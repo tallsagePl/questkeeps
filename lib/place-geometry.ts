@@ -148,7 +148,11 @@ const cache = new MemoryCache<number, Promise<PlaceGeometry>>();
 let queue: Promise<void> = Promise.resolve(),
   lastRequest = 0;
 const providerBackoff = new Map<string, number>();
-export async function osmRequest(url: string) {
+export async function osmRequest(
+  url: string,
+  timeoutMs = 12000,
+  request: RequestInit = {},
+) {
   const pending = queue.then(async () => {
     const host = new URL(url).host;
     if ((providerBackoff.get(host) || 0) > Date.now())
@@ -158,8 +162,12 @@ export async function osmRequest(url: string) {
     lastRequest = Date.now();
     try {
       const response = await fetch(url, {
-        headers: { 'User-Agent': 'QuestKeeps/1.0 (travel journal)' },
-        signal: AbortSignal.timeout(12000),
+        ...request,
+        headers: {
+          'User-Agent':
+            'QuestKeeps (personal travel journal; public OSM geometry)',
+        },
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (!response.ok)
         throw Object.assign(Error('Границы мест временно недоступны'), {
@@ -181,7 +189,7 @@ export async function osmRequest(url: string) {
   );
   return pending;
 }
-async function overpass(query: string) {
+export async function overpass(query: string, timeoutMs = 12000) {
   const providers = process.env.OVERPASS_ENDPOINT
     ? [process.env.OVERPASS_ENDPOINT]
     : [
@@ -190,9 +198,11 @@ async function overpass(query: string) {
       ];
   for (const endpoint of providers) {
     try {
-      const url = new URL(endpoint);
-      url.searchParams.set('data', query);
-      const result = await osmRequest(url.toString());
+      // POST avoids URL filtering/length limits on city-wide geometry requests.
+      const result = await osmRequest(endpoint, timeoutMs, {
+        method: 'POST',
+        body: new URLSearchParams({ data: query }),
+      });
       return result.elements || [];
     } catch {
       /* Try the next provider; failed hosts have a five-minute cooldown. */

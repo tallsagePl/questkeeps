@@ -1,11 +1,14 @@
 import { russianAreaTitle, russianAreaDescription } from './area-localization';
 import { all, one, run, db, id, type Row } from './db';
 import { closestCity } from './city-lookup';
-import { publicLocalMap, osmRequest, geometryFromOsm } from './place-geometry';
+import { overpass, geometryFromOsm } from './place-geometry';
 import { photoInArea } from './area-membership';
 import { MemoryCache } from './memory-cache';
 import { membership, fail } from './access';
-const discovered = new MemoryCache<string, Promise<string[]>>();
+const discovered = new MemoryCache<
+  string,
+  Promise<{ ids: string[]; incomplete: boolean }>
+>();
 export const osmAreaId = (url: string) => {
   const match = url.match(
     new RegExp(
@@ -47,8 +50,14 @@ export function eligibleAreaObject(e: any) {
         ['neighbourhood', 'quarter', 'suburb'].includes(t.place)))
   );
 }
-async function discoverCity(lat: number, lon: number) {
-  const key = 'v2:' + lat + ',' + lon;
+// closestCity accepts points up to 35 km away. Use the same fixed public-city
+// coverage everywhere, with a margin; neither GPS nor a trip-derived radius is sent.
+export const PUBLIC_CITY_RADIUS_METERS = 40000;
+export const areaCityCacheKey = (lat: number, lon: number) =>
+  'v3:' + lat + ',' + lon + ':' + PUBLIC_CITY_RADIUS_METERS;
+export async function discoverCity(lat: number, lon: number) {
+  const radius = PUBLIC_CITY_RADIUS_METERS;
+  const key = areaCityCacheKey(lat, lon);
   let pending = discovered.get(key);
   if (pending) return pending;
   pending = (async () => {
@@ -58,16 +67,35 @@ async function discoverCity(lat: number, lon: number) {
       key,
     );
     if (stored && Date.now() - stored.updated < 86400000)
-      return JSON.parse(stored.json) as string[];
-    const merged = new Map<string, any>();
-    for (const y of [-0.01, 0, 0.01])
-      for (const x of [-0.01, 0, 0.01]) {
-        for (const element of await publicLocalMap(lat + y, lon + x))
-          merged.set(element.type + ':' + element.id, element);
-      }
-    const elements = [...merged.values()];
+      return { ids: JSON.parse(stored.json) as string[], incomplete: false };
+    // Request complete geometry, including boundaries crossing the search circle.
+    // Unlike the old tile grid, this covers the old town and outlying photo clusters.
+    const around = '(around:' + radius + ',' + lat + ',' + lon + ')';
+    const elements = await overpass(
+      '[out:json][timeout:40];(' +
+        'way["name"]["highway"]' +
+        around +
+        ';' +
+        'wr["name"]["place"~"^(neighbourhood|quarter|suburb)$"]' +
+        around +
+        ';' +
+        'rel["name"]["boundary"="administrative"]["admin_level"~"^(8|9|10)$"]' +
+        around +
+        ';' +
+        ');out geom;',
+      50000,
+    );
+    let incomplete = false;
     const nodes = elements.filter((e: any) => e.type === 'node');
     const candidates = elements.filter(eligibleAreaObject);
+    const streetGroups = new Map<string, any[]>();
+    for (const candidate of candidates) {
+      if (candidate.type !== 'way' || !candidate.tags?.highway) continue;
+      const name = normal(candidate.tags.name);
+      const group = streetGroups.get(name) || [];
+      group.push(candidate);
+      streetGroups.set(name, group);
+    }
     const results: string[] = [];
     const seenWays = new Set<number>();
     for (const object of candidates) {
@@ -76,12 +104,7 @@ async function discoverCity(lat: number, lon: number) {
       if (object.type === 'way' && object.tags.highway) {
         // Only connected segments of the same named street belong together.
         const connected = new Set<number>(object.nodes || []);
-        const sameName = candidates.filter(
-          (e: any) =>
-            e.type === 'way' &&
-            e.tags?.highway &&
-            normal(e.tags.name) === normal(object.tags.name),
-        );
+        const sameName = streetGroups.get(normal(object.tags.name)) || [];
         let changed = true;
         while (changed) {
           changed = false;
@@ -101,33 +124,15 @@ async function discoverCity(lat: number, lon: number) {
           ? Math.min(...pieces.map((e: any) => e.id))
           : object.id;
       const areaId = 'osm-' + object.type + '-' + objectId;
-      const saved = one('SELECT updated FROM map_areas WHERE id=?', areaId);
-      if (saved && Date.now() - saved.updated < 86400000) {
-        results.push(areaId);
+      // Rebuild even recently saved streets: wider coverage can add connected segments.
+      const geometry = geometryFromOsm(
+        object.type === 'relation' ? [object] : [...nodes, ...pieces],
+        object.tags['name:ru'] || object.tags.name,
+      );
+      if (!geometry.features.length) {
+        incomplete = true;
         continue;
       }
-      let geometry;
-      try {
-        geometry =
-          object.type === 'relation'
-            ? geometryFromOsm(
-                (
-                  await osmRequest(
-                    'https://api.openstreetmap.org/api/0.6/relation/' +
-                      object.id +
-                      '/full.json',
-                  )
-                ).elements || [],
-                object.tags['name:ru'] || object.tags.name,
-              )
-            : geometryFromOsm(
-                [...nodes, ...pieces],
-                object.tags['name:ru'] || object.tags.name,
-              );
-      } catch {
-        continue;
-      }
-      if (!geometry.features.length) continue;
       const kind = geometry.features.some(
         (f: any) => f.properties.kind === 'district',
       )
@@ -162,16 +167,33 @@ async function discoverCity(lat: number, lon: number) {
       );
       results.push(areaId);
     }
-    run(
-      'INSERT INTO map_area_city_cache VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET json=excluded.json,updated=excluded.updated',
-      key,
-      JSON.stringify(results),
-      Date.now(),
-    );
-    return results;
-  })();
+    if (!incomplete)
+      run(
+        'INSERT INTO map_area_city_cache VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET json=excluded.json,updated=excluded.updated',
+        key,
+        JSON.stringify(results),
+        Date.now(),
+      );
+    return { ids: results, incomplete };
+  })().catch((error) => {
+    // Keep previously downloaded public geometry visible during provider outages.
+    const fallback =
+      one('SELECT json FROM map_area_city_cache WHERE key=?', key) ||
+      one(
+        'SELECT json FROM map_area_city_cache WHERE key=?',
+        'v2:' + lat + ',' + lon,
+      );
+    if (fallback)
+      return { ids: JSON.parse(fallback.json) as string[], incomplete: true };
+    throw error;
+  });
   discovered.set(key, pending);
-  void pending.catch(() => discovered.delete(key));
+  void pending.then(
+    (result) => {
+      if (result.incomplete) discovered.delete(key);
+    },
+    () => discovered.delete(key),
+  );
   return pending;
 }
 export function accessibleAreaPhotos(tripId: string, userId: string) {
@@ -191,17 +213,21 @@ export async function areaSuggestions(tripId: string, userId: string) {
   const seeds = new Map<string, { lat: number; lon: number }>();
   for (const photo of photos) {
     const city = closestCity(photo.lat, photo.lon);
-    if (city)
-      seeds.set(city.country + ':' + city.name, {
+    if (city) {
+      const key = city.country + ':' + city.name;
+      seeds.set(key, {
         lat: city.lat,
         lon: city.lon,
       });
+    }
   }
   let incomplete = false;
   const ids = new Set<string>();
   for (const city of seeds.values()) {
     try {
-      (await discoverCity(city.lat, city.lon)).forEach((id) => ids.add(id));
+      const result = await discoverCity(city.lat, city.lon);
+      result.ids.forEach((id) => ids.add(id));
+      incomplete ||= result.incomplete;
     } catch {
       incomplete = true;
     }

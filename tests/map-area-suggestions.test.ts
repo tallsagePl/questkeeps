@@ -9,6 +9,7 @@ const { db, run, all, one } = await import('../lib/db');
 const { handle } = await import('../lib/api');
 const { session } = await import('../lib/access');
 const { closestCity } = await import('../lib/city-lookup');
+const { areaCityCacheKey } = await import('../lib/map-area-suggestions');
 const area = {
   type: 'FeatureCollection',
   features: [
@@ -167,7 +168,7 @@ for (const photo of all('SELECT lat,lon FROM media')) {
   if (city)
     run(
       'INSERT OR REPLACE INTO map_area_city_cache VALUES (?,?,?)',
-      'v2:' + city.lat + ',' + city.lon,
+      areaCityCacheKey(city.lat, city.lon),
       JSON.stringify(['osm-relation-100']),
       Date.now(),
     );
