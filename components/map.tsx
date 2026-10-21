@@ -552,10 +552,22 @@ export default function TravelMap({
           </span>
         </div>
       )}
-      {suggestionsLoading && (
-        <p className="fine" role="status">
-          {t('Ищем районы и улицы рядом с фотографиями…')}
-        </p>
+      {(suggestionsLoading || geometryLoading) && (
+        <div className="map-loading-status" role="status">
+          <span className="spinner" aria-hidden="true" />
+          <div>
+            <strong>
+              {t(
+                suggestionsLoading
+                  ? 'Ищем районы и улицы рядом с фотографиями…'
+                  : 'Загружаем контуры посещённых мест…',
+              )}
+            </strong>
+            {suggestionsLoading && geometryLoading && (
+              <p>{t('Загружаем контуры посещённых мест…')}</p>
+            )}
+          </div>
+        </div>
       )}
       {suggestionsFailed && (
         <div className="map-geometry-status">
@@ -570,11 +582,6 @@ export default function TravelMap({
             {t('Повторить поиск мест')}
           </button>
         </div>
-      )}
-      {geometryLoading && (
-        <p className="fine" role="status">
-          {t('Загружаем контуры посещённых мест…')}
-        </p>
       )}
       {geometryMissing && (
         <div className="map-geometry-status">
