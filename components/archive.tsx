@@ -39,6 +39,7 @@ import DiscoveredPlaces from './discovered-places';
 import ConfirmedPlaceDetails from './confirmed-place-details';
 import LocalizedArticle from './localized-article';
 import TripDescription from './trip-description';
+import LocationForm from './location-form';
 import PlaceRecommendations from './place-recommendations';
 import TripPreloader, { tripMapScope } from './trip-preloader';
 import { distanceMeters } from '../lib/geo';
@@ -2619,51 +2620,35 @@ function ArchiveContent({
                 </>
               ) : (
                 activeMedia.user_id === user?.id && (
-                  <FeedbackForm
-                    className="stack"
-                    onSubmit={(e) => {
-                      const input = values(e);
+                  <LocationForm
+                    key={activeMedia.id}
+                    busy={busy}
+                    initial={(() => {
+                      const candidates = (data?.media || []).filter(
+                        (photo: Row) =>
+                          !photo.hidden &&
+                          !photo.missing &&
+                          Number.isFinite(photo.lat) &&
+                          Number.isFinite(photo.lon),
+                      );
+                      const target = Date.parse(activeMedia.taken);
+                      const nearest = [...candidates].sort(
+                        (a: Row, b: Row) =>
+                          Math.abs(Date.parse(a.taken) - target) -
+                          Math.abs(Date.parse(b.taken) - target),
+                      )[0];
+                      return nearest
+                        ? { lat: nearest.lat, lon: nearest.lon }
+                        : null;
+                    })()}
+                    onSave={(point) => {
                       void action(async () => {
-                        await api('media/' + activeMedia.id, 'PATCH', {
-                          lat: Number(input.lat),
-                          lon: Number(input.lon),
-                        });
-                        setActiveMedia({
-                          ...activeMedia,
-                          lat: Number(input.lat),
-                          lon: Number(input.lon),
-                        });
+                        await api('media/' + activeMedia.id, 'PATCH', point);
+                        setActiveMedia({ ...activeMedia, ...point });
                         await refresh();
                       });
                     }}
-                  >
-                    <p className="muted">
-                      {t('В файле нет GPS. Можно указать место съёмки.')}
-                    </p>
-                    <div className="form-row">
-                      <Field
-                        label={t('Широта')}
-                        name="lat"
-                        type="number"
-                        step="any"
-                        min={-90}
-                        max={90}
-                        required
-                      />
-                      <Field
-                        label={t('Долгота')}
-                        name="lon"
-                        type="number"
-                        step="any"
-                        min={-180}
-                        max={180}
-                        required
-                      />
-                    </div>
-                    <FeedbackButton className="secondary" disabled={busy}>
-                      {t('Сохранить координаты')}
-                    </FeedbackButton>
-                  </FeedbackForm>
+                  />
                 )
               )}
             </div>

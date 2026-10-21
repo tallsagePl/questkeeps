@@ -543,5 +543,12 @@
   "Показать все места": "Show all places",
   "Место": "Place",
   "Улица": "Street",
-  "Район": "District"
+  "Район": "District",
+  "Выбрать на карте": "Choose on map",
+  "Скрыть карту": "Hide map",
+  "Выбранное место съёмки": "Selected capture location",
+  "Выбор места съёмки на карте": "Choose capture location on map",
+  "Нажми на карту или перемести метку, чтобы выбрать место съёмки.": "Click the map or drag the marker to choose the capture location.",
+  "Выбрать точку в центре карты": "Select the point at the map centre",
+  "или": "or"
 }
