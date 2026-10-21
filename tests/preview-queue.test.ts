@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
-import { queuePreview } from '../lib/preview-queue';
+import { queuePreview, PREVIEW_TIMEOUT_MS } from '../lib/preview-queue';
 test('очередь отдаёт приоритет экрану, вытесняет фон и отменяет ненужные запросы', async () => {
   const starts: string[] = [],
     aborted: string[] = [];
@@ -60,5 +60,35 @@ test('очередь отдаёт приоритет экрану, вытесн�
     handles.forEach((handle) => handle.release());
     await Promise.allSettled(handles.map((handle) => handle.promise));
     await setImmediate();
+  }
+});
+
+test('a stalled preview releases queue capacity on timeout even when its task ignores abort', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const handles = Array.from({ length: 6 }, (_, i) =>
+    queuePreview('stalled-' + i, 0, () => new Promise<Blob>(() => {})),
+  );
+  const outcomes = Promise.allSettled(handles.map((h) => h.promise));
+  const next = queuePreview('after-stalls', 0, async () => new Blob(['ok']));
+  try {
+    await setImmediate();
+    t.mock.timers.tick(PREVIEW_TIMEOUT_MS);
+    await setImmediate();
+    const failures = await outcomes;
+    assert.ok(
+      failures.every(
+        (result) =>
+          result.status === 'rejected' && result.reason.name === 'TimeoutError',
+      ),
+    );
+    assert.equal(
+      await (await next.promise).text(),
+      'ok',
+      'queued photos continue after stalled requests',
+    );
+  } finally {
+    handles.forEach((h) => h.release());
+    next.release();
+    t.mock.timers.reset();
   }
 });

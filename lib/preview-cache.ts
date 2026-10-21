@@ -56,6 +56,27 @@ export async function clearPreviewCache() {
     );
   }
 }
+export async function discardPreview(src: string, scope: string) {
+  const request = new Request(new URL(src, location.origin));
+  const key = scope + request.url;
+  const timer = timers.get(key);
+  if (timer) clearTimeout(timer);
+  timers.delete(key);
+  if (typeof caches !== 'undefined') {
+    const cache = await cacheFor(scope).catch(() => null);
+    await cache?.delete(request).catch(() => {});
+  }
+}
+async function validatePreview(blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    image.src = url;
+    await image.decode();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 export async function previewBlob(
   src: string,
   scope: string,
@@ -72,8 +93,16 @@ export async function previewBlob(
   if (saved) {
     const at = Number(saved.headers.get('X-QuestKeeps-Expires') || 0);
     if (at > Date.now()) {
-      if (cache) expire(cache, request, scope + request.url, at);
-      return saved.blob();
+      try {
+        const blob = await saved.blob();
+        await validatePreview(blob);
+        signal?.throwIfAborted();
+        if (cache) expire(cache, request, scope + request.url, at);
+        return blob;
+      } catch (error) {
+        signal?.throwIfAborted();
+        // A damaged cached response is not a successful preview: fetch it afresh.
+      }
     }
     await cache?.delete(request);
   }
@@ -89,14 +118,7 @@ export async function previewBlob(
     throw new Error('Preview unavailable');
   const blob = await response.blob();
   // Do not persist broken images or an error page returned with a successful status.
-  const url = URL.createObjectURL(blob);
-  try {
-    const image = new Image();
-    image.src = url;
-    await image.decode();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  await validatePreview(blob);
   signal?.throwIfAborted();
   if (cache && generation === currentGeneration) {
     await cache

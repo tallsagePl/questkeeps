@@ -9,6 +9,26 @@ type Job = {
   preempted: boolean;
   finished: boolean;
 };
+export const PREVIEW_TIMEOUT_MS = 20000;
+function runPreviewTask(job: Job, controller: AbortController): Promise<Blob> {
+  let onAbort!: () => void;
+  const interrupted = new Promise<never>((_, reject) => {
+    onAbort = () => reject(controller.signal.reason);
+    controller.signal.addEventListener('abort', onAbort, { once: true });
+  });
+  const timer = setTimeout(() => {
+    controller.abort(
+      new DOMException('Preview request timed out', 'TimeoutError'),
+    );
+  }, PREVIEW_TIMEOUT_MS);
+  return Promise.race([
+    Promise.resolve().then(() => job.task(controller.signal)),
+    interrupted,
+  ]).finally(() => {
+    clearTimeout(timer);
+    controller.signal.removeEventListener('abort', onAbort);
+  });
+}
 const jobs = new Map<string, Job>();
 const running = new Set<Job>();
 const rank = (job: Job) => Math.min(...job.consumers.values());
@@ -45,8 +65,7 @@ function pump() {
     job.controller = controller;
     job.preempted = false;
     running.add(job);
-    void job
-      .task(controller.signal)
+    void runPreviewTask(job, controller)
       .then((blob) => {
         if (!job.finished && !job.preempted) {
           job.finished = true;

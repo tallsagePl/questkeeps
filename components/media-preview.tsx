@@ -1,7 +1,7 @@
 'use client';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { useLocale } from './appearance';
-import { previewBlob } from '../lib/preview-cache';
+import { previewBlob, discardPreview } from '../lib/preview-cache';
 import { queuePreview } from '../lib/preview-queue';
 import { PreviewPriority } from './preview-priority';
 import { CACHE_TTL } from '../lib/memory-cache';
@@ -69,7 +69,7 @@ function RetryingPreview({
   }, [eligible, state, attempt]);
   const [url, setUrl] = useState<string>();
   useEffect(() => {
-    if (!eligible || url) return;
+    if (!eligible || url || state !== 'loading') return;
     let disposed = false;
     const work = queuePreview(scope + ':' + src, priority ?? 1, (signal) =>
       previewBlob(src, scope, signal),
@@ -88,7 +88,7 @@ function RetryingPreview({
       work.release();
       if (request.current === work) request.current = null;
     };
-  }, [src, scope, attempt, eligible, url]);
+  }, [src, scope, attempt, eligible, url, state]);
   useEffect(() => {
     if (priority !== null) request.current?.setPriority(priority);
   }, [priority]);
@@ -135,9 +135,10 @@ function RetryingPreview({
           loading="eager"
           decoding="async"
           onLoad={() => setState('loaded')}
-          onError={(event) => {
-            if (event.currentTarget.naturalWidth > 0) return;
+          onError={() => {
             setState(attempt < 3 ? 'retrying' : 'failed');
+            // A failed object URL must not block the next network attempt.
+            void discardPreview(src, scope).finally(() => setUrl(undefined));
           }}
         />
       )}
