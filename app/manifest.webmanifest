@@ -1,0 +1,16 @@
+{
+  "name": "QuestKeeps",
+  "short_name": "QuestKeeps",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f5fa",
+  "theme_color": "#3448f5",
+  "icons": [
+    {
+      "src": "/brand/questkeeps-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

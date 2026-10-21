@@ -1,0 +1,20 @@
+node_modules/
+.next/
+data/
+.env*
+!.env.example
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Local backups, credentials and generated diagnostics
+*.repair-backup
+*.bak
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.pem
+Thumbs.db
+.DS_Store
+work-test-results.txt

@@ -1,0 +1,21 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { MemoryCache, CACHE_TTL } from '../lib/memory-cache';
+test('кеш освобождает значения через 15 минут без продления при чтении', (t) => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 1000 });
+  const cache = new MemoryCache<string, string>();
+  cache.set('a', 'one');
+  t.mock.timers.tick(CACHE_TTL - 1);
+  assert.equal(cache.get('a'), 'one');
+  t.mock.timers.tick(1);
+  assert.equal(cache.size, 0);
+  assert.equal(cache.get('a'), undefined);
+  cache.set('a', 'old');
+  t.mock.timers.tick(500);
+  cache.set('a', 'new');
+  t.mock.timers.tick(CACHE_TTL - 500);
+  assert.equal(cache.get('a'), 'new');
+  cache.clear();
+  assert.equal(cache.size, 0);
+  t.mock.timers.reset();
+});
