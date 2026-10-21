@@ -1,5 +1,10 @@
 'use client';
-import { cachedPlaceDescription } from '../lib/place-client-cache';
+import {
+  cachedPlaceDescription,
+  cachedMapGeometry,
+  cachedMapSuggestions,
+  invalidateMapResource,
+} from '../lib/place-client-cache';
 import { suggestedMapAreas, type AreaCandidate } from './suggested-map-areas';
 
 import { useLocale } from '@/components/appearance';
@@ -9,8 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import MapThumbnail from './map-thumbnail';
 import type { Map as LeafletMap, CircleMarker } from 'leaflet';
 import { mapRegions, mapDateTime } from '../lib/map-regions';
-import { MemoryCache } from '../lib/memory-cache';
-const geometries = new MemoryCache<string, Promise<any>>();
+
 type Point = {
   id: string;
   lat: number;
@@ -37,9 +41,11 @@ export default function TravelMap({
   geometryPaths,
   onGeometrySelect,
   suggestionPath,
+  resourceScope,
   onAddArea,
 }: {
   suggestionPath?: string;
+  resourceScope?: string;
   onAddArea?: (areaId: string) => Promise<void>;
   onGeometrySelect?: (endpoint: string) => void;
   geometryPaths?: string[];
@@ -54,7 +60,37 @@ export default function TravelMap({
     () => mapRegions(points, language),
     [points, language],
   );
-  const [selectedRegion, setSelectedRegion] = useState('all');
+  const mapScope = resourceScope || previewScope;
+  const viewKey =
+    'questkeeps:map-view:v1:' +
+    previewScope +
+    ':' +
+    (suggestionPath || (geometryPaths || []).join('|'));
+  const [selectedRegion, setSelectedRegion] = useState(() => {
+    if (compact) return 'all';
+    try {
+      return (
+        JSON.parse(localStorage.getItem(viewKey) || 'null')?.region || 'all'
+      );
+    } catch {
+      return 'all';
+    }
+  });
+  const restoredView = useRef('');
+  useEffect(() => {
+    if (compact) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(viewKey) || 'null');
+      setSelectedRegion(saved?.region || 'all');
+    } catch {}
+    restoredView.current = viewKey;
+  }, [viewKey, compact]);
+  useEffect(() => {
+    if (compact || restoredView.current !== viewKey) return;
+    try {
+      localStorage.setItem(viewKey, JSON.stringify({ region: selectedRegion }));
+    } catch {}
+  }, [selectedRegion, viewKey, compact]);
   const [mapReady, setMapReady] = useState(0);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const mapHandle = useRef<LeafletMap | null>(null);
@@ -220,22 +256,7 @@ export default function TravelMap({
       for (const endpoint of geometryKey.split('|')) {
         if (cancelled) break;
         try {
-          let pending = geometries.get(endpoint);
-          if (!pending) {
-            pending = fetch(endpoint, {
-              credentials: 'same-origin',
-              cache: 'no-store',
-            }).then(async (response) => {
-              if (!response.ok) throw Error('Geometry unavailable');
-              return response.json();
-            });
-            geometries.set(endpoint, pending);
-            void pending.catch(() => {
-              if (geometries.get(endpoint) === pending)
-                geometries.delete(endpoint);
-            });
-          }
-          const collection = await pending;
+          const collection = await cachedMapGeometry(endpoint, mapScope);
           if (cancelled) break;
           if (!collection.features?.length) {
             missing = true;
@@ -363,7 +384,15 @@ export default function TravelMap({
       cancelled = true;
       layers.forEach((layer) => layer.remove());
     };
-  }, [geometryKey, mapReady, compact, geometryRetry, language, previewScope]);
+  }, [
+    geometryKey,
+    mapReady,
+    compact,
+    geometryRetry,
+    language,
+    previewScope,
+    mapScope,
+  ]);
   const [suggestions, setSuggestions] = useState<AreaCandidate[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [suggestionsFailed, setSuggestionsFailed] = useState(false);
@@ -378,16 +407,9 @@ export default function TravelMap({
     const controller = new AbortController();
     setSuggestionsLoading(true);
     setSuggestionsFailed(false);
-    fetch(suggestionPath, {
-      credentials: 'same-origin',
-      cache: 'no-store',
-      signal: controller.signal,
-    })
-      .then(async (r) => {
-        if (!r.ok) throw Error();
-        return r.json();
-      })
+    cachedMapSuggestions(suggestionPath, mapScope)
       .then((data) => {
+        if (controller.signal.aborted) return;
         setSuggestions(data.candidates || []);
         setSuggestionsFailed(!!data.incomplete);
       })
@@ -398,7 +420,19 @@ export default function TravelMap({
         if (!controller.signal.aborted) setSuggestionsLoading(false);
       });
     return () => controller.abort();
-  }, [suggestionPath, geometryKey, suggestionRetry]);
+  }, [suggestionPath, geometryKey, suggestionRetry, mapScope]);
+  useEffect(() => {
+    const changed = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.scope !== mapScope + ':map-v1') return;
+      if (detail.endpoint === suggestionPath) setSuggestionRetry((n) => n + 1);
+      else if (geometryKey.split('|').includes(detail.endpoint))
+        setGeometryRetry((n) => n + 1);
+    };
+    window.addEventListener('questkeeps:map-resource-updated', changed);
+    return () =>
+      window.removeEventListener('questkeeps:map-resource-updated', changed);
+  }, [mapScope, suggestionPath, geometryKey]);
   const shownIds = shownPoints.map((p) => p.id).join('|');
   useEffect(() => {
     const map = mapHandle.current;
@@ -577,7 +611,11 @@ export default function TravelMap({
           <button
             type="button"
             className="text-button"
-            onClick={() => setSuggestionRetry((n) => n + 1)}
+            onClick={async () => {
+              if (suggestionPath)
+                await invalidateMapResource(suggestionPath, mapScope);
+              setSuggestionRetry((n) => n + 1);
+            }}
           >
             {t('Повторить поиск мест')}
           </button>
@@ -599,9 +637,12 @@ export default function TravelMap({
           <button
             type="button"
             className="text-button"
-            onClick={() => {
-              for (const path of geometryKey.split('|'))
-                geometries.delete(path);
+            onClick={async () => {
+              await Promise.all(
+                geometryKey
+                  .split('|')
+                  .map((path) => invalidateMapResource(path, mapScope)),
+              );
               setGeometryRetry((value) => value + 1);
             }}
           >

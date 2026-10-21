@@ -40,6 +40,7 @@ import ConfirmedPlaceDetails from './confirmed-place-details';
 import LocalizedArticle from './localized-article';
 import TripDescription from './trip-description';
 import PlaceRecommendations from './place-recommendations';
+import TripPreloader, { tripMapScope } from './trip-preloader';
 import { distanceMeters } from '../lib/geo';
 import { BackToTop, FavoriteButton, MediaTitle } from './media-controls';
 import { clearPreviewCache } from '../lib/preview-cache';
@@ -524,6 +525,11 @@ function ArchiveContent({
   );
   const mediaPath = (m: Row, kind: string) =>
     '/api/media/' + m.id + '/' + kind + (share ? '?share=' + share : '');
+  const resourceScope = share ? 'guest:' + share : 'user:' + user?.id;
+  const mapResourceScope = useMemo(
+    () => (data ? tripMapScope(data, resourceScope) : resourceScope),
+    [data, resourceScope],
+  );
   const [placeTarget, setPlaceTarget] = useState<string | null>(null);
   const applyAddedPlace = (place: Row, title = place.title.slice(0, 160)) => {
     setData((old: Row | null) =>
@@ -1050,6 +1056,16 @@ function ArchiveContent({
               </div>
             )}
           </div>
+          {data && (
+            <TripPreloader
+              data={data}
+              scope={resourceScope}
+              mapScope={mapResourceScope}
+              userId={user?.id}
+              guest={guest}
+              share={share}
+            />
+          )}
           {(tab === 'gallery' || tab === 'map') && (
             <>
               <div className="gallery-toolbar">
@@ -1080,6 +1096,7 @@ function ArchiveContent({
               {tab === 'map' ? (
                 <>
                   <TravelMap
+                    resourceScope={mapResourceScope}
                     suggestionPath={
                       !guest
                         ? '/api/trips/' + trip.id + '/area-suggestions'

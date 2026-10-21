@@ -5,6 +5,7 @@ import { includesDate } from '../lib/date-selection';
 import { useLocale } from './appearance';
 import { api } from './api';
 import MapThumbnail from './map-thumbnail';
+import { searchPhotoPlaces } from '../lib/place-search-client';
 import { ApiError, FeedbackButton, useFeedback } from './feedback';
 import DismissPlaceSuggestion from './dismiss-place-suggestion';
 import LocalizedArticle from './localized-article';
@@ -120,10 +121,25 @@ export default function PlaceRecommendations({
   const [remaining, setRemaining] = useState(true);
   const completed = useRef(new Set<string>());
   const savedSearches = useRef<SavedSearches>(new Map());
-  const restoredKey = useRef('');
   const cardSnapshot = useRef<Card[]>([]);
   const exclusions = useRef({ places, dismissed });
   exclusions.current = { places, dismissed };
+  useEffect(() => {
+    const update = (event: Event) => {
+      if (
+        (event as CustomEvent).detail === tripId &&
+        uniqueCards(
+          cardSnapshot.current,
+          exclusions.current.places,
+          exclusions.current.dismissed,
+        ).length < MAX_SUGGESTIONS
+      )
+        setAttempt((n) => n + 1);
+    };
+    window.addEventListener('questkeeps:place-search-updated', update);
+    return () =>
+      window.removeEventListener('questkeeps:place-search-updated', update);
+  }, [tripId]);
   const [attempt, setAttempt] = useState(0),
     [cards, setCards] = useState<Card[]>([]),
     [loading, setLoading] = useState(false),
@@ -200,8 +216,7 @@ export default function PlaceRecommendations({
       ':' +
       photo.lon;
     const resultsKey = 'questkeeps:found-places:v1:' + scope + ':' + tripId;
-    if (restoredKey.current !== resultsKey) {
-      restoredKey.current = resultsKey;
+    {
       completed.current.clear();
       cardSnapshot.current = [];
       try {
@@ -255,12 +270,7 @@ export default function PlaceRecommendations({
         try {
           let result = cache.get(key);
           if (!result || result.expires < Date.now()) {
-            const response = await api(
-              'media/' + photo.id + '/places',
-              'GET',
-              undefined,
-              controller.signal,
-            );
+            const response = await searchPhotoPlaces(photo, scope, tripId);
             result = {
               expires: Date.now() + CACHE_TTL,
               suggestions: response.suggestions,
@@ -272,6 +282,13 @@ export default function PlaceRecommendations({
             savedSearches.current.set(photoKey(photo), result.suggestions);
             try {
               const validKeys = new Set(allPhotos.map(photoKey));
+              savedSearches.current = new Map([
+                ...readSavedSearches(
+                  localStorage.getItem(resultsKey),
+                  validKeys,
+                ),
+                ...savedSearches.current,
+              ]);
               localStorage.setItem(
                 resultsKey,
                 JSON.stringify(

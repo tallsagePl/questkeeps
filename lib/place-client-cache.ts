@@ -1,4 +1,7 @@
-import { queuePlaceResource } from './place-resource-queue';
+import {
+  queuePlaceResource,
+  promotePlaceResource,
+} from './place-resource-queue';
 import { MemoryCache, CACHE_TTL } from './memory-cache';
 type PlaceInfo = { image: string | null };
 export type PlaceText = {
@@ -13,6 +16,8 @@ const prefix = 'questkeeps-place-resources-v3-';
 const memory = new MemoryCache<string, Promise<unknown>>();
 const stores = new MemoryCache<string, Promise<Cache | null>>();
 let generation = 0;
+const priorities = new Map<string, number>();
+const freshUntil = new Map<string, number>();
 async function store(scope: string) {
   if (typeof caches === 'undefined') return null;
   let pending = stores.get(scope);
@@ -32,7 +37,8 @@ async function store(scope: string) {
       (await cache.keys()).map(async (key) => {
         const value = await cache.match(key);
         if (
-          Number(value?.headers.get('X-QuestKeeps-Expires') || 0) <= Date.now()
+          Number(value?.headers.get('X-QuestKeeps-Expires') || 0) <
+          Date.now() - 7 * 86400000
         )
           await cache.delete(key);
       }),
@@ -49,35 +55,97 @@ async function cached<T>(
   encode: (data: T) => Response,
   decode: (res: Response) => Promise<T>,
   valid: (data: T) => boolean,
+  ttl: number | ((data: T) => number) = CACHE_TTL,
+  allowStale = false,
+  priority = 0,
 ): Promise<T> {
   const key = scope + ':' + endpoint;
   const existing = memory.get(key);
-  if (existing) return existing as Promise<T>;
+  if (existing && (freshUntil.get(key) ?? Infinity) > Date.now()) {
+    priorities.set(key, Math.min(priorities.get(key) ?? priority, priority));
+    if (priority === 0) promotePlaceResource(key);
+    return existing as Promise<T>;
+  }
+  priorities.set(key, priority);
+  if (existing) memory.delete(key);
+  freshUntil.delete(key);
   const version = generation;
   const pending = (async () => {
     const cache = await store(scope),
       request = new Request(new URL(endpoint, location.origin));
     const saved = await cache?.match(request).catch(() => undefined);
-    if (
-      saved &&
-      Number(saved.headers.get('X-QuestKeeps-Expires') || 0) > Date.now()
-    )
-      return decode(saved);
-    if (saved) await cache?.delete(request);
-    const value = await queuePlaceResource(load);
-    if (!valid(value)) {
-      memory.delete(key);
-      return value;
+    let stale: T | undefined;
+    if (saved) {
+      try {
+        const decoded = await decode(saved.clone());
+        if (valid(decoded)) {
+          const expires = Number(
+            saved.headers.get('X-QuestKeeps-Expires') || 0,
+          );
+          if (expires > Date.now()) {
+            freshUntil.set(key, expires);
+            return decoded;
+          }
+          if (allowStale) stale = decoded;
+        }
+      } catch {
+        await cache?.delete(request).catch(() => {});
+      }
     }
-    if (cache && generation === version) {
-      const response = encode(value);
-      response.headers.set(
-        'X-QuestKeeps-Expires',
-        String(Date.now() + CACHE_TTL),
+    const refresh = async (background = false): Promise<T> => {
+      const value = await queuePlaceResource(
+        load,
+        background ? 2 : (priorities.get(key) ?? priority),
+        key,
       );
-      await cache.put(request, response).catch(() => {});
+      if (!valid(value)) {
+        memory.delete(key);
+        return value;
+      }
+      // An incomplete provider response must not erase a previously downloaded contour.
+      if (
+        stale !== undefined &&
+        ((value as any).incomplete ||
+          ((stale as any).features?.length && !(value as any).features?.length))
+      ) {
+        freshUntil.set(key, Date.now() + 30000);
+        return stale;
+      }
+      const expires =
+        Date.now() + (typeof ttl === 'function' ? ttl(value) : ttl);
+      if (generation === version) {
+        freshUntil.set(key, expires);
+        if (cache) {
+          const response = encode(value);
+          response.headers.set('X-QuestKeeps-Expires', String(expires));
+          await cache.put(request, response).catch(() => {});
+        }
+      }
+      return value;
+    };
+    if (stale !== undefined) {
+      freshUntil.set(key, Date.now() + 30000);
+      void refresh(true)
+        .then((value) => {
+          if (generation !== version) return;
+          memory.set(key, Promise.resolve(value));
+          if (typeof window !== 'undefined')
+            window.dispatchEvent(
+              new CustomEvent('questkeeps:map-resource-updated', {
+                detail: { endpoint, scope },
+              }),
+            );
+        })
+        .catch((error) => {
+          if ([401, 403, 404].includes(error?.status)) {
+            memory.delete(key);
+            freshUntil.delete(key);
+            void cache?.delete(request);
+          }
+        });
+      return stale;
     }
-    return value;
+    return refresh();
   })();
   memory.set(key, pending);
   void pending.catch(() => {
@@ -92,19 +160,25 @@ const currentLanguage = () =>
 async function json<T>(
   endpoint: string,
   language = currentLanguage(),
+  timeout = 20000,
 ): Promise<T> {
   const response = await fetch(endpoint, {
     credentials: 'same-origin',
     headers: { 'X-QuestKeeps-Language': language },
+    signal: AbortSignal.timeout(timeout),
     cache: 'no-store',
   });
-  if (!response.ok) throw new Error('Place unavailable');
+  if (!response.ok)
+    throw Object.assign(new Error('Place unavailable'), {
+      status: response.status,
+    });
   return response.json();
 }
 export const cachedPlaceInfo = (
   endpoint: string,
   scope = '',
   language = currentLanguage(),
+  priority = 0,
 ) =>
   cached(
     endpoint,
@@ -113,11 +187,15 @@ export const cachedPlaceInfo = (
     (value) => Response.json(value),
     (response) => response.json(),
     (value) => !!value.image,
+    86400000,
+    false,
+    priority,
   );
 export const cachedPlaceDescription = (
   endpoint: string,
   scope = '',
   language = currentLanguage(),
+  priority = 0,
 ) =>
   cached(
     endpoint,
@@ -126,8 +204,11 @@ export const cachedPlaceDescription = (
     (value) => Response.json(value),
     (response) => response.json(),
     (value) => !!value.description || value.available === false,
+    86400000,
+    false,
+    priority,
   );
-export const cachedPlaceImage = (src: string, scope = '') =>
+export const cachedPlaceImage = (src: string, scope = '', priority = 0) =>
   cached(
     src,
     scope,
@@ -136,6 +217,7 @@ export const cachedPlaceImage = (src: string, scope = '') =>
         credentials: 'omit',
         referrerPolicy: 'no-referrer',
         mode: 'cors',
+        signal: AbortSignal.timeout(20000),
         cache: 'no-store',
       });
       if (
@@ -157,10 +239,15 @@ export const cachedPlaceImage = (src: string, scope = '') =>
     (blob) => new Response(blob, { headers: { 'Content-Type': blob.type } }),
     (response) => response.blob(),
     () => true,
+    86400000,
+    false,
+    priority,
   );
 export async function clearPlaceClientCache() {
   generation++;
   memory.clear();
+  freshUntil.clear();
+  priorities.clear();
   stores.clear();
   if (typeof caches !== 'undefined')
     await Promise.all(
@@ -170,7 +257,7 @@ export async function clearPlaceClientCache() {
     );
 }
 
-export const cachedAreaWiki = (endpoint: string, scope = '') =>
+export const cachedAreaWiki = (endpoint: string, scope = '', priority = 0) =>
   cached(
     endpoint,
     scope,
@@ -178,4 +265,46 @@ export const cachedAreaWiki = (endpoint: string, scope = '') =>
     (value) => Response.json(value),
     (response) => response.json(),
     () => true,
+    86400000,
+    false,
+    priority,
   );
+
+export const cachedMapGeometry = (endpoint: string, scope = '', priority = 0) =>
+  cached<any>(
+    endpoint,
+    scope + ':map-v1',
+    () => json(endpoint),
+    (value) => Response.json(value),
+    (r) => r.json(),
+    (value) => Array.isArray(value?.features),
+    (value) => (value.features.length ? 86400000 : 30000),
+    true,
+    priority,
+  );
+export const cachedMapSuggestions = (
+  endpoint: string,
+  scope = '',
+  priority = 0,
+) =>
+  cached<any>(
+    endpoint,
+    scope + ':map-v1',
+    () => json(endpoint, currentLanguage(), 120000),
+    (value) => Response.json(value),
+    (r) => r.json(),
+    (value) => Array.isArray(value?.candidates),
+    (value) => (value.incomplete ? 30000 : CACHE_TTL),
+    true,
+    priority,
+  );
+export async function invalidateMapResource(endpoint: string, scope: string) {
+  const namespace = scope + ':map-v1';
+  const key = namespace + ':' + endpoint;
+  memory.delete(key);
+  freshUntil.delete(key);
+  const cache = await store(namespace);
+  await cache
+    ?.delete(new Request(new URL(endpoint, location.origin)))
+    .catch(() => {});
+}

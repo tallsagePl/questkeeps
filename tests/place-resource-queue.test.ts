@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   queuePlaceResource,
+  promotePlaceResource,
   retryPlaceWhenIdle,
 } from '../lib/place-resource-queue';
 import { queuePreview } from '../lib/preview-queue';
@@ -62,5 +63,42 @@ test('idle retries wait for resource and preview queues, obey visibility and can
     delete (globalThis as any).document;
     if (nav) Object.defineProperty(globalThis, 'navigator', nav);
     else delete (globalThis as any).navigator;
+  }
+});
+
+test('background work reserves foreground slots and queued resources can be promoted', async () => {
+  const started: string[] = [];
+  const finish = new Map<string, () => void>();
+  const add = (key: string, priority: number) =>
+    queuePlaceResource(
+      () =>
+        new Promise<void>((resolve) => {
+          started.push(key);
+          finish.set(key, resolve);
+        }),
+      priority,
+      key,
+    );
+  const a = add('background-a', 2),
+    b = add('background-b', 2),
+    c = add('promoted', 2),
+    d = add('background-d', 2);
+  const visible = add('visible', 0);
+  try {
+    await flush();
+    assert.deepEqual(started, ['background-a', 'background-b', 'visible']);
+    promotePlaceResource('promoted');
+    await flush();
+    assert.ok(started.includes('promoted'));
+    assert.ok(!started.includes('background-d'));
+    finish.get('visible')!();
+    finish.get('promoted')!();
+    await flush();
+    finish.get('background-a')!();
+    await flush();
+    assert.ok(started.includes('background-d'));
+  } finally {
+    for (const complete of finish.values()) complete();
+    await Promise.all([a, b, c, d, visible]);
   }
 });

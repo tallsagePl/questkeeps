@@ -1,5 +1,6 @@
-import { CACHE_TTL } from './memory-cache';
 import { clearPlaceClientCache } from './place-client-cache';
+import { clearPlaceSearchRequests } from './place-search-client';
+const PREVIEW_STORAGE_TTL = 86400000;
 // Only preview images are persisted; originals and video streams never enter this cache.
 const prefix = 'questkeeps-previews-v1-';
 let generation = 0;
@@ -44,6 +45,7 @@ async function cacheFor(scope: string) {
 }
 export async function clearPreviewCache() {
   generation++;
+  clearPlaceSearchRequests();
   await clearPlaceClientCache();
   timers.forEach((timer) => clearTimeout(timer));
   timers.clear();
@@ -127,12 +129,17 @@ export async function previewBlob(
         new Response(blob, {
           headers: {
             'Content-Type': blob.type,
-            'X-QuestKeeps-Expires': String(Date.now() + CACHE_TTL),
+            'X-QuestKeeps-Expires': String(Date.now() + PREVIEW_STORAGE_TTL),
           },
         }),
       )
       .catch(() => {});
-    expire(cache, request, scope + request.url, Date.now() + CACHE_TTL);
+    expire(
+      cache,
+      request,
+      scope + request.url,
+      Date.now() + PREVIEW_STORAGE_TTL,
+    );
   }
   return blob;
 }

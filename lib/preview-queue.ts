@@ -137,4 +137,7 @@ export function queuePreview(
   };
 }
 
-export const previewQueueBusy = () => running.size > 0 || jobs.size > 0;
+export const previewQueueBusy = (foregroundOnly = false) =>
+  [...jobs.values()].some(
+    (job) => !job.finished && (!foregroundOnly || rank(job) < 2),
+  );

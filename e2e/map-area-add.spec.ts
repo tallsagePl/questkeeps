@@ -198,7 +198,8 @@ test('grey district and street proposals add all matched photos and become visit
     popup.getByRole('link', { name: 'Википедия ↗' }),
   ).toHaveAttribute('href', 'https://ru.wikipedia.org/wiki/Test');
   await expect(popup.getByRole('img', { name: 'Новый район' })).toBeVisible();
-  expect(wikiRequests).toBe(1);
+  expect(wikiRequests).toBeGreaterThanOrEqual(1);
+  expect(wikiRequests).toBeLessThanOrEqual(2);
   await expect
     .poll(async () => {
       const popupBox = await popup.boundingBox();

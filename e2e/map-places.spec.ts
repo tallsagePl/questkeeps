@@ -118,6 +118,9 @@ test('real public street and district geometry is visible above tiles, with lege
   await page.route('**/api/media/*/places', (r) =>
     r.fulfill({ json: { suggestions: [] } }),
   );
+  await page.route('**/api/trips/public-map/area-suggestions', (r) =>
+    r.fulfill({ json: { candidates: [], incomplete: false } }),
+  );
   let missingRequests = 0;
   await page.route('**/api/media/*/places/*/geometry', (r) => {
     const key = new URL(r.request().url()).pathname.split('/')[3];
