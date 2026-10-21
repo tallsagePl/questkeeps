@@ -1,3 +1,7 @@
+import {
+  photoSearchRegions,
+  type PhotoSearchRegion,
+} from './photo-search-regions';
 import { russianAreaTitle, russianAreaDescription } from './area-localization';
 import { all, one, run, db, id, type Row } from './db';
 import { closestCity } from './city-lookup';
@@ -50,29 +54,26 @@ export function eligibleAreaObject(e: any) {
         ['neighbourhood', 'quarter', 'suburb'].includes(t.place)))
   );
 }
-// closestCity accepts points up to 35 km away. Use the same fixed public-city
-// coverage everywhere, with a margin; neither GPS nor a trip-derived radius is sent.
-export const PUBLIC_CITY_RADIUS_METERS = 40000;
-export const areaCityCacheKey = (lat: number, lon: number) =>
-  'v3:' + lat + ',' + lon + ':' + PUBLIC_CITY_RADIUS_METERS;
-export async function discoverCity(lat: number, lon: number) {
-  const radius = PUBLIC_CITY_RADIUS_METERS;
-  const key = areaCityCacheKey(lat, lon);
+export async function discoverPhotoRegion(region: PhotoSearchRegion) {
+  const { key, lat, lon, radius } = region;
   let pending = discovered.get(key);
   if (pending) return pending;
   pending = (async () => {
-    // This seed is the public GeoNames city centre, never a photograph coordinate.
+    // Cache only public map geometry for the stable cell around the photographs.
     const stored = one(
       'SELECT json,updated FROM map_area_city_cache WHERE key=?',
       key,
     );
     if (stored && Date.now() - stored.updated < 86400000)
       return { ids: JSON.parse(stored.json) as string[], incomplete: false };
-    // Request complete geometry, including boundaries crossing the search circle.
-    // Unlike the old tile grid, this covers the old town and outlying photo clusters.
+    // Load full objects around this cell, including districts enclosing its centre.
     const around = '(around:' + radius + ',' + lat + ',' + lon + ')';
     const elements = await overpass(
-      '[out:json][timeout:40];(' +
+      '[out:json][timeout:40];is_in(' +
+        lat +
+        ',' +
+        lon +
+        ')->.containing;(' +
         'way["name"]["highway"]' +
         around +
         ';' +
@@ -82,6 +83,8 @@ export async function discoverCity(lat: number, lon: number) {
         'rel["name"]["boundary"="administrative"]["admin_level"~"^(8|9|10)$"]' +
         around +
         ';' +
+        'rel(pivot.containing)["name"]["boundary"="administrative"]["admin_level"~"^(8|9|10)$"];' +
+        'wr(pivot.containing)["name"]["place"~"^(neighbourhood|quarter|suburb)$"];' +
         ');out geom;',
       50000,
     );
@@ -133,6 +136,22 @@ export async function discoverCity(lat: number, lon: number) {
         incomplete = true;
         continue;
       }
+      // Adjacent cells can return different connected pieces of the same street.
+      // Keep the union so a later, smaller lookup cannot trim existing geometry.
+      if (object.type === 'way' && object.tags.highway) {
+        const saved = one('SELECT geometry FROM map_areas WHERE id=?', areaId);
+        if (saved) {
+          const previous = JSON.parse(saved.geometry).features || [];
+          const present = new Set(
+            geometry.features.map((f: any) => JSON.stringify(f.geometry)),
+          );
+          geometry.features.push(
+            ...previous.filter(
+              (f: any) => !present.has(JSON.stringify(f.geometry)),
+            ),
+          );
+        }
+      }
       const kind = geometry.features.some(
         (f: any) => f.properties.kind === 'district',
       )
@@ -177,12 +196,18 @@ export async function discoverCity(lat: number, lon: number) {
     return { ids: results, incomplete };
   })().catch((error) => {
     // Keep previously downloaded public geometry visible during provider outages.
+    const city = closestCity(lat, lon);
     const fallback =
       one('SELECT json FROM map_area_city_cache WHERE key=?', key) ||
-      one(
-        'SELECT json FROM map_area_city_cache WHERE key=?',
-        'v2:' + lat + ',' + lon,
-      );
+      (city &&
+        (one(
+          'SELECT json FROM map_area_city_cache WHERE key=?',
+          'v3:' + city.lat + ',' + city.lon + ':40000',
+        ) ||
+          one(
+            'SELECT json FROM map_area_city_cache WHERE key=?',
+            'v2:' + city.lat + ',' + city.lon,
+          )));
     if (fallback)
       return { ids: JSON.parse(fallback.json) as string[], incomplete: true };
     throw error;
@@ -210,22 +235,12 @@ export function accessibleAreaPhotos(tripId: string, userId: string) {
 }
 export async function areaSuggestions(tripId: string, userId: string) {
   const { photos } = accessibleAreaPhotos(tripId, userId);
-  const seeds = new Map<string, { lat: number; lon: number }>();
-  for (const photo of photos) {
-    const city = closestCity(photo.lat, photo.lon);
-    if (city) {
-      const key = city.country + ':' + city.name;
-      seeds.set(key, {
-        lat: city.lat,
-        lon: city.lon,
-      });
-    }
-  }
+  const regions = photoSearchRegions(photos as { lat: number; lon: number }[]);
   let incomplete = false;
   const ids = new Set<string>();
-  for (const city of seeds.values()) {
+  for (const region of regions) {
     try {
-      const result = await discoverCity(city.lat, city.lon);
+      const result = await discoverPhotoRegion(region);
       result.ids.forEach((id) => ids.add(id));
       incomplete ||= result.incomplete;
     } catch {

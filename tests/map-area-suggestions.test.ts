@@ -8,8 +8,7 @@ process.env.APP_URL = 'http://localhost:3000';
 const { db, run, all, one } = await import('../lib/db');
 const { handle } = await import('../lib/api');
 const { session } = await import('../lib/access');
-const { closestCity } = await import('../lib/city-lookup');
-const { areaCityCacheKey } = await import('../lib/map-area-suggestions');
+const { photoSearchRegions } = await import('../lib/photo-search-regions');
 const area = {
   type: 'FeatureCollection',
   features: [
@@ -163,16 +162,15 @@ run(
   JSON.stringify(area),
   Date.now(),
 );
-for (const photo of all('SELECT lat,lon FROM media')) {
-  const city = closestCity(photo.lat, photo.lon);
-  if (city)
-    run(
-      'INSERT OR REPLACE INTO map_area_city_cache VALUES (?,?,?)',
-      areaCityCacheKey(city.lat, city.lon),
-      JSON.stringify(['osm-relation-100']),
-      Date.now(),
-    );
-}
+for (const region of photoSearchRegions(
+  all('SELECT lat,lon FROM media') as { lat: number; lon: number }[],
+))
+  run(
+    'INSERT OR REPLACE INTO map_area_city_cache VALUES (?,?,?)',
+    region.key,
+    JSON.stringify(['osm-relation-100']),
+    Date.now(),
+  );
 const cookies = Object.fromEntries(
   ['owner', 'member', 'stranger'].map((u) => [u, 'ta_session=' + session(u)]),
 );
