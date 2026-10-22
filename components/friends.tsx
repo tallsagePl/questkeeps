@@ -258,7 +258,11 @@ export default function Friends({
   }
   return (
     <section
-      className={'friends-section' + (compact ? ' friends-compact' : '')}
+      className={
+        'friends-section' +
+        (compact ? ' friends-compact' : '') +
+        (compact && lists.friends.length ? ' friends-compact-populated' : '')
+      }
       id={compact ? undefined : 'friends'}
       aria-label={t('Друзья')}
     >

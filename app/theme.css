@@ -3948,3 +3948,9 @@ a:any-link:focus-visible,
     display: none;
   }
 }
+
+.friends-compact:not(.friends-compact-populated) {
+  border-bottom: 0;
+  padding-bottom: 0;
+  margin-bottom: 32px;
+}
