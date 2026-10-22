@@ -3,6 +3,7 @@ import {
   registrationPasswordPattern,
   registrationPasswordHint,
 } from '../lib/password-policy';
+import WelcomeSlideshow from './welcome-slideshow';
 import { isAreaPlace } from '../lib/place-kind';
 import {
   announceSessionChange,
@@ -864,14 +865,7 @@ function ArchiveContent({
                 'Соберите фотографии, маршруты и маленькие открытия в одном архиве. И разделите воспоминания с теми, кто был рядом.',
               )}
             </p>
-            <div className="landscape" aria-hidden="true">
-              <div className="sun" />
-              <div className="mountain far" />
-              <div className="mountain near" />
-              <div className="landscape-label">
-                {t('СОХРАНЯЙТЕ МЕСТА. ВОЗВРАЩАЙТЕСЬ К ЧУВСТВАМ.')}
-              </div>
-            </div>
+            <WelcomeSlideshow />
             <div className="welcome-details">
               <span>
                 <Icon name="cloud" />
