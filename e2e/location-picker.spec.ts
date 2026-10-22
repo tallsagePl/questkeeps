@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
+
 for (const mobile of [false, true])
   test(
     'choose missing GPS on a map and save ' +

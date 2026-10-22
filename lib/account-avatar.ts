@@ -1,5 +1,6 @@
 import { accountToken } from './yandex';
 import { driveIconSVG } from './drive-icon';
+
 function avatarResponse(body: BodyInit, type: string, maxAge: number) {
   return new Response(body, {
     headers: {
@@ -13,6 +14,7 @@ function avatarResponse(body: BodyInit, type: string, maxAge: number) {
     },
   });
 }
+
 export async function accountAvatar(accountId: string) {
   try {
     const token = await accountToken(accountId);

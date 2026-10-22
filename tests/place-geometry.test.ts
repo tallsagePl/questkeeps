@@ -1,10 +1,15 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+
 process.env.DATABASE_PATH = './data/geometry-' + randomUUID() + '.sqlite';
+
 const { geometryFromOsm } = await import('../lib/place-geometry');
+
 const { db } = await import('../lib/db');
+
 after(() => db.close());
+
 test('street lines and district boundaries keep actual geometry and holes, incomplete rings are not fabricated', () => {
   const pt = (lon: number, lat: number) => ({ lon, lat });
   const result = geometryFromOsm(
@@ -190,8 +195,8 @@ test('geometry resolves only public article coordinates, persists success and re
   );
   const { placeGeometry } = await import('../lib/place-geometry');
   const original = globalThis.fetch;
-  let calls = 0,
-    failed = false;
+  let calls = 0;
+  let failed = false;
   const urls: string[] = [];
   t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   globalThis.fetch = async (input) => {

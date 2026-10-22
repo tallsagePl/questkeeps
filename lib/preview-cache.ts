@@ -4,12 +4,18 @@ import {
 } from './browser-storage';
 import { clearPlaceClientCache } from './place-client-cache';
 import { clearPlaceSearchRequests } from './place-search-client';
+
 const PREVIEW_STORAGE_TTL = 86400000;
+
 // Only preview images are persisted; originals and video streams never enter this cache.
 const prefix = 'questkeeps-previews-v2-';
+
 let generation = 0;
+
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
+
 const pruned = new Set<string>();
+
 function expire(cache: Cache, request: Request, key: string, at: number) {
   const previous = timers.get(key);
   if (previous) clearTimeout(previous);
@@ -24,6 +30,7 @@ function expire(cache: Cache, request: Request, key: string, at: number) {
     ),
   );
 }
+
 async function cacheFor(scope: string) {
   const digest = await crypto.subtle.digest(
     'SHA-256',
@@ -47,6 +54,7 @@ async function cacheFor(scope: string) {
   }
   return cache;
 }
+
 export async function clearPreviewCache() {
   generation++;
   clearPrivateLocalStorage();
@@ -63,6 +71,7 @@ export async function clearPreviewCache() {
     );
   }
 }
+
 export async function discardPreview(src: string, scope: string) {
   const request = await opaqueCacheRequest(src);
   const key = scope + request.url;
@@ -74,6 +83,7 @@ export async function discardPreview(src: string, scope: string) {
     await cache?.delete(request).catch(() => {});
   }
 }
+
 async function validatePreview(blob: Blob) {
   const url = URL.createObjectURL(blob);
   try {
@@ -84,6 +94,7 @@ async function validatePreview(blob: Blob) {
     URL.revokeObjectURL(url);
   }
 }
+
 export async function previewBlob(
   src: string,
   scope: string,

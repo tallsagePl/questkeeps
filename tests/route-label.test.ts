@@ -2,11 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after } from 'node:test';
-process.env.DATABASE_PATH = './data/labels-' + randomUUID() + '.sqlite';
-const { closestCity } = await import('../lib/infer-trip');
-const { db } = await import('../lib/db');
-after(() => db.close());
 import { routeLabel } from '../lib/route-label';
+
+process.env.DATABASE_PATH = './data/labels-' + randomUUID() + '.sqlite';
+
+const { closestCity } = await import('../lib/infer-trip');
+
+const { db } = await import('../lib/db');
+
+after(() => db.close());
+
 test('названия маршрута следуют языку, точной географии и разделителю', () => {
   const points = [
     [55.5991, 37.3552],

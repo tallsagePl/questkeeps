@@ -1,18 +1,24 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+
 process.env.DATABASE_PATH = './data/nearby-' + randomUUID() + '.sqlite';
+
 const { db } = await import('../lib/db');
+
 const { nearby, wiki } = await import('../lib/places');
+
 const originalFetch = globalThis.fetch;
+
 after(() => {
   globalThis.fetch = originalFetch;
   db.close();
 });
+
 test('близкие кадры используют один запрос, расстояния считаются для каждого кадра, сбой не кешируется', async () => {
-  let calls = 0,
-    charged = 0,
-    fail = false;
+  let calls = 0;
+  let charged = 0;
+  let fail = false;
   globalThis.fetch = async () => {
     calls++;
     if (fail) return new Response('', { status: 502 });
@@ -57,8 +63,8 @@ test('ошибка перегрузки внутри HTTP 200 повторяет
 });
 
 test('обращения к Википедии выполняются последовательно', async () => {
-  let active = 0,
-    max = 0;
+  let active = 0;
+  let max = 0;
   globalThis.fetch = async () => {
     active++;
     max = Math.max(max, active);
@@ -210,6 +216,7 @@ test('если главное фото отсутствует, берём фот
   );
   assert.equal(calls, 2);
 });
+
 test('главное фото не требует запасного запроса; небезопасные и несвободные файлы не подставляются', async () => {
   const { placeImage } = await import('../lib/places');
   let calls = 0;

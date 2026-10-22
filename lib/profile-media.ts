@@ -13,12 +13,14 @@ export function ownProfileMedia(req: Request, id: string) {
   );
   return media || fail(404, 'Файл недоступен');
 }
+
 export function profileMediaGroups(userId: string) {
   return all(
     'SELECT t.id,t.title,COUNT(*) count FROM media m JOIN trips t ON t.id=m.trip_id WHERE m.user_id=? GROUP BY t.id ORDER BY MAX(m.taken) DESC,t.id',
     userId,
   );
 }
+
 export function profileMediaPage(userId: string, url: URL) {
   const trip = url.searchParams.get('trip');
   if (!trip || trip.length > 100) fail(400, 'Выберите поездку');
@@ -48,8 +50,8 @@ export function profileMediaPage(userId: string, url: URL) {
     trip,
     ...(cursor ? [cursor.taken, cursor.taken, cursor.id] : []),
   );
-  const media = rows.slice(0, 30),
-    last = media.at(-1);
+  const media = rows.slice(0, 30);
+  const last = media.at(-1);
   return {
     media,
     next:
@@ -60,6 +62,7 @@ export function profileMediaPage(userId: string, url: URL) {
         : null,
   };
 }
+
 export function sharedProfileTrips(viewerId: string, targetId: string) {
   if (viewerId === targetId) return [];
   // Both people must still participate, and their permitted dates must overlap.

@@ -4,7 +4,9 @@ import {
   promotePlaceResource,
 } from './place-resource-queue';
 import { MemoryCache, CACHE_TTL } from './memory-cache';
+
 type PlaceInfo = { image: string | null };
+
 export type PlaceText = {
   description: string;
   summary: string;
@@ -13,12 +15,19 @@ export type PlaceText = {
   available?: boolean;
   language?: string;
 };
+
 const prefix = 'questkeeps-place-resources-v4-';
+
 const memory = new MemoryCache<string, Promise<unknown>>();
+
 const stores = new MemoryCache<string, Promise<Cache | null>>();
+
 let generation = 0;
+
 const priorities = new Map<string, number>();
+
 const freshUntil = new Map<string, number>();
+
 async function store(scope: string) {
   if (typeof caches === 'undefined') return null;
   let pending = stores.get(scope);
@@ -49,6 +58,7 @@ async function store(scope: string) {
   stores.set(scope, pending);
   return pending;
 }
+
 async function cached<T>(
   endpoint: string,
   scope: string,
@@ -72,8 +82,8 @@ async function cached<T>(
   freshUntil.delete(key);
   const version = generation;
   const pending = (async () => {
-    const cache = await store(scope),
-      request = await opaqueCacheRequest(endpoint);
+    const cache = await store(scope);
+    const request = await opaqueCacheRequest(endpoint);
     const saved = await cache?.match(request).catch(() => undefined);
     let stale: T | undefined;
     if (saved) {
@@ -154,10 +164,12 @@ async function cached<T>(
   });
   return pending;
 }
+
 const currentLanguage = () =>
   typeof document !== 'undefined' && document.documentElement.lang === 'en'
     ? 'en'
     : 'ru';
+
 async function json<T>(
   endpoint: string,
   language = currentLanguage(),
@@ -175,6 +187,7 @@ async function json<T>(
     });
   return response.json();
 }
+
 export const cachedPlaceInfo = (
   endpoint: string,
   scope = '',
@@ -192,6 +205,7 @@ export const cachedPlaceInfo = (
     false,
     priority,
   );
+
 export const cachedPlaceDescription = (
   endpoint: string,
   scope = '',
@@ -209,6 +223,7 @@ export const cachedPlaceDescription = (
     false,
     priority,
   );
+
 export const cachedPlaceImage = (src: string, scope = '', priority = 0) =>
   cached(
     src,
@@ -226,8 +241,8 @@ export const cachedPlaceImage = (src: string, scope = '', priority = 0) =>
         !response.headers.get('content-type')?.startsWith('image/')
       )
         throw new Error('Image unavailable');
-      const blob = await response.blob(),
-        url = URL.createObjectURL(blob);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       try {
         const image = new Image();
         image.src = url;
@@ -244,6 +259,7 @@ export const cachedPlaceImage = (src: string, scope = '', priority = 0) =>
     false,
     priority,
   );
+
 export async function clearPlaceClientCache() {
   generation++;
   memory.clear();
@@ -283,6 +299,7 @@ export const cachedMapGeometry = (endpoint: string, scope = '', priority = 0) =>
     true,
     priority,
   );
+
 export const cachedMapSuggestions = (
   endpoint: string,
   scope = '',
@@ -299,6 +316,7 @@ export const cachedMapSuggestions = (
     true,
     priority,
   );
+
 export async function invalidateMapResource(endpoint: string, scope: string) {
   const namespace = scope + ':map-v1';
   const key = namespace + ':' + endpoint;

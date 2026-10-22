@@ -1,14 +1,19 @@
 const key = 'questkeepsNavigation';
+
 const tabs = ['gallery', 'places', 'map', 'notes', 'settings'];
+
 type Entry = { version: 1; back: boolean; tab?: string; sectionSteps?: number };
+
 function entry(): Entry | undefined {
   const value = window.history.state?.[key];
   if (value?.version === 1 && typeof value.back === 'boolean') return value;
 }
+
 function state() {
   const value = window.history.state;
   return value && typeof value === 'object' ? value : {};
 }
+
 function browserPreviousEntry(): boolean | undefined {
   // Navigation API limits back traversal to contiguous same-origin entries,
   // even when the site's no-referrer policy deliberately hides document.referrer.
@@ -19,6 +24,7 @@ function browserPreviousEntry(): boolean | undefined {
     ? navigation.canGoBack
     : undefined;
 }
+
 export function initializeNavigation() {
   if (entry()) return;
   let back = false;
@@ -34,10 +40,12 @@ export function initializeNavigation() {
     '',
   );
 }
+
 export function navigationTab() {
   const tab = entry()?.tab;
   return tab && tabs.includes(tab) ? tab : 'gallery';
 }
+
 export function pushNavigation(path: string, tab = 'gallery') {
   initializeNavigation();
   const destination = new URL(path, window.location.href);
@@ -63,6 +71,7 @@ export function pushNavigation(path: string, tab = 'gallery') {
     destination.href,
   );
 }
+
 function section(url: URL) {
   return url.pathname === '/'
     ? url.searchParams.get('trip')
@@ -70,6 +79,7 @@ function section(url: URL) {
       : 'home'
     : url.pathname;
 }
+
 export function goBack() {
   initializeNavigation();
   const navigation = (
@@ -82,8 +92,8 @@ export function goBack() {
   ).navigation;
   const current = navigation?.currentEntry;
   if (current && current.index >= 0 && navigation?.entries) {
-    const entries = navigation.entries(),
-      here = new URL(window.location.href);
+    const entries = navigation.entries();
+    const here = new URL(window.location.href);
     for (let i = current.index - 1; i >= 0; i--) {
       const previous = entries[i];
       if (!previous) break;

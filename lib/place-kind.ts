@@ -1,10 +1,11 @@
 export type PlaceAreaKind = 'street' | 'district';
+
 export function placeAreaKind(
   title: string,
   summary: string,
 ): PlaceAreaKind | null {
-  const name = title.toLowerCase().replace(/́/g, ''),
-    text = summary.toLowerCase().replace(/́/g, '');
+  const name = title.toLowerCase().replace(/́/g, '');
+  const text = summary.toLowerCase().replace(/́/g, '');
   const street =
     /^(?:улица|проспект|бульвар|набережная)\b|(?:проспект|бульвар|набережная|street|avenue|boulevard)\s*(?:\([^)]*\))?$/u;
   if (
@@ -41,5 +42,6 @@ export function placeAreaKind(
     return 'district';
   return null;
 }
+
 export const isAreaPlace = (title: string, summary: string) =>
   placeAreaKind(title, summary) !== null;

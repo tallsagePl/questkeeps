@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
+import sharp from 'sharp';
+import AxeBuilder from '@axe-core/playwright';
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/trips/*/sync', (route) =>
     route.fulfill({ json: { synced: 0, failed: 0 } }),
   );
 });
-import sharp from 'sharp';
-import AxeBuilder from '@axe-core/playwright';
+
 test('превью фото и видео, подписи, наведение, клавиатура и уменьшение анимаций', async ({
   page,
 }) => {
@@ -908,9 +910,9 @@ test('открытые места в отдельной вкладке без д
     }),
   );
   let allowMuseumImage = false;
-  let infoCalls = 0,
-    imageCalls = 0,
-    textCalls = 0;
+  let infoCalls = 0;
+  let imageCalls = 0;
+  let textCalls = 0;
   await page.clock.install();
   await page.route(
     '**/api/media/*/places/*/image',
@@ -1005,8 +1007,8 @@ test('открытые места в отдельной вкладке без д
   const retained = await card
     .locator('.place-wiki-image img')
     .evaluate((img) => {
-      const box = img.parentElement!.getBoundingClientRect(),
-        image = img.getBoundingClientRect();
+      const box = img.parentElement!.getBoundingClientRect();
+      const image = img.getBoundingClientRect();
       return box.height / image.height;
     });
   expect(retained).toBeGreaterThan(0.69);
@@ -1049,8 +1051,8 @@ test('открытые места в отдельной вкладке без д
   await expect(
     page.getByRole('dialog').getByRole('heading', { name: /^Наш кадр/ }),
   ).toBeVisible();
-  const beforeDetailsImages = imageCalls,
-    beforeDetailsInfo = infoCalls;
+  const beforeDetailsImages = imageCalls;
+  const beforeDetailsInfo = infoCalls;
   const details = page
     .getByRole('dialog')
     .locator('.confirmed-photo-place')
@@ -1168,10 +1170,12 @@ test('открытые места в отдельной вкладке без д
 
   expect(imageCalls).toBe(beforeDetailsImages);
   const title = await confirmed
-      .locator('.confirmed-place-heading > strong')
-      .boundingBox(),
-    photo = await confirmed.locator('.confirmed-place-picture').boundingBox(),
-    trash = await confirmed.locator('.place-trash').boundingBox();
+    .locator('.confirmed-place-heading > strong')
+    .boundingBox();
+  const photo = await confirmed
+    .locator('.confirmed-place-picture')
+    .boundingBox();
+  const trash = await confirmed.locator('.place-trash').boundingBox();
   expect(photo!.x).toBeGreaterThan(title!.x + title!.width);
   expect(trash!.x).toBeGreaterThan(photo!.x + photo!.width);
   await confirmed.screenshot({
@@ -1207,8 +1211,8 @@ test('открытые места в отдельной вкладке без д
   await expect(
     museum.getByText('Изображение недоступно', { exact: true }),
   ).toBeVisible();
-  const retryBounds = await retryImage.boundingBox(),
-    imageBounds = await museum.locator('.place-wiki-image').boundingBox();
+  const retryBounds = await retryImage.boundingBox();
+  const imageBounds = await museum.locator('.place-wiki-image').boundingBox();
   expect(retryBounds!.y - imageBounds!.y).toBeLessThan(15);
   expect(
     imageBounds!.x + imageBounds!.width - retryBounds!.x - retryBounds!.width,
@@ -1219,9 +1223,9 @@ test('открытые места в отдельной вкладке без д
   await expect(
     museum.getByRole('img', { name: 'Музей', exact: true }),
   ).toHaveJSProperty('naturalWidth', 640);
-  const initialInfo = infoCalls,
-    initialImages = imageCalls,
-    initialTexts = textCalls;
+  const initialInfo = infoCalls;
+  const initialImages = imageCalls;
+  const initialTexts = textCalls;
   await page.getByRole('button', { name: 'Галерея', exact: true }).click();
   await page
     .getByRole('button', { name: 'Открытые места', exact: true })
@@ -1254,8 +1258,8 @@ test('открытые места в отдельной вкладке без д
   ).toHaveJSProperty('naturalWidth', 640);
   await expect.poll(() => infoCalls).toBeGreaterThan(initialInfo);
   await expect.poll(() => imageCalls).toBeGreaterThan(initialImages);
-  const textBox = await card.locator('.discovered-place-content').boundingBox(),
-    imageBox = await card.locator('.place-wiki-image').boundingBox();
+  const textBox = await card.locator('.discovered-place-content').boundingBox();
+  const imageBox = await card.locator('.place-wiki-image').boundingBox();
   expect(imageBox!.x).toBeGreaterThanOrEqual(textBox!.x + textBox!.width - 1);
   for (const theme of ['light', 'dark']) {
     await page.evaluate((theme) => {

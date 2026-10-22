@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 test('ошибки входа показаны у полей и снимаются после исправления', async ({
   page,
 }) => {
@@ -8,8 +9,8 @@ test('ошибки входа показаны у полей и снимаютс
     .fill('missing-' + Date.now() + '@example.test');
   await page.getByLabel('Пароль', { exact: true }).fill('WrongPassword123');
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
-  const email = page.locator('input[name="email"]'),
-    password = page.locator('input[name="password"]');
+  const email = page.locator('input[name="email"]');
+  const password = page.locator('input[name="password"]');
   await expect(email).toHaveAttribute('aria-invalid', 'true');
   await expect(password).toHaveAttribute('aria-invalid', 'true');
   await expect(
@@ -64,6 +65,7 @@ test('ошибки входа показаны у полей и снимаютс
     ),
   ).toBeTruthy();
 });
+
 test('даты и текст дневника проверяются возле полей', async ({ page }) => {
   await page.goto('/');
   await page

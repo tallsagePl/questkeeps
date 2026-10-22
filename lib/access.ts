@@ -1,6 +1,7 @@
 import { ensureUsername, descriptionMentions } from './profiles';
 import { addMapDetails } from './map-details';
 import { one, all, run, hash, token, Row } from './db';
+
 export class HttpError extends Error {
   constructor(
     public status: number,
@@ -9,9 +10,11 @@ export class HttpError extends Error {
     super(message);
   }
 }
+
 export function fail(status: number, message: string): never {
   throw new HttpError(status, message);
 }
+
 export function cookie(req: Request, name: string) {
   return (
     (req.headers.get('cookie') || '')
@@ -21,6 +24,7 @@ export function cookie(req: Request, name: string) {
       ?.slice(name.length + 1) || ''
   );
 }
+
 export function userProfile(userId: string): Row | undefined {
   const username = ensureUsername(userId);
   const user = one(
@@ -39,6 +43,7 @@ export function userProfile(userId: string): Row | undefined {
       }
     : undefined;
 }
+
 export function currentUser(req: Request) {
   const s = cookie(req, 'ta_session');
   return s
@@ -52,9 +57,11 @@ export function currentUser(req: Request) {
       })()
     : undefined;
 }
+
 export function requireUser(req: Request): Row {
   return currentUser(req) || fail(401, 'Сначала войдите в аккаунт');
 }
+
 export function session(userId: string) {
   const raw = token();
   run('DELETE FROM sessions WHERE expires<?', Date.now());
@@ -66,6 +73,7 @@ export function session(userId: string) {
   );
   return raw;
 }
+
 export function sessionCookie(raw: string, seconds = 30 * 86400) {
   return (
     'ta_session=' +
@@ -75,6 +83,7 @@ export function sessionCookie(raw: string, seconds = 30 * 86400) {
     ((process.env.APP_URL || '').startsWith('https:') ? '; Secure' : '')
   );
 }
+
 export function membership(tripId: string, userId: string): Row {
   const trip =
     one('SELECT * FROM trips WHERE id=?', tripId) ||
@@ -89,11 +98,13 @@ export function membership(tripId: string, userId: string): Row {
     ) || fail(403, 'Нет доступа к поездке');
   return { ...trip, role: 'member', from: m.start, to: m.end };
 }
+
 export function owner(tripId: string, userId: string) {
   const t = membership(tripId, userId);
   if (t.role !== 'owner') fail(403, 'Это действие доступно владельцу');
   return t;
 }
+
 export function viewAccess(req: Request, tripId: string): Row {
   const share = new URL(req.url).searchParams.get('share');
   if (share) {
@@ -107,12 +118,15 @@ export function viewAccess(req: Request, tripId: string): Row {
   }
   return membership(tripId, requireUser(req).id);
 }
+
 export function inRange(day: string, from: string, to: string) {
   return day >= from && day <= to;
 }
+
 export function assertDay(day: string, t: Row) {
   if (!inRange(day, t.from, t.to)) fail(403, 'Дата вне периода вашего участия');
 }
+
 export function mediaFor(req: Request, mediaId: string) {
   const m =
     one(
@@ -124,6 +138,7 @@ export function mediaFor(req: Request, mediaId: string) {
   if (m.hidden || m.missing || !m.approved) fail(404, 'Файл недоступен');
   return m;
 }
+
 export function throttle(key: string, limit = 10, period = 15 * 60000) {
   const now = Date.now();
   run('DELETE FROM throttle WHERE until<?', now);
@@ -135,6 +150,7 @@ export function throttle(key: string, limit = 10, period = 15 * 60000) {
   if (one('SELECT count FROM throttle WHERE key=?', key)!.count > limit)
     fail(429, 'Слишком много попыток. Попробуйте позже');
 }
+
 export function tripData(req: Request, tripId: string) {
   const t = viewAccess(req, tripId);
   const user = currentUser(req);

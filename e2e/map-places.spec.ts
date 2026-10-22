@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import sharp from 'sharp';
+
 test('real public street and district geometry is visible above tiles, with legend and specific unavailable places', async ({
   page,
 }) => {

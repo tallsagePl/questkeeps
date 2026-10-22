@@ -9,7 +9,9 @@ type Job = {
   preempted: boolean;
   finished: boolean;
 };
+
 export const PREVIEW_TIMEOUT_MS = 20000;
+
 function runPreviewTask(job: Job, controller: AbortController): Promise<Blob> {
   let onAbort!: () => void;
   const interrupted = new Promise<never>((_, reject) => {
@@ -29,10 +31,15 @@ function runPreviewTask(job: Job, controller: AbortController): Promise<Blob> {
     controller.signal.removeEventListener('abort', onAbort);
   });
 }
+
 const jobs = new Map<string, Job>();
+
 const running = new Set<Job>();
+
 const rank = (job: Job) => Math.min(...job.consumers.values());
+
 let scheduled = false;
+
 function schedule() {
   if (scheduled) return;
   scheduled = true;
@@ -41,6 +48,7 @@ function schedule() {
     pump();
   });
 }
+
 function pump() {
   const waiting = [...jobs.values()]
     .filter((j) => !j.finished && !running.has(j))
@@ -86,6 +94,7 @@ function pump() {
       });
   }
 }
+
 export function queuePreview(
   key: string,
   priority: number,
@@ -93,7 +102,8 @@ export function queuePreview(
 ) {
   let job = jobs.get(key);
   if (!job) {
-    let resolve!: Job['resolve'], reject!: Job['reject'];
+    let resolve!: Job['resolve'];
+    let reject!: Job['reject'];
     const promise = new Promise<Blob>((yes, no) => {
       resolve = yes;
       reject = no;
@@ -110,8 +120,8 @@ export function queuePreview(
     };
     jobs.set(key, job);
   }
-  const current = job,
-    consumer = Symbol();
+  const current = job;
+  const consumer = Symbol();
   current.consumers.set(consumer, priority);
   schedule();
   return {

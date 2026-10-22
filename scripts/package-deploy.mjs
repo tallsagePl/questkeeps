@@ -4,16 +4,22 @@ import { resolve, join, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+
 if (!process.argv[2])
   throw Error('Supply an output directory outside the repository');
+
 const output = resolve(process.argv[2]);
+
 const outputRelative = relative(root, output);
+
 if (
   !outputRelative ||
   (!outputRelative.startsWith('..') && !isAbsolute(outputRelative))
 )
   throw Error('Output must be outside the repository');
+
 mkdirSync(output, { recursive: true });
+
 const files = execFileSync(
   'git',
   [
@@ -29,6 +35,7 @@ const files = execFileSync(
 )
   .split('\0')
   .filter(Boolean);
+
 for (const name of files) {
   if (
     /[\r\n]/.test(name) ||
@@ -40,6 +47,7 @@ for (const name of files) {
   )
     throw Error('Unexpected private or unsafe source path: ' + name);
 }
+
 for (const required of [
   'package-lock.json',
   'lib/data/place-names.json',
@@ -49,13 +57,18 @@ for (const required of [
   if (!files.includes(required) || !existsSync(join(root, required)))
     throw Error('Required deployment source is missing: ' + required);
 }
+
 const list = join(output, 'questkeeps-source-files.txt');
+
 const archive = join(output, 'questkeeps-source.tar.gz');
+
 writeFileSync(list, files.join('\n') + '\n');
+
 execFileSync('tar', ['-czf', archive, '-T', list], {
   cwd: root,
   stdio: 'pipe',
 });
+
 console.log(
   JSON.stringify({
     files: files.length,

@@ -1,6 +1,7 @@
 import exifr from 'exifr';
 import { one, run, hash, Row } from './db';
 import { mediaURL, trustedFetch, Resource } from './yandex';
+
 export async function readPhotoExif(
   accountId: string,
   r: Resource,
@@ -75,6 +76,7 @@ export async function readPhotoExif(
     return { metadataReadFailed: true };
   }
 }
+
 export function captureDay(r: Resource, info: Row): string | null {
   const value = info.DateTimeOriginal;
   // EXIF wall-clock dates have no timezone. Preserve the calendar day as recorded by the camera.

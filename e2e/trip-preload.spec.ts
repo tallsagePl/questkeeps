@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
+
 test('trip warms all resources before tabs open, reuses them after reload, and retains city selection and stale contours', async ({
   page,
 }) => {
@@ -66,10 +67,10 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
     release = resolve;
   });
   const previews = new Map<string, number>();
-  let areas = 0,
-    geometries = 0,
-    texts = 0,
-    lookups = 0;
+  let areas = 0;
+  let geometries = 0;
+  let texts = 0;
+  let lookups = 0;
   let providersFail = false;
   let refreshed = false;
   let geometryGate: Promise<void> | null = null;

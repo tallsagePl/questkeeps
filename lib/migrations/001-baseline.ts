@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { createHash } from 'node:crypto';
+
 export function baseline(db: Database.Database) {
   db.exec(
     'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE, name TEXT NOT NULL, password TEXT, created INTEGER NOT NULL);' +
@@ -72,8 +73,8 @@ export function baseline(db: Database.Database) {
       base =
         'user_' +
         createHash('sha256').update(user.id).digest('hex').slice(0, 8);
-    let username = base,
-      suffix = 1;
+    let username = base;
+    let suffix = 1;
     while (
       db.prepare('SELECT 1 FROM user_handles WHERE username=?').get(username)
     )

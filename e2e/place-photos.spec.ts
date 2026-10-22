@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
+
 test('photos of one landmark paginate inside the same viewer and respect single-photo and date-filter states', async ({
   page,
 }) => {
@@ -123,13 +124,13 @@ test('photos of one landmark paginate inside the same viewer and respect single-
   await museum.getByRole('button', { name: 'Ваши фото', exact: true }).click();
   const viewer = page.locator('dialog.modal');
   const previous = viewer.getByRole('button', {
-      name: 'Предыдущее фото этого места',
-      exact: true,
-    }),
-    next = viewer.getByRole('button', {
-      name: 'Следующее фото этого места',
-      exact: true,
-    });
+    name: 'Предыдущее фото этого места',
+    exact: true,
+  });
+  const next = viewer.getByRole('button', {
+    name: 'Следующее фото этого места',
+    exact: true,
+  });
   await expect(
     viewer.getByRole('heading', {
       name: 'Первый кадр Изменить название',
@@ -168,8 +169,8 @@ test('photos of one landmark paginate inside the same viewer and respect single-
   await expect(viewer.locator('.place-photo-counter')).toHaveText('Фото 2 / 3');
   await expect
     .poll(async () => {
-      const a = await next.boundingBox(),
-        b = await viewer.locator('.media-viewer').boundingBox();
+      const a = await next.boundingBox();
+      const b = await viewer.locator('.media-viewer').boundingBox();
       return a && b ? Math.abs(a.y + a.height / 2 - b.y - b.height / 2) : 999;
     })
     .toBeLessThan(2);

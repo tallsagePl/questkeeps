@@ -1,5 +1,6 @@
 import { one, run, decrypt, encrypt, Row } from './db';
 import { fail } from './access';
+
 export interface Resource {
   path: string;
   name: string;
@@ -16,6 +17,7 @@ export interface Resource {
   file?: string;
   _embedded?: { items: Resource[]; total: number };
 }
+
 export async function accountToken(accountId: string) {
   const a =
     one('SELECT * FROM accounts WHERE id=?', accountId) ||
@@ -46,6 +48,7 @@ export async function accountToken(accountId: string) {
   }
   return decrypt(a.token);
 }
+
 export async function disk(
   accountId: string,
   endpoint: string,
@@ -74,6 +77,7 @@ export async function disk(
   }
   return response.json();
 }
+
 export function normalizePath(p: string) {
   if (
     !p.startsWith('disk:/') ||
@@ -83,9 +87,11 @@ export function normalizePath(p: string) {
     fail(400, 'Неверный путь папки');
   return p === 'disk:/' ? p : p.replace(/\/+$/, '');
 }
+
 export function inside(p: string, root: string) {
   return p === root || p.startsWith(root === 'disk:/' ? root : root + '/');
 }
+
 export async function trustedFetch(
   url: string,
   headers: Record<string, string> = {},
@@ -127,6 +133,7 @@ export async function trustedFetch(
   }
   return r;
 }
+
 export async function mediaURL(m: Row, preview = false, signal?: AbortSignal) {
   if (preview) {
     const meta = (await disk(

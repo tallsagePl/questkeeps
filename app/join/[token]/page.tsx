@@ -1,4 +1,5 @@
 import Archive from '@/components/archive';
+
 export default async function Join({
   params,
 }: {

@@ -1,4 +1,5 @@
 import { includesDate } from './date-selection';
+
 type Photo = {
   id: string;
   kind: string;
@@ -6,7 +7,9 @@ type Photo = {
   hidden?: boolean | number;
   missing?: boolean | number;
 };
+
 type Association = { url: string; media_id: string; day: string };
+
 export function groupPlacePhotos<T extends Photo>(
   media: T[],
   places: Association[],

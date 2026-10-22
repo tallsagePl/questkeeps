@@ -1,5 +1,6 @@
 // Browser fixture server never calls external providers.
 const original = globalThis.fetch;
+
 globalThis.fetch = async (input, options) => {
   const value =
     typeof input === 'string' || input instanceof URL

@@ -8,9 +8,13 @@ import {
   clearlyNotAttraction,
   obviousAttraction,
 } from './attractions';
+
 let wikiQueue: Promise<void> = Promise.resolve();
+
 let lastWikiRequest = 0;
+
 let pendingWikiRequests = 0;
+
 export function wiki(
   params: Record<string, string>,
   language: string = 'ru',
@@ -41,6 +45,7 @@ export function wiki(
     pendingWikiRequests--;
   });
 }
+
 async function requestWiki(
   params: Record<string, string>,
   language: string,
@@ -104,10 +109,12 @@ type NearbyPlace = {
   lon: number;
   dist: number;
 };
+
 const attractionCache = new MemoryCache<
   number,
   { expires: number; allowed: boolean }
 >();
+
 async function filterAttractions(places: NearbyPlace[]) {
   const candidates = places.filter(
     (place) => !clearlyNotAttraction(place.title),
@@ -145,7 +152,9 @@ async function filterAttractions(places: NearbyPlace[]) {
       attractionCache.get(place.pageid)?.allowed,
   );
 }
+
 let russianGeoPausedUntil = 0;
+
 async function searchNearby(lat: number, lon: number): Promise<NearbyPlace[]> {
   const params = {
     list: 'geosearch',
@@ -220,17 +229,19 @@ async function searchNearby(lat: number, lon: number): Promise<NearbyPlace[]> {
     ];
   });
 }
+
 const nearbyCache = new MemoryCache<
   string,
   { expires: number; result: Promise<NearbyPlace[]> }
 >();
+
 export async function nearby(
   lat: number,
   lon: number,
   beforeFetch?: () => void,
 ) {
-  const centerLat = Number(lat.toFixed(3)),
-    centerLon = Number(lon.toFixed(3));
+  const centerLat = Number(lat.toFixed(3));
+  const centerLon = Number(lon.toFixed(3));
   const key = centerLat + ':' + centerLon;
   let cached = nearbyCache.get(key);
   if (!cached || cached.expires < Date.now()) {
@@ -252,7 +263,9 @@ export async function nearby(
     .filter((place) => place.dist <= 2000)
     .sort((a, b) => a.dist - b.dist);
 }
+
 const summaryCache = new MemoryCache<number, Promise<any>>();
+
 export async function placeSummary(
   pageId: number,
   origin?: { lat: number; lon: number },
@@ -312,6 +325,7 @@ const imageCache = new MemoryCache<
   string,
   { expires: number; image: string | null }
 >();
+
 function wikiImageUrl(source: unknown): string | null {
   if (typeof source !== 'string') return null;
   try {
@@ -327,7 +341,9 @@ function wikiImageUrl(source: unknown): string | null {
   } catch {}
   return null;
 }
+
 const pendingImages = new Map<string, Promise<string | null>>();
+
 export async function placeImage(
   pageId: number,
   language = 'ru',
@@ -348,6 +364,7 @@ export async function placeImage(
   }
   return pending;
 }
+
 async function loadPlaceImage(
   pageId: number,
   language: string,
@@ -391,8 +408,8 @@ async function loadPlaceImage(
       );
       const pages = Object.values(files.query?.pages || {}) as any[];
       for (const title of titles) {
-        const file = pages.find((item) => item.title === title),
-          info = file?.imageinfo?.[0];
+        const file = pages.find((item) => item.title === title);
+        const info = file?.imageinfo?.[0];
         // Commons files are freely reusable; do not fall back to local fair-use files.
         if (
           file?.imagerepository !== 'shared' ||
@@ -418,6 +435,7 @@ const textCache = new MemoryCache<
   number,
   { expires: number; result: Promise<{ summary: string; description: string }> }
 >();
+
 export async function placeText(pageId: number) {
   const cached = textCache.get(pageId);
   if (cached && cached.expires > Date.now()) return cached.result;

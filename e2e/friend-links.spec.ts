@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+
 test('friend links survive registration and login, add both people, and can be replaced or disabled', async ({
   page,
   browser,
 }) => {
-  const base = 'http://127.0.0.1:3101',
-    unique = Date.now();
+  const base = 'http://127.0.0.1:3101';
+  const unique = Date.now();
   const register = async (context: any, name: string, email: string) => {
     const r = await context.request.post(base + '/api/auth/register', {
       headers: { origin: base },
@@ -26,8 +27,8 @@ test('friend links survive registration and login, add both people, and can be r
   const field = page.getByLabel('Ссылка для друзей', { exact: true });
   await expect(field).toBeVisible();
   const url = await field.inputValue();
-  const search = await page.locator('#find-people').boundingBox(),
-    link = await page.locator('.friend-link-block').boundingBox();
+  const search = await page.locator('#find-people').boundingBox();
+  const link = await page.locator('.friend-link-block').boundingBox();
   expect(search!.x).toBeLessThan(link!.x);
   expect(Math.abs(search!.width - link!.width)).toBeLessThan(2);
   await page.screenshot({
@@ -122,8 +123,8 @@ test('friend links survive registration and login, add both people, and can be r
     'Ссылка недействительна или истекла',
   );
   await page.setViewportSize({ width: 390, height: 844 });
-  const mobileSearch = await page.locator('#find-people').boundingBox(),
-    mobileLink = await page.locator('.friend-link-block').boundingBox();
+  const mobileSearch = await page.locator('#find-people').boundingBox();
+  const mobileLink = await page.locator('.friend-link-block').boundingBox();
   expect(mobileLink!.y).toBeGreaterThan(mobileSearch!.y + mobileSearch!.height);
   expect(
     await page.evaluate(

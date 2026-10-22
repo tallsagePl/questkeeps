@@ -5,11 +5,16 @@ import { NextRequest } from 'next/server';
 import { migrate } from '../lib/migrations';
 import { baseline } from '../lib/migrations/001-baseline';
 import { validRegistrationPassword } from '../lib/password-policy';
-const { db, run, one, all, decrypt, hash } = await import('../lib/db');
+
+const { db, one, all, decrypt, hash } = await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const { queueVerification, deliverEmails, confirmEmail, emailPending } =
   await import('../lib/email-verification');
+
 after(() => db.close());
+
 async function request(
   path: string,
   data?: unknown,
@@ -29,9 +34,11 @@ async function request(
     path.split('?')[0].split('/'),
   );
 }
+
 function sessionCookie(response: Response) {
   return response.headers.get('set-cookie')!.match(/ta_session=[^;]+/)![0];
 }
+
 test('numbered migrations preserve legacy records, apply once, and reject newer schemas', () => {
   const legacy = new Database(':memory:');
   legacy.pragma('foreign_keys=ON');
@@ -60,6 +67,7 @@ test('numbered migrations preserve legacy records, apply once, and reject newer 
   assert.equal(fresh.pragma('user_version', { simple: true }), 3);
   fresh.close();
 });
+
 test('new passwords require Latin upper/lowercase and six characters; legacy login remains compatible', async () => {
   for (const value of [
     'abcde',
@@ -94,6 +102,7 @@ test('new passwords require Latin upper/lowercase and six characters; legacy log
     200,
   );
 });
+
 test('required verification creates no session; encrypted queue, retries, one-use token and owner-safe resend work', async () => {
   process.env.EMAIL_VERIFICATION_REQUIRED = 'true';
   process.env.RESEND_API_KEY = 'fixture-only';
@@ -189,6 +198,7 @@ test('required verification creates no session; encrypted queue, retries, one-us
     process.env.EMAIL_FROM = '';
   }
 });
+
 test('linked Yandex login returns to the password account and keeps private extra email out of public profile', async () => {
   process.env.YANDEX_CLIENT_ID = 'fixture-client';
   const created = await request('auth/register', {

@@ -2,11 +2,17 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
+
 process.env.DATABASE_PATH = './data/replies-' + randomUUID() + '.sqlite';
+
 process.env.APP_URL = 'http://localhost:3000';
+
 const { db, run, one } = await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const { session } = await import('../lib/access');
+
 for (const user of ['owner', 'member', 'other'])
   run(
     'INSERT INTO users VALUES (?,?,?,?,?)',
@@ -16,6 +22,7 @@ for (const user of ['owner', 'member', 'other'])
     null,
     Date.now(),
   );
+
 for (const trip of ['trip', 'different'])
   run(
     'INSERT INTO trips(id,owner_id,title,destination,start,end,created) VALUES (?,?,?,?,?,?,?)',
@@ -27,6 +34,7 @@ for (const trip of ['trip', 'different'])
     '2026-10-18',
     Date.now(),
   );
+
 run(
   'INSERT INTO members VALUES (?,?,?,?,1)',
   'trip',
@@ -34,6 +42,7 @@ run(
   '2026-10-12',
   '2026-10-14',
 );
+
 for (const [id, trip, day] of [
   ['note', 'trip', '2026-10-13'],
   ['early', 'trip', '2026-10-11'],
@@ -48,12 +57,14 @@ for (const [id, trip, day] of [
     day,
     'История',
   );
+
 const cookies = Object.fromEntries(
   ['owner', 'member', 'other'].map((user) => [
     user,
     'ta_session=' + session(user),
   ]),
 );
+
 async function request(
   path: string,
   method = 'GET',
@@ -69,7 +80,9 @@ async function request(
     path.split('/'),
   );
 }
+
 after(() => db.close());
+
 test('threaded replies enforce parent, author, trip and date permissions; deletion preserves other participants', async () => {
   const route = 'trips/trip/notes/note/replies';
   assert.equal(

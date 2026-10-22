@@ -1,21 +1,26 @@
 import { MemoryCache } from './memory-cache';
 import { wiki } from './places';
 import { one, run } from './db';
-import { isAreaPlace, placeAreaKind } from './place-kind';
+import { placeAreaKind } from './place-kind';
+
 export { isAreaPlace } from './place-kind';
+
 export type PlaceGeometry = {
   type: 'FeatureCollection';
   features: any[];
   title?: string;
   schemaVersion?: number;
 };
+
 type Coord = [number, number];
+
 const same = (a: Coord, b: Coord) => a[0] === b[0] && a[1] === b[1];
+
 function stitch(parts: Coord[][]) {
   const pending = parts
-      .filter((part) => part.length > 1)
-      .map((part) => [...part]),
-    rings: Coord[][] = [];
+    .filter((part) => part.length > 1)
+    .map((part) => [...part]);
+  const rings: Coord[][] = [];
   while (pending.length) {
     let ring = pending.shift()!;
     let joined = true;
@@ -41,11 +46,12 @@ function stitch(parts: Coord[][]) {
   }
   return rings;
 }
+
 function inside(point: Coord, ring: Coord[]) {
   let result = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const a = ring[i],
-      b = ring[j];
+    const a = ring[i];
+    const b = ring[j];
     if (
       a[1] > point[1] !== b[1] > point[1] &&
       point[0] < ((b[0] - a[0]) * (point[1] - a[1])) / (b[1] - a[1]) + a[0]
@@ -54,6 +60,7 @@ function inside(point: Coord, ring: Coord[]) {
   }
   return result;
 }
+
 export function geometryFromOsm(elements: any[], title: string): PlaceGeometry {
   const features: any[] = [];
   const coords = (geometry: any[]) =>
@@ -88,8 +95,8 @@ export function geometryFromOsm(elements: any[], title: string): PlaceGeometry {
   );
   for (const element of elements) {
     if (element.type === 'way' && relationWays.has(element.id)) continue;
-    const tags = element.tags || {},
-      properties = { title, kind: 'street' };
+    const tags = element.tags || {};
+    const properties = { title, kind: 'street' };
     if (
       element.type === 'relation' &&
       ['multipolygon', 'boundary'].includes(tags.type)
@@ -144,10 +151,15 @@ export function geometryFromOsm(elements: any[], title: string): PlaceGeometry {
   }
   return { type: 'FeatureCollection', features };
 }
+
 const cache = new MemoryCache<number, Promise<PlaceGeometry>>();
-let queue: Promise<void> = Promise.resolve(),
-  lastRequest = 0;
+
+let queue: Promise<void> = Promise.resolve();
+
+let lastRequest = 0;
+
 const providerBackoff = new Map<string, number>();
+
 export async function osmRequest(
   url: string,
   timeoutMs = 12000,
@@ -189,6 +201,7 @@ export async function osmRequest(
   );
   return pending;
 }
+
 export async function overpass(query: string, timeoutMs = 12000) {
   const providers = process.env.OVERPASS_ENDPOINT
     ? [process.env.OVERPASS_ENDPOINT]
@@ -212,6 +225,7 @@ export async function overpass(query: string, timeoutMs = 12000) {
 }
 
 const areaMaps = new MemoryCache<string, Promise<any[]>>();
+
 const normalizedName = (value: string) =>
   value
     .normalize('NFKD')
@@ -219,6 +233,7 @@ const normalizedName = (value: string) =>
     .replace(/\p{M}/gu, '')
     .replace(/\bmahallesi\b/g, '')
     .replace(/[^\p{L}\p{N}]/gu, '');
+
 export function matchingMapObjects(
   elements: any[],
   qid: string | undefined,
@@ -261,10 +276,11 @@ export function matchingMapObjects(
     );
   });
 }
+
 export async function publicLocalMap(lat: number, lon: number) {
-  const y = Math.round(lat * 100) / 100,
-    x = Math.round(lon * 100) / 100,
-    key = y + ',' + x;
+  const y = Math.round(lat * 100) / 100;
+  const x = Math.round(lon * 100) / 100;
+  const key = y + ',' + x;
   let pending = areaMaps.get(key);
   if (!pending) {
     const bbox = [
@@ -285,6 +301,7 @@ export async function publicLocalMap(lat: number, lon: number) {
   }
   return pending;
 }
+
 export async function placeGeometry(
   pageId: number,
   title: string,
@@ -400,8 +417,8 @@ export async function placeGeometry(
         Number.isFinite(coordinate?.lat) &&
         Number.isFinite(coordinate?.lon)
       ) {
-        const elements = await publicLocalMap(coordinate.lat, coordinate.lon),
-          matches = matchingMapObjects(elements, qid, names, kind);
+        const elements = await publicLocalMap(coordinate.lat, coordinate.lon);
+        const matches = matchingMapObjects(elements, qid, names, kind);
         mappedPointOnly =
           kind === 'district' &&
           !matches.length &&

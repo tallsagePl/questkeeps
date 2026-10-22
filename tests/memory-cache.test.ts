@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MemoryCache, CACHE_TTL } from '../lib/memory-cache';
+
 test('кеш освобождает значения через 15 минут без продления при чтении', (t) => {
   t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 1000 });
   const cache = new MemoryCache<string, string>();

@@ -15,6 +15,7 @@ import {
   type ArticleLanguage,
 } from './wiki-article';
 import { MemoryCache } from './memory-cache';
+
 export type AreaWiki = {
   title: string;
   url: string | null;
@@ -23,14 +24,18 @@ export type AreaWiki = {
   localizationVersion?: number;
   language?: string;
 };
+
 const pending = new MemoryCache<string, Promise<AreaWiki>>();
+
 const empty: AreaWiki = { title: '', url: null, image: null, description: '' };
+
 type AreaContext = {
   title?: string;
   kind?: 'street' | 'district';
   country?: string;
   language?: ArticleLanguage;
 };
+
 export async function resolveAreaWiki(
   type: string,
   id: string,
@@ -43,9 +48,9 @@ export async function resolveAreaWiki(
   const tags =
     data.elements?.find((e: any) => e.type === type && String(e.id) === id)
       ?.tags || {};
-  let entity: any,
-    language = '',
-    sourceTitle = '';
+  let entity: any;
+  let language = '';
+  let sourceTitle = '';
   if (/^Q[1-9][0-9]*$/.test(tags.wikidata || ''))
     entity = await readWikiEntity(tags.wikidata);
   const linked = /^(ru|en|tr|de|fr|es|it|pt|nl|pl|uk|ja|zh|ar):(.+)$/.exec(
@@ -167,6 +172,7 @@ export async function resolveAreaWiki(
     language,
   };
 }
+
 export async function areaWiki(
   tripId: string,
   areaId: string,

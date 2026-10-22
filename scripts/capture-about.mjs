@@ -2,33 +2,43 @@
 import { chromium } from '@playwright/test';
 import sharp from 'sharp';
 import { mkdir, writeFile } from 'node:fs/promises';
+
 const base = new URL(process.env.ABOUT_CAPTURE_URL || 'http://localhost:3000');
+
 if (!['localhost', '127.0.0.1', '[::1]'].includes(base.hostname))
   throw Error('Only loopback capture is allowed');
+
 const readme = process.env.ABOUT_CAPTURE_README === '1';
+
 const languages = process.env.ABOUT_CAPTURE_LANGUAGE
   ? [process.env.ABOUT_CAPTURE_LANGUAGE]
   : ['ru', 'en'];
+
 if (languages.some((language) => !['ru', 'en'].includes(language)))
   throw Error('Capture language must be ru or en');
+
 const output = readme ? 'docs/screenshots' : 'public/about/screenshots';
+
 await mkdir(output, { recursive: true });
+
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
+
 const thumb = await sharp({
   create: { width: 320, height: 220, channels: 3, background: '#b9cad5' },
 })
   .png()
   .toBuffer();
+
 try {
   for (const language of languages)
     for (const theme of ['light', 'dark']) {
-      const en = language === 'en',
-        context = await browser.newContext({
-          viewport: { width: 1280, height: readme ? 960 : 800 },
-          deviceScaleFactor: 1,
-          reducedMotion: 'reduce',
-          colorScheme: theme,
-        });
+      const en = language === 'en';
+      const context = await browser.newContext({
+        viewport: { width: 1280, height: readme ? 960 : 800 },
+        deviceScaleFactor: 1,
+        reducedMotion: 'reduce',
+        colorScheme: theme,
+      });
       const page = await context.newPage();
       await page.addInitScript(
         ({ language, theme }) => {

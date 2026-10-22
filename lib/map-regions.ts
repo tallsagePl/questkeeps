@@ -1,4 +1,5 @@
 import { distanceMeters } from './geo';
+
 export type MapRegionPoint = {
   id: string;
   lat: number;
@@ -9,6 +10,7 @@ export type MapRegionPoint = {
     names?: Partial<Record<'ru' | 'en', string>>;
   } | null;
 };
+
 export function mapRegions<T extends MapRegionPoint>(
   points: T[],
   language: 'ru' | 'en',
@@ -44,6 +46,7 @@ export function mapRegions<T extends MapRegionPoint>(
   }
   return groups;
 }
+
 export function mapDateTime(
   taken: string,
   clock: string | null | undefined,

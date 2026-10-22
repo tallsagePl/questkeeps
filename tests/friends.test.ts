@@ -2,14 +2,23 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
+
 process.env.DATABASE_PATH = './data/friends-test-' + randomUUID() + '.sqlite';
+
 process.env.APP_URL = 'http://localhost:3000';
+
 process.env.TOKEN_ENCRYPTION_KEY = '12'.repeat(32);
+
 const { db, run, one, id } = await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const { session } = await import('../lib/access');
+
 const { ensureUsername } = await import('../lib/profiles');
+
 const [alice, bob, eve] = [id(), id(), id()];
+
 for (const [uid, name] of [
   [alice, 'Alice'],
   [bob, 'Bob'],
@@ -25,10 +34,13 @@ for (const [uid, name] of [
   );
   ensureUsername(uid);
 }
+
 const cookies = new Map(
   [alice, bob, eve].map((u) => [u, 'ta_session=' + session(u)]),
 );
+
 const trip = id();
+
 run(
   'INSERT INTO trips(id,owner_id,title,destination,start,end,created) VALUES (?,?,?,?,?,?,?)',
   trip,
@@ -39,6 +51,7 @@ run(
   '2026-10-18',
   Date.now(),
 );
+
 async function request(
   user: string | null,
   p: string,
@@ -59,7 +72,9 @@ async function request(
     p.split('?')[0].split('/'),
   );
 }
+
 after(() => db.close());
+
 test('friendship requires recipient consent, keeps private lists and never grants trip access', async () => {
   assert.equal((await request(null, 'friends')).status, 401);
   assert.equal((await request(alice, 'friends/' + alice, 'POST')).status, 400);

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 test('календарь переходит между годами, ограничивает даты и закрывается с клавиатуры', async ({
   page,
 }) => {

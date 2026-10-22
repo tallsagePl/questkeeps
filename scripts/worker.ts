@@ -1,12 +1,16 @@
 import { deliverEmails } from '../lib/email-verification';
 import { syncDue } from '../lib/sync';
+
 let stopped = false;
+
 process.on('SIGINT', () => {
   stopped = true;
 });
+
 process.on('SIGTERM', () => {
   stopped = true;
 });
+
 async function main() {
   console.log('QuestKeeps: синхронизация каждые 15 минут');
   while (!stopped) {
@@ -22,4 +26,5 @@ async function main() {
       await new Promise((r) => setTimeout(r, 1000));
   }
 }
+
 void main();

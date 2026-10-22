@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+
 export function identityMail(db: Database.Database) {
   const columns = db.pragma('table_info(accounts)') as { name: string }[];
   if (!columns.some((c) => c.name === 'provider_email'))

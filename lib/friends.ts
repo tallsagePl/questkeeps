@@ -4,14 +4,17 @@ import { ensureUsername } from './profiles';
 
 export type Relationship =
   'self' | 'none' | 'incoming' | 'outgoing' | 'friends';
+
 function pair(a: string, b: string) {
   return a < b ? [a, b] : [b, a];
 }
+
 function targetUser(userId: string, targetId: string) {
   if (userId === targetId) fail(400, 'Нельзя добавить себя в друзья');
   if (!one('SELECT 1 FROM users WHERE id=?', targetId))
     fail(404, 'Пользователь не найден');
 }
+
 export function relationship(userId: string, targetId: string): Relationship {
   if (userId === targetId) return 'self';
   const [a, b] = pair(userId, targetId);
@@ -28,6 +31,7 @@ export function relationship(userId: string, targetId: string): Relationship {
         ? 'outgoing'
         : 'incoming';
 }
+
 export function friendLists(userId: string) {
   const rows = all(
     'SELECT u.id,u.name,h.username,EXISTS(SELECT 1 FROM user_avatars av WHERE av.user_id=u.id) OR EXISTS(SELECT 1 FROM accounts ac WHERE ac.user_id=u.id AND ac.disk_enabled=1) hasAvatar,f.status,f.requested_by FROM friendships f JOIN users u ON u.id=CASE WHEN f.user_a=? THEN f.user_b ELSE f.user_a END JOIN user_handles h ON h.user_id=u.id WHERE f.user_a=? OR f.user_b=? ORDER BY quest_fold(u.name),u.id',
@@ -51,6 +55,7 @@ export function friendLists(userId: string) {
       .map(profile),
   };
 }
+
 export function requestFriend(userId: string, targetId: string) {
   targetUser(userId, targetId);
   return db
@@ -73,6 +78,7 @@ export function requestFriend(userId: string, targetId: string) {
     })
     .immediate();
 }
+
 export function acceptFriend(userId: string, targetId: string) {
   targetUser(userId, targetId);
   return db
@@ -92,6 +98,7 @@ export function acceptFriend(userId: string, targetId: string) {
     })
     .immediate();
 }
+
 export function removeFriend(userId: string, targetId: string) {
   targetUser(userId, targetId);
   const [a, b] = pair(userId, targetId);

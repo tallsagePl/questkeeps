@@ -1,20 +1,26 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+
 process.env.DATABASE_PATH = './data/fallback-' + randomUUID() + '.sqlite';
+
 const { db } = await import('../lib/db');
+
 const { nearby } = await import('../lib/places');
+
 const original = globalThis.fetch;
+
 after(() => {
   globalThis.fetch = original;
   db.close();
 });
+
 test('недоступный русский геопоиск заменяется английским с возвратом русских статей и без повторного штурма', async () => {
-  let russianSearches = 0,
-    englishSearches = 0;
+  let russianSearches = 0;
+  let englishSearches = 0;
   globalThis.fetch = async (input) => {
-    const url = new URL(String(input)),
-      p = url.searchParams;
+    const url = new URL(String(input));
+    const p = url.searchParams;
     if (p.get('list') === 'geosearch') {
       if (url.hostname === 'ru.wikipedia.org') {
         russianSearches++;

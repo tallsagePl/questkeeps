@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import { fail } from './access';
+
 export async function readAvatar(req: Request) {
   const max = 5 * 1024 * 1024;
   if (

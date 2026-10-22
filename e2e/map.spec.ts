@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
+
 test('резервная карта при 403 и миниатюры кадров под картой', async ({
   page,
 }) => {
@@ -62,8 +63,8 @@ test('резервная карта при 403 и миниатюры кадро�
   })
     .jpeg()
     .toBuffer();
-  let primary = 0,
-    fallback = 0;
+  let primary = 0;
+  let fallback = 0;
   await page.route('https://services.arcgisonline.com/**', (r) => {
     primary++;
     return r.fulfill({ status: 403, body: 'Forbidden' });

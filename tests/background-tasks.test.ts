@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { startBackgroundTasks } from '../lib/background-tasks';
+
 const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
+
 test('background tasks continue past a failed item, retry later, and stop when the trip closes', async (t) => {
   const nav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   Object.defineProperty(globalThis, 'navigator', {

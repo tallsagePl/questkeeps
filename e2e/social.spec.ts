@@ -1,18 +1,21 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+
 test('friends are consensual and private, profile is a page, About works in both languages and themes', async ({
   browser,
-}, testInfo) => {
+}) => {
   test.setTimeout(90000);
-  const base = 'http://127.0.0.1:3101',
-    suffix = Date.now().toString(36),
-    origin = { origin: base };
+  const base = 'http://127.0.0.1:3101';
+  const suffix = Date.now().toString(36);
+  const origin = { origin: base };
   const a = await browser.newContext({
-      viewport: { width: 1440, height: 1000 },
-    }),
-    b = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-  const aliceEmail = 'social-a-' + suffix + '@fixture.invalid',
-    bobEmail = 'social-b-' + suffix + '@fixture.invalid';
+    viewport: { width: 1440, height: 1000 },
+  });
+  const b = await browser.newContext({
+    viewport: { width: 1440, height: 1000 },
+  });
+  const aliceEmail = 'social-a-' + suffix + '@fixture.invalid';
+  const bobEmail = 'social-b-' + suffix + '@fixture.invalid';
   try {
     const ar = await a.request.post(base + '/api/auth/register', {
       headers: origin,
@@ -43,8 +46,8 @@ test('friends are consensual and private, profile is a page, About works in both
         end: '2026-10-18',
       },
     });
-    const page = await a.newPage(),
-      other = await b.newPage();
+    const page = await a.newPage();
+    const other = await b.newPage();
     await page.goto(base + '/profile');
     await expect(
       page.getByRole('heading', { name: 'Мой профиль.' }),

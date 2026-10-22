@@ -1,7 +1,8 @@
 import { readPhotoExif, captureDay } from './photo-metadata';
 import { db, one, all, run, id, Row } from './db';
-import { disk, inside, mediaURL, trustedFetch, Resource } from './yandex';
+import { disk, inside, Resource } from './yandex';
 import { fail, inRange } from './access';
+
 export async function syncSource(sourceId: string) {
   const s = one(
     'SELECT s.*,t.start trip_start,t.end trip_end,t.owner_id FROM sources s JOIN trips t ON t.id=s.trip_id WHERE s.id=?',
@@ -27,8 +28,8 @@ export async function syncSource(sourceId: string) {
       s.user_id,
     );
     if (s.user_id !== s.owner_id && !member) return { paused: true };
-    const from = member?.start || s.trip_start,
-      to = member?.end || s.trip_end;
+    const from = member?.start || s.trip_start;
+    const to = member?.end || s.trip_end;
     const queue = [s.path];
     const seen = new Set<string>();
     const items: Row[] = [];
@@ -207,6 +208,7 @@ export async function syncSource(sourceId: string) {
     );
   }
 }
+
 export async function syncDue() {
   const sources = all(
     'SELECT s.id FROM sources s JOIN trips t ON t.id=s.trip_id JOIN accounts a ON a.id=s.account_id WHERE a.disk_enabled=1 AND s.approved=1 AND s.lock_until<? AND (s.last_sync IS NULL OR s.last_sync<?) AND (s.user_id=t.owner_id OR EXISTS (SELECT 1 FROM members m WHERE m.trip_id=s.trip_id AND m.user_id=s.user_id AND m.active=1)) ORDER BY s.last_sync LIMIT 25',

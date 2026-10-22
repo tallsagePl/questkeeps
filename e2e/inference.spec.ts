@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+
 async function register(page: Page) {
   await page.goto('/');
   await page
@@ -19,6 +20,7 @@ async function register(page: Page) {
     page.getByRole('heading', { name: 'Ваши путешествия.' }),
   ).toBeVisible();
 }
+
 async function folder(page: Page) {
   await page
     .getByRole('button', { name: 'Выбрать папку Яндекс Диска' })
@@ -28,6 +30,7 @@ async function folder(page: Page) {
     .getByRole('button', { name: 'Выбрать эту папку', exact: true })
     .click();
 }
+
 async function mockAccounts(page: Page) {
   await page.route('**/api/accounts', (route) =>
     route.fulfill({
@@ -46,6 +49,7 @@ async function mockAccounts(page: Page) {
     });
   });
 }
+
 test('даты и место включаются независимо, результаты редактируются вручную', async ({
   page,
 }) => {
@@ -152,6 +156,7 @@ test('даты и место включаются независимо, резу
     page.getByRole('heading', { name: 'Фотоархив Грузии.' }),
   ).toBeVisible();
 });
+
 test('нет метаданных: локальные пояснения и ручной ввод остаются доступны', async ({
   page,
 }) => {

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { groupPlacePhotos } from '../lib/place-photo-groups';
+
 test('place photo groups are chronological and unique, exclude hidden, missing, video and inaccessible media, and honor the date range', () => {
   const media = [
     { id: 'later', kind: 'photo', taken: '2026-10-12T14:00:00' },

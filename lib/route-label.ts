@@ -4,6 +4,7 @@ export type RouteCity = {
   distanceKm: number;
   names?: Partial<Record<'ru' | 'en', string>>;
 };
+
 export function routeLabel(route: RouteCity[], language: 'ru' | 'en') {
   if (!route.length) return null;
   const regions = new Intl.DisplayNames([language], { type: 'region' });

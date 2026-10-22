@@ -5,8 +5,11 @@ type Job = {
   resolve: (value: any) => void;
   reject: (error: unknown) => void;
 };
+
 const waiting: Job[] = [];
+
 let active = 0;
+
 function drain() {
   waiting.sort((a, b) => a.priority - b.priority);
   while (active < 2 && waiting.length) {
@@ -25,6 +28,7 @@ function drain() {
       });
   }
 }
+
 // Only queued work is cancelled. In-flight work can finish and populate the shared cache.
 export function queuePlaceDescription<T>(
   run: () => Promise<T>,

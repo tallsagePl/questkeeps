@@ -1,8 +1,11 @@
 const eventKey = 'questkeeps:session-change';
+
 let instance = '';
+
 function source() {
   return instance || (instance = crypto.randomUUID());
 }
+
 export function announceSessionChange() {
   const message = { source: source(), nonce: crypto.randomUUID() };
   try {
@@ -14,6 +17,7 @@ export function announceSessionChange() {
     channel.close();
   }
 }
+
 export function observeSessionChanges() {
   let reloading = false;
   const changed = (message: unknown) => {

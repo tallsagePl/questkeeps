@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/trips/*/sync', (route) =>
     route.fulfill({ json: { synced: 0, failed: 0 } }),
   );
 });
+
 test('регистрация, поездка, дневник, гостевая ссылка и мобильный интерфейс', async ({
   page,
   browser,

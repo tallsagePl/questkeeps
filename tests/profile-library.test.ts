@@ -2,15 +2,24 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
+
 process.env.DATABASE_PATH =
   './data/profile-library-' + randomUUID() + '.sqlite';
+
 process.env.APP_URL = 'http://localhost:3000';
+
 const { db, run, id, encrypt } = await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const { session, mediaFor } = await import('../lib/access');
+
 const { ensureUsername } = await import('../lib/profiles');
+
 const { ownProfileMedia } = await import('../lib/profile-media');
+
 const [alice, bob, eve] = [id(), id(), id()];
+
 for (const u of [alice, bob, eve]) {
   run(
     'INSERT INTO users VALUES (?,?,?,?,?)',
@@ -22,9 +31,11 @@ for (const u of [alice, bob, eve]) {
   );
   ensureUsername(u);
 }
+
 const cookies = new Map(
   [alice, bob, eve].map((u) => [u, 'ta_session=' + session(u)]),
 );
+
 function request(u: string | null, path: string) {
   return handle(
     new NextRequest('http://localhost:3000/api/' + path, {
@@ -33,6 +44,7 @@ function request(u: string | null, path: string) {
     path.split('?')[0].split('/'),
   );
 }
+
 function trip(owner: string, title: string) {
   const tid = id();
   run(
@@ -47,10 +59,15 @@ function trip(owner: string, title: string) {
   );
   return tid;
 }
-const shared = trip(bob, 'Shared'),
-  privateTrip = trip(bob, 'Never expose'),
-  departed = trip(bob, 'Departed'),
-  nonoverlap = trip(eve, 'No common dates');
+
+const shared = trip(bob, 'Shared');
+
+trip(bob, 'Never expose');
+
+const departed = trip(bob, 'Departed');
+
+const nonoverlap = trip(eve, 'No common dates');
+
 for (const [tid, u, start, end, active] of [
   [shared, alice, '2026-10-12', '2026-10-14', 1],
   [departed, alice, '2026-10-12', '2026-10-14', 0],
@@ -58,8 +75,11 @@ for (const [tid, u, start, end, active] of [
   [nonoverlap, bob, '2026-10-13', '2026-10-14', 1],
 ] as const)
   run('INSERT INTO members VALUES (?,?,?,?,?)', tid, u, start, end, active);
-const aid = id(),
-  sid = id();
+
+const aid = id();
+
+const sid = id();
+
 run(
   'INSERT INTO accounts(id,user_id,yandex_id,label,token,disk_enabled) VALUES (?,?,?,?,?,1)',
   aid,
@@ -68,6 +88,7 @@ run(
   'Fixture',
   encrypt('dummy'),
 );
+
 run(
   'INSERT INTO sources(id,trip_id,user_id,account_id,path,approved) VALUES (?,?,?,?,?,0)',
   sid,
@@ -76,6 +97,7 @@ run(
   aid,
   'disk:/fixture',
 );
+
 for (let i = 0; i < 65; i++) {
   const mid = 'media-' + i.toString().padStart(3, '0');
   run(
@@ -93,7 +115,9 @@ for (let i = 0; i < 65; i++) {
     'exif',
   );
 }
+
 after(() => db.close());
+
 test('shared profile trips require authentication, both active memberships and overlapping dates', async () => {
   const path = 'profiles/' + ensureUsername(bob) + '/shared-trips';
   assert.equal((await request(null, path)).status, 401);
@@ -118,6 +142,7 @@ test('shared profile trips require authentication, both active memberships and o
   );
   assert.deepEqual((await (await request(alice, path)).json()).trips, []);
 });
+
 test('author file library is paginated, isolated and stable for duplicate dates', async () => {
   assert.equal((await request(null, 'my-media/groups')).status, 401);
   const groups = await (await request(alice, 'my-media/groups')).json();
@@ -152,6 +177,7 @@ test('author file library is paginated, isolated and stable for duplicate dates'
     400,
   );
 });
+
 test('private author preview may read own hidden departed files, never another author or a guest', async () => {
   const own = new Request(
     'http://localhost:3000/api/my-media/media-001/preview',

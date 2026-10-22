@@ -10,6 +10,7 @@ export async function opaqueCacheRequest(source: string) {
   ).join('');
   return new Request(new URL('/__questkeeps_cache__/' + key, location.origin));
 }
+
 export function clearPrivateLocalStorage() {
   if (typeof localStorage === 'undefined') return;
   try {
@@ -20,7 +21,9 @@ export function clearPrivateLocalStorage() {
     /* Storage can be unavailable in private browsing. */
   }
 }
+
 let migrated = false;
+
 export async function migratePrivateStorage() {
   if (migrated || typeof window === 'undefined') return;
   migrated = true;

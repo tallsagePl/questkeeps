@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
+
 test('grey district and street proposals add all matched photos and become visited shapes', async ({
   page,
 }) => {

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 async function register(page: any) {
   const response = await page.request.post('/api/auth/register', {
     headers: { origin: 'http://127.0.0.1:3101' },
@@ -12,6 +13,7 @@ async function register(page: any) {
   expect(response.ok()).toBeTruthy();
   return (await response.json()).user;
 }
+
 test('initial network failure preserves the session and offers retry instead of login', async ({
   page,
 }) => {
@@ -33,6 +35,7 @@ test('initial network failure preserves the session and offers retry instead of 
     page.getByRole('heading', { name: 'Ваши путешествия.' }),
   ).toBeVisible();
 });
+
 test('password visibility, case rules, confirmation and six-character signup work', async ({
   page,
 }) => {
@@ -78,6 +81,7 @@ test('password visibility, case rules, confirmation and six-character signup wor
     page.getByRole('heading', { name: 'Ваши путешествия.' }),
   ).toBeVisible();
 });
+
 test('header retains active travel link, matches About highlight, and trip count has a space', async ({
   page,
 }) => {

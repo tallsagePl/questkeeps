@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
+
 test('all article surfaces follow site language and category filters retain canonical photo links', async ({
   page,
 }) => {
@@ -97,9 +98,9 @@ test('all article surfaces follow site language and category filters retain cano
   );
   await page.route('**/api/media/*/places/*/text', (r) => {
     const id = Number(
-        new URL(r.request().url()).pathname.split('/')[5].replace('place-', ''),
-      ),
-      language = r.request().headers()['x-questkeeps-language'] || 'ru';
+      new URL(r.request().url()).pathname.split('/')[5].replace('place-', ''),
+    );
+    const language = r.request().headers()['x-questkeeps-language'] || 'ru';
     reads.push({ id, language });
     const en = language === 'en';
     return r.fulfill({

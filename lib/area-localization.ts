@@ -33,6 +33,7 @@ const turkishLetters: Record<string, string> = {
   y: 'й',
   z: 'з',
 };
+
 export function russianAreaTitle(source: string, country = '') {
   const original = source.trim();
   if (/[А-Яа-яЁё]/.test(original)) return original;
@@ -57,11 +58,13 @@ export function russianAreaTitle(source: string, country = '') {
       : result;
   });
 }
+
 export function russianAreaDescription(
   title: string,
   kind: 'street' | 'district',
 ) {
   return (kind === 'street' ? 'Улица ' : 'Городской район ') + title + '.';
 }
+
 export const russianText = (value: unknown): value is string =>
   typeof value === 'string' && /[А-Яа-яЁё]/.test(value);

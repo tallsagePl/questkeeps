@@ -2,21 +2,29 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
+
 process.env.DATABASE_PATH =
   './data/social-security-' + randomUUID() + '.sqlite';
+
 process.env.APP_URL = 'http://localhost:3000';
+
 process.env.TOKEN_ENCRYPTION_KEY = '34'.repeat(32);
+
 const { db, run, id, encrypt } = await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const { session } = await import('../lib/access');
+
 after(() => db.close());
+
 test('revoked source blocks every place read and write before a provider request', async () => {
-  const owner = id(),
-    member = id(),
-    trip = id(),
-    account = id(),
-    source = id(),
-    media = id();
+  const owner = id();
+  const member = id();
+  const trip = id();
+  const account = id();
+  const source = id();
+  const media = id();
   for (const u of [owner, member])
     run(
       'INSERT INTO users VALUES (?,?,?,?,?)',
@@ -75,8 +83,8 @@ test('revoked source blocks every place read and write before a provider request
     1,
     2,
   );
-  const c = 'ta_session=' + session(member),
-    own = 'ta_session=' + session(owner);
+  const c = 'ta_session=' + session(member);
+  const own = 'ta_session=' + session(owner);
   const original = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async () => {
@@ -119,6 +127,7 @@ test('revoked source blocks every place read and write before a provider request
     globalThis.fetch = original;
   }
 });
+
 test('persistent cache selectors are opaque, distinct and do not contain a guest bearer', async () => {
   const original = Object.getOwnPropertyDescriptor(globalThis, 'location');
   Object.defineProperty(globalThis, 'location', {
@@ -144,6 +153,7 @@ test('persistent cache selectors are opaque, distinct and do not contain a guest
     else Reflect.deleteProperty(globalThis, 'location');
   }
 });
+
 test('concurrent cold image requests share one job; canceled queued jobs do not fetch', async () => {
   const { placeImage } = await import('../lib/places');
   const original = globalThis.fetch;
@@ -164,8 +174,8 @@ test('concurrent cold image requests share one job; canceled queued jobs do not 
     });
   };
   try {
-    const first = placeImage(777),
-      second = placeImage(777);
+    const first = placeImage(777);
+    const second = placeImage(777);
     await new Promise((r) => setImmediate(r));
     const abort = new AbortController();
     const canceled = placeImage(778, 'ru', abort.signal);
@@ -183,10 +193,10 @@ test('concurrent cold image requests share one job; canceled queued jobs do not 
 
 test('a search completed after logout cannot recreate private localStorage', async () => {
   const descriptor = Object.getOwnPropertyDescriptor(
-      globalThis,
-      'localStorage',
-    ),
-    original = globalThis.fetch;
+    globalThis,
+    'localStorage',
+  );
+  const original = globalThis.fetch;
   const values: Record<string, string> = {};
   const storage = {
     getItem: (key: string) => values[key] || null,
@@ -226,9 +236,10 @@ test('a search completed after logout cannot recreate private localStorage', asy
     else Reflect.deleteProperty(globalThis, 'localStorage');
   }
 });
+
 test('legacy capability-bearing storage is removed while theme and new caches remain', async () => {
-  const local = Object.getOwnPropertyDescriptor(globalThis, 'localStorage'),
-    cached = Object.getOwnPropertyDescriptor(globalThis, 'caches');
+  const local = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const cached = Object.getOwnPropertyDescriptor(globalThis, 'caches');
   const storage: Record<string, any> = {
     'ta-theme': 'dark',
     'questkeeps:map-view:v1:guest:dummy-secret': '{}',

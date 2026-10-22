@@ -1,13 +1,15 @@
 import { test, expect, type BrowserContext } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+
 const base = 'http://127.0.0.1:3101';
+
 test('дневник: ответы лесенкой, сворачивание, права автора, гости и мобильный экран', async ({
   page,
   browser,
 }) => {
-  const owner = page.context(),
-    member = await browser.newContext(),
-    guest = await browser.newContext();
+  const owner = page.context();
+  const member = await browser.newContext();
+  const guest = await browser.newContext();
   const post = async (context: BrowserContext, path: string, data: unknown) => {
     const r = await context.request.post(base + '/api/' + path, {
       headers: { origin: base },

@@ -11,7 +11,9 @@ import {
 } from '../lib/friend-links';
 import { relationship } from '../lib/friends';
 import { GET, HEAD } from '../app/friend/[token]/route';
+
 const users = [id(), id(), id()];
+
 for (const user of users)
   run(
     'INSERT INTO users VALUES (?,?,?,?,?)',
@@ -21,9 +23,13 @@ for (const user of users)
     null,
     Date.now(),
   );
+
 const [owner, guest, other] = users;
+
 const cookies = users.map((user) => 'ta_session=' + session(user));
+
 after(() => db.close());
+
 async function api(
   path: string,
   method = 'GET',
@@ -38,6 +44,7 @@ async function api(
     path.split('/'),
   );
 }
+
 test('friend links are private hashed capabilities; rotation, expiry and revocation take effect immediately', () => {
   const first = createFriendLink(owner);
   assert.equal(first.token.length, 43);
@@ -66,6 +73,7 @@ test('friend links are private hashed capabilities; rotation, expiry and revocat
   );
   assert.equal(relationship(guest, owner), 'friends');
 });
+
 test('GET and HEAD do not add friends; a pending cookie survives anonymous access and is consumed only by authenticated same-origin POST', async () => {
   run('DELETE FROM friendships');
   assert.equal((await api('friends/link', 'POST')).status, 401);

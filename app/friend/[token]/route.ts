@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pendingFriendCookie, validFriendToken } from '@/lib/friend-links';
+
 export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ token: string }> },
@@ -30,6 +32,7 @@ export async function GET(
     });
   return response;
 }
+
 // Link scanners and prefetches must never change a friendship.
 export async function HEAD() {
   return new Response(null, {

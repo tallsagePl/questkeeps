@@ -1,20 +1,24 @@
 import { db, one, run, id, token, hash, encrypt, decrypt } from './db';
+
 export function verificationRequired() {
   return process.env.EMAIL_VERIFICATION_REQUIRED === 'true';
 }
+
 export function mailConfigured() {
   return !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM;
 }
+
 export function emailPending(userId: string) {
   return !!one(
     'SELECT 1 FROM email_status WHERE user_id=? AND required=1 AND verified_at IS NULL',
     userId,
   );
 }
+
 export function queueVerification(userId: string, email: string) {
-  const raw = token(),
-    expires = Date.now() + 86400000,
-    origin = new URL(process.env.APP_URL || 'http://localhost:3000').origin;
+  const raw = token();
+  const expires = Date.now() + 86400000;
+  const origin = new URL(process.env.APP_URL || 'http://localhost:3000').origin;
   if (
     !origin.startsWith('https://') &&
     !['localhost', '127.0.0.1', '[::1]'].includes(new URL(origin).hostname)
@@ -51,6 +55,7 @@ export function queueVerification(userId: string, email: string) {
     );
   }).immediate();
 }
+
 export function confirmEmail(raw: string) {
   return db
     .transaction(() => {
@@ -75,7 +80,9 @@ export function confirmEmail(raw: string) {
     })
     .immediate();
 }
+
 export type Mail = { to: string; subject: string; text: string };
+
 export async function sendMail(mail: Mail, jobId: string) {
   if (!mailConfigured()) throw Error('Mail transport is disabled');
   const response = await fetch('https://api.resend.com/emails', {
@@ -96,6 +103,7 @@ export async function sendMail(mail: Mail, jobId: string) {
   });
   if (!response.ok) throw Error('Mail provider rejected delivery');
 }
+
 export async function deliverEmails(
   transport: (mail: Mail, jobId: string) => Promise<void> = sendMail,
   now = Date.now(),
@@ -104,8 +112,8 @@ export async function deliverEmails(
     return { sent: 0, failed: 0 };
   run('DELETE FROM email_verifications WHERE expires<?', now);
   run('DELETE FROM delivery_jobs WHERE created<?', now - 7 * 86400000);
-  let sent = 0,
-    failed = 0;
+  let sent = 0;
+  let failed = 0;
   for (let i = 0; i < 10; i++) {
     const lease = token();
     const job = db

@@ -2,6 +2,7 @@ import { MemoryCache } from './memory-cache';
 import { one, hash, type Row } from './db';
 import { closestCity } from './city-lookup';
 import { distanceMeters } from './geo';
+
 // Metropolitan anchors avoid labelling a whole visit after a small nearby district.
 const metros = [
   {
@@ -26,12 +27,15 @@ const metros = [
     lon: 30.69556,
   },
 ];
+
 type MapCity = {
   key: string;
   name: string;
   names?: Partial<Record<'ru' | 'en', string>>;
 };
+
 const cityCache = new MemoryCache<string, MapCity | null>();
+
 export function mapCity(lat: number, lon: number): MapCity | null {
   const key = lat.toFixed(4) + ':' + lon.toFixed(4);
   if (cityCache.has(key)) return cityCache.get(key)!;
@@ -54,6 +58,7 @@ export function mapCity(lat: number, lon: number): MapCity | null {
   cityCache.set(key, result);
   return result;
 }
+
 export function captureClock(value: unknown) {
   if (typeof value !== 'string') return null;
   const match = value.match(/[T ](\d{2})[:-](\d{2})(?:[:-]\d{2})?/);
@@ -61,6 +66,7 @@ export function captureClock(value: unknown) {
     ? match[1] + ':' + match[2]
     : null;
 }
+
 export function addMapDetails(media: Row[]) {
   for (const item of media) {
     const cacheKey = hash(

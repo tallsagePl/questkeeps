@@ -4,8 +4,11 @@ export type PhotoSearchRegion = {
   lon: number;
   radius: number;
 };
+
 const KM_PER_LATITUDE_DEGREE = 111.32;
+
 export const PHOTO_SEARCH_RADIUS_METERS = 1200;
+
 // Stable cells approximately 1 km across. Every photo is at most about 710 m
 // from its cell centre, leaving about 490 m of search margin in every direction.
 // Distant clusters remain separate, and adding photos only loads new cells.

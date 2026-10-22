@@ -1,14 +1,20 @@
 import Database from 'better-sqlite3';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
+
 const path = resolve(process.env.DATABASE_PATH || './data/travel.sqlite');
+
 if (!existsSync(path)) {
   console.log(JSON.stringify({ database: 'missing' }));
   process.exit(1);
 }
+
 const db = new Database(path, { readonly: true, fileMustExist: true });
+
 const integrity = db.pragma('quick_check') as { quick_check: string }[];
+
 const foreignKeys = db.pragma('foreign_key_check');
+
 const required = [
   'users',
   'sessions',
@@ -29,11 +35,13 @@ const required = [
   'delivery_jobs',
   'friend_links',
 ];
+
 const tables = (
   db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as {
     name: string;
   }[]
 ).map((t) => t.name);
+
 const report = {
   database: {
     path,
@@ -62,8 +70,11 @@ const report = {
     ).n,
   },
 };
+
 db.close();
+
 console.log(JSON.stringify(report, null, 2));
+
 if (
   report.database.integrity !== 'ok' ||
   report.database.foreignKeyViolations ||

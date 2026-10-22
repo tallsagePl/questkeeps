@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
+
 test('carousel recovers a damaged cached preview and a later image decoding error', async ({
   page,
 }) => {

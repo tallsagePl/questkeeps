@@ -1,7 +1,9 @@
 import { wiki } from './places';
 import { MemoryCache } from './memory-cache';
 import { placeTextContent } from './place-text';
+
 export type ArticleLanguage = 'ru' | 'en';
+
 export type WikiArticle = {
   title: string;
   url: string | null;
@@ -11,7 +13,9 @@ export type WikiArticle = {
   pageId: number | null;
   available: boolean;
 };
+
 const articles = new MemoryCache<string, Promise<WikiArticle>>();
+
 export async function readWikiPage(
   language: string,
   identity: { pageId?: number; title?: string },
@@ -37,6 +41,7 @@ export async function readWikiPage(
       p.pageprops?.disambiguation === undefined,
   );
 }
+
 export async function readWikiEntity(id: string) {
   if (!/^Q[1-9][0-9]*$/.test(id)) return undefined;
   const response = await fetch(
@@ -46,14 +51,15 @@ export async function readWikiEntity(id: string) {
   if (!response.ok) throw Error('Wikidata unavailable');
   return (await response.json()).entities?.[id];
 }
+
 export async function chooseWikiPage(
   source: any,
   sourceLanguage: string,
   preferred: ArticleLanguage,
   entity?: any,
 ) {
-  let page = source,
-    language = sourceLanguage;
+  let page = source;
+  let language = sourceLanguage;
   if (source && sourceLanguage === preferred)
     return { page: source, language: sourceLanguage, entity };
   if (
@@ -76,6 +82,7 @@ export async function chooseWikiPage(
   }
   return { page: null, language: preferred, entity };
 }
+
 export function localizedWikiArticle(
   pageId: number,
   preferred: ArticleLanguage,

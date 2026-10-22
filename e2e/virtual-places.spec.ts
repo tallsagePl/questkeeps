@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
+
 test('place feed keeps a bounded window, retained images and offscreen targets', async ({
   page,
 }) => {

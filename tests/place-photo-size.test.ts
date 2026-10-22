@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { placePhotoSize } from '../lib/place-photo-size';
+
 test('landscape fills the frame; portrait keeps at least 70% without distortion', () => {
   assert.deepEqual(placePhotoSize(440, 260, 1600, 900), {
     width: 440,

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readSavedSearches } from '../lib/place-recommendation-store';
+
 test('saved discoveries survive reload and exclude changed or inaccessible photos', () => {
   const raw = JSON.stringify([
     ['photo:rev1', [{ pageid: 1, title: 'Музей', dist: 10 }]],

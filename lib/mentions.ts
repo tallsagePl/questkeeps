@@ -5,7 +5,9 @@ export type Mention = {
   username?: string;
   name?: string;
 };
+
 export type MentionUser = { id: string; name: string; username: string };
+
 // Preserve links outside an edit, move later links, and drop links whose text was changed.
 export function moveMentions(
   before: string,
@@ -19,8 +21,8 @@ export function moveMentions(
     before[start] === after[start]
   )
     start++;
-  let end = before.length,
-    newEnd = after.length;
+  let end = before.length;
+  let newEnd = after.length;
   while (
     end > start &&
     newEnd > start &&

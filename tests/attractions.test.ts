@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { isAttraction } from '../lib/attractions';
+
 test('отбор достопримечательностей исключает события, районы и обычные улицы, сохраняя физические памятники', () => {
   const no = [
     {

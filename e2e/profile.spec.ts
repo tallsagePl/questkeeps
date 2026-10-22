@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
 import AxeBuilder from '@axe-core/playwright';
+
 test('профиль: никнейм, своя аватарка, отдельное фото Яндекса и отключение', async ({
   page,
 }) => {

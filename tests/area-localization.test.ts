@@ -4,6 +4,7 @@ import {
   russianAreaTitle,
   russianAreaDescription,
 } from '../lib/area-localization';
+
 test('Russian source names win and Turkish fallback uses Cyrillic without administrative suffixes', () => {
   assert.equal(russianAreaTitle('Джанкуртаран', 'TR'), 'Джанкуртаран');
   assert.equal(russianAreaTitle('Cankurtaran Mahallesi', 'TR'), 'Джанкуртаран');

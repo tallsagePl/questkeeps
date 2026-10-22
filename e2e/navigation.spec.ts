@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 async function register(page: any) {
   const result = await page.request.post('/api/auth/register', {
     headers: { origin: 'http://127.0.0.1:3101' },
@@ -12,6 +13,7 @@ async function register(page: any) {
   expect(result.ok()).toBeTruthy();
   return (await result.json()).user;
 }
+
 test('back returns from own public profile to settings, then previous page; direct entry is safe', async ({
   page,
   context,
@@ -47,6 +49,7 @@ test('back returns from own public profile to settings, then previous page; dire
   await expect(direct).toHaveURL('/');
   await direct.close();
 });
+
 test('trip tabs restore back, forward and after reload; main has no back button', async ({
   page,
 }) => {
@@ -90,8 +93,8 @@ test('trip tabs restore back, forward and after reload; main has no back button'
   const position = await page
     .locator('header .header-brand')
     .evaluate((element) => {
-      const back = element.querySelector('button')!.getBoundingClientRect(),
-        logo = element.querySelector('a')!.getBoundingClientRect();
+      const back = element.querySelector('button')!.getBoundingClientRect();
+      const logo = element.querySelector('a')!.getBoundingClientRect();
       return back.right <= logo.left;
     });
   expect(position).toBeTruthy();
@@ -126,6 +129,7 @@ test('trip tabs restore back, forward and after reload; main has no back button'
     page.getByRole('heading', { name: 'Ваши путешествия.' }),
   ).toBeVisible();
 });
+
 test('a late trip response cannot undo Back', async ({ page }) => {
   await page.route('**/api/me', (r) =>
     r.fulfill({ json: { user: { id: 'fixture', name: 'Fixture' } } }),

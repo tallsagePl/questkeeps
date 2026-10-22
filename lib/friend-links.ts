@@ -1,9 +1,12 @@
 import { db, one, run, hash, token } from './db';
 import { fail } from './access';
 import { ensureUsername } from './profiles';
+
 export const pendingFriendCookie = 'qk_friend_invite';
+
 export const validFriendToken = (value: string) =>
   /^[A-Za-z0-9_-]{43}$/.test(value);
+
 export function friendLinkStatus(userId: string) {
   return {
     expires:
@@ -14,9 +17,10 @@ export function friendLinkStatus(userId: string) {
       )?.expires ?? null,
   };
 }
+
 export function createFriendLink(userId: string) {
-  const value = token(),
-    expires = Date.now() + 30 * 86400000;
+  const value = token();
+  const expires = Date.now() + 30 * 86400000;
   run(
     'INSERT INTO friend_links(user_id,hash,expires) VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET hash=excluded.hash,expires=excluded.expires',
     userId,
@@ -25,9 +29,11 @@ export function createFriendLink(userId: string) {
   );
   return { token: value, expires };
 }
+
 export function revokeFriendLink(userId: string) {
   run('DELETE FROM friend_links WHERE user_id=?', userId);
 }
+
 export function acceptFriendLink(userId: string, value: string) {
   if (!validFriendToken(value)) fail(404, 'Ссылка недействительна или истекла');
   return db

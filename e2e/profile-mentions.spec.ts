@@ -4,9 +4,9 @@ test('selected names, @ suggestions, profile usernames and short public links', 
   page,
   browser,
 }) => {
-  const suffix = Date.now().toString(36),
-    username = 'owl_' + suffix,
-    friendHandle = 'andrey_' + suffix;
+  const suffix = Date.now().toString(36);
+  const username = 'owl_' + suffix;
+  const friendHandle = 'andrey_' + suffix;
   const email = 'mentions-' + suffix + '@example.test';
   const register = await page.request.post('/api/auth/register', {
     headers: { origin: 'http://127.0.0.1:3101' },
@@ -82,8 +82,8 @@ test('selected names, @ suggestions, profile usernames and short public links', 
   const copy = page.locator('.trip-description > p');
   await expect(copy).toContainText('Первая поездка');
   await copy.locator('.trip-description-paragraph').evaluate((el) => {
-    const text = el.firstChild!,
-      start = text.textContent!.indexOf('Сашей');
+    const text = el.firstChild!;
+    const start = text.textContent!.indexOf('Сашей');
     const range = document.createRange();
     range.setStart(text, start);
     range.setEnd(text, start + 5);

@@ -3,12 +3,19 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { photoInArea } from '../lib/area-membership';
+
 process.env.DATABASE_PATH = './data/map-areas-' + randomUUID() + '.sqlite';
+
 process.env.APP_URL = 'http://localhost:3000';
+
 const { db, run, all, one } = await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const { session } = await import('../lib/access');
+
 const { photoSearchRegions } = await import('../lib/photo-search-regions');
+
 const area = {
   type: 'FeatureCollection',
   features: [
@@ -37,6 +44,7 @@ const area = {
     },
   ],
 };
+
 for (const u of ['owner', 'member', 'stranger'])
   run(
     'INSERT INTO users VALUES (?,?,?,?,?)',
@@ -46,6 +54,7 @@ for (const u of ['owner', 'member', 'stranger'])
     null,
     Date.now(),
   );
+
 for (const tid of ['trip', 'foreign'])
   run(
     'INSERT INTO trips(id,owner_id,title,destination,start,end,created) VALUES (?,?,?,?,?,?,?)',
@@ -57,6 +66,7 @@ for (const tid of ['trip', 'foreign'])
     '2026-10-18',
     Date.now(),
   );
+
 run(
   'INSERT INTO members VALUES (?,?,?,?,1)',
   'trip',
@@ -64,6 +74,7 @@ run(
   '2026-10-12',
   '2026-10-14',
 );
+
 for (const u of ['owner', 'member']) {
   run(
     'INSERT INTO accounts(id,user_id,yandex_id,label,token) VALUES (?,?,?,?,?)',
@@ -82,6 +93,7 @@ for (const u of ['owner', 'member']) {
     'disk:/',
   );
 }
+
 run(
   'INSERT INTO sources(id,trip_id,user_id,account_id,path,approved) VALUES (?,?,?,?,?,0)',
   'unapproved-source',
@@ -90,6 +102,7 @@ run(
   'acc-owner',
   'disk:/private',
 );
+
 for (const [id, user, day, lat, lon, hidden, missing, kind, source] of [
   ['one', 'owner', '2026-10-11', 41.005, 28.975, 0, 0, 'photo', 's-owner'],
   ['two', 'owner', '2026-10-14', 41.015, 28.975, 0, 0, 'photo', 's-owner'],
@@ -150,6 +163,7 @@ for (const [id, user, day, lat, lon, hidden, missing, kind, source] of [
     hidden,
     missing,
   );
+
 run(
   'INSERT INTO map_areas VALUES (?,?,?,?,?,?,?,?,?)',
   'osm-relation-100',
@@ -162,6 +176,7 @@ run(
   JSON.stringify(area),
   Date.now(),
 );
+
 for (const region of photoSearchRegions(
   all('SELECT lat,lon FROM media') as { lat: number; lon: number }[],
 ))
@@ -171,9 +186,11 @@ for (const region of photoSearchRegions(
     JSON.stringify(['osm-relation-100']),
     Date.now(),
   );
+
 const cookies = Object.fromEntries(
   ['owner', 'member', 'stranger'].map((u) => [u, 'ta_session=' + session(u)]),
 );
+
 const req = (path: string, method = 'GET', data?: unknown, user = 'owner') =>
   handle(
     new NextRequest('http://localhost:3000/api/' + path, {
@@ -183,7 +200,9 @@ const req = (path: string, method = 'GET', data?: unknown, user = 'owner') =>
     }),
     path.split('/'),
   );
+
 after(() => db.close());
+
 test('polygon matching respects holes and street matching uses 30 metres', () => {
   assert.equal(photoInArea({ lat: 41.005, lon: 28.975 }, area), true);
   assert.equal(photoInArea({ lat: 41.01, lon: 28.98 }, area), false);
@@ -204,6 +223,7 @@ test('polygon matching respects holes and street matching uses 30 metres', () =>
   assert.equal(photoInArea({ lat: 25 / 111320, lon: 0.005 }, street), true);
   assert.equal(photoInArea({ lat: 35 / 111320, lon: 0.005 }, street), false);
 });
+
 test('area discovery and atomic batch attachment enforce author, dates, visibility and idempotence', async () => {
   const path = 'trips/trip/area-suggestions';
   const discovery = await req(path);
@@ -465,8 +485,8 @@ test('Russian articles take priority, English is a fallback, and Turkish extract
     assert.equal(osmRussian.title, 'Русское имя');
     const originalLookup = globalThis.fetch;
     globalThis.fetch = async (input: any) => {
-      const url = new URL(String(input)),
-        response = await originalLookup(input);
+      const url = new URL(String(input));
+      const response = await originalLookup(input);
       if (
         url.hostname.endsWith('wikipedia.org') &&
         url.searchParams.get('prop') !== 'pageimages|images'

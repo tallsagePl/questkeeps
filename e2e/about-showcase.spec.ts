@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+
 test('About invites instead of instructing; screenshot stack works with hover, keyboard, themes, language and reduced motion', async ({
   page,
 }) => {

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 test('welcome photographs rotate, pause and preserve typed login fields', async ({
   page,
 }) => {
@@ -79,6 +80,7 @@ test('welcome photographs rotate, pause and preserve typed login fields', async 
     current!,
   );
 });
+
 test('broken first photograph is skipped without leaving an empty banner', async ({
   page,
 }) => {

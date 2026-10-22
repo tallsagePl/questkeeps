@@ -2,12 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import { queuePreview, PREVIEW_TIMEOUT_MS } from '../lib/preview-queue';
+
 test('очередь отдаёт приоритет экрану, вытесняет фон и отменяет ненужные запросы', async () => {
-  const starts: string[] = [],
-    aborted: string[] = [];
+  const starts: string[] = [];
+  const aborted: string[] = [];
   const handles: ReturnType<typeof queuePreview>[] = [];
   const task = (name: string) => (signal: AbortSignal) =>
-    new Promise<Blob>((resolve, reject) => {
+    new Promise<Blob>((_resolve, reject) => {
       starts.push(name);
       signal.addEventListener(
         'abort',

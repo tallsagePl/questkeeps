@@ -1,4 +1,5 @@
 import { previewQueueBusy } from './preview-queue';
+
 const waiting: {
   run: () => Promise<unknown>;
   priority: number;
@@ -6,8 +7,11 @@ const waiting: {
   resolve: (value: any) => void;
   reject: (error: unknown) => void;
 }[] = [];
+
 let active = 0;
+
 let background = 0;
+
 function drain() {
   while (active < 4 && waiting.length) {
     waiting.sort((a, b) => a.priority - b.priority);
@@ -28,6 +32,7 @@ function drain() {
       });
   }
 }
+
 export function queuePlaceResource<T>(
   run: () => Promise<T>,
   priority = 0,
@@ -38,6 +43,7 @@ export function queuePlaceResource<T>(
     drain();
   });
 }
+
 export function promotePlaceResource(key: string) {
   const job = waiting.find((job) => job.key === key);
   if (job) {
@@ -45,8 +51,11 @@ export function promotePlaceResource(key: string) {
     drain();
   }
 }
+
 const retries = new Set<{ run: () => void; at: number }>();
+
 let timer: ReturnType<typeof setTimeout> | undefined;
+
 function checkIdle() {
   timer = undefined;
   if (
@@ -65,6 +74,7 @@ function checkIdle() {
   }
   if (retries.size) timer = setTimeout(checkIdle, 500);
 }
+
 // A bounded second pass waits behind all foreground place and preview requests.
 export function retryPlaceWhenIdle(run: () => void, delay: number) {
   const job = { run, at: Date.now() + delay };

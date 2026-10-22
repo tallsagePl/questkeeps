@@ -2,11 +2,17 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
+
 process.env.DATABASE_PATH = './data/username-login-' + randomUUID() + '.sqlite';
+
 process.env.APP_URL = 'http://localhost:3000';
+
 const { db, run, all, one } = await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const password = 'FixturePassword123!';
+
 async function request(path: string, data: unknown) {
   return handle(
     new NextRequest('http://localhost:3000/api/' + path, {
@@ -20,6 +26,7 @@ async function request(path: string, data: unknown) {
     path.split('/'),
   );
 }
+
 async function fixture(email: string, username: string) {
   const r = await request('auth/register', {
     email,
@@ -31,10 +38,15 @@ async function fixture(email: string, username: string) {
   run('UPDATE user_handles SET username=? WHERE user_id=?', username, user.id);
   return { ...user, username };
 }
-const alice = await fixture('night@example.invalid', 'night_owl'),
-  bob = await fixture('bob@example.invalid', 'someone_else'),
-  limited = await fixture('limited@example.invalid', 'rate_limited');
+
+const alice = await fixture('night@example.invalid', 'night_owl');
+
+const bob = await fixture('bob@example.invalid', 'someone_else');
+
+const limited = await fixture('limited@example.invalid', 'rate_limited');
+
 after(() => db.close());
+
 test('email and unique handle identify the same account, regardless of case and @ prefix', async () => {
   for (const email of [
     'night@example.invalid',
@@ -62,15 +74,16 @@ test('email and unique handle identify the same account, regardless of case and 
     'VisibleName',
   );
 });
+
 test('wrong passwords, missing handles and non-unique display names never authenticate', async () => {
   const wrong = await request('auth/login', {
-      email: 'night_owl',
-      password: 'WrongPassword123!',
-    }),
-    missing = await request('auth/login', {
-      email: 'missing_handle',
-      password: 'WrongPassword123!',
-    });
+    email: 'night_owl',
+    password: 'WrongPassword123!',
+  });
+  const missing = await request('auth/login', {
+    email: 'missing_handle',
+    password: 'WrongPassword123!',
+  });
   assert.equal(wrong.status, 401);
   assert.equal(missing.status, 401);
   assert.deepEqual(await wrong.json(), await missing.json());
@@ -97,6 +110,7 @@ test('wrong passwords, missing handles and non-unique display names never authen
     400,
   );
 });
+
 test('renamed usernames work immediately and the old username stops working', async () => {
   run(
     'UPDATE user_handles SET username=? WHERE user_id=?',
@@ -111,6 +125,7 @@ test('renamed usernames work immediately and the old username stops working', as
   assert.equal(r.status, 200);
   assert.equal((await r.json()).user.id, alice.id);
 });
+
 test('all login aliases share an account rate limit and throttle identifiers contain no raw email', async () => {
   const aliases = [
     'limited@example.invalid',

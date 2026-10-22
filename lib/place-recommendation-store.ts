@@ -1,5 +1,7 @@
 export type SavedSuggestion = { pageid: number; title: string; dist: number };
+
 export type SavedSearches = Map<string, SavedSuggestion[]>;
+
 // Search results are saved discoveries, not a temporary resource cache.
 // Keys include photo revision and coordinates, so changed photos are searched again.
 export function readSavedSearches(

@@ -2,14 +2,20 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { placeTextContent } from '../lib/place-text';
+
 process.env.DATABASE_PATH = './data/place-text-' + randomUUID() + '.sqlite';
+
 const { db } = await import('../lib/db');
+
 const { placeSummary, placeText } = await import('../lib/places');
+
 const originalFetch = globalThis.fetch;
+
 after(() => {
   globalThis.fetch = originalFetch;
   db.close();
 });
+
 test('полный текст сохраняется, краткое описание не обрывается на сокращениях внутри скобок', async () => {
   const extract =
     'Галата (тур. Galata, итал. Galata) — исторический район города. Здесь сохранились старые здания.\n\n' +

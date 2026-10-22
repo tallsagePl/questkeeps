@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { queuePlaceDescription } from '../lib/place-description-queue';
+
 test('description queue limits concurrency, prioritizes visible cards and drops cancelled neighbors', async () => {
-  let active = 0,
-    peak = 0;
-  const order: number[] = [],
-    release: (() => void)[] = [];
+  let active = 0;
+  let peak = 0;
+  const order: number[] = [];
+  const release: (() => void)[] = [];
   const run = (id: number) => async () => {
     active++;
     peak = Math.max(peak, active);
@@ -14,10 +15,10 @@ test('description queue limits concurrency, prioritizes visible cards and drops 
     active--;
     return id;
   };
-  const signal = new AbortController().signal,
-    cancelled = new AbortController();
-  const first = queuePlaceDescription(run(1), signal),
-    second = queuePlaceDescription(run(2), signal);
+  const signal = new AbortController().signal;
+  const cancelled = new AbortController();
+  const first = queuePlaceDescription(run(1), signal);
+  const second = queuePlaceDescription(run(2), signal);
   const neighbor = queuePlaceDescription(run(3), signal, 1);
   const discarded = queuePlaceDescription(run(4), cancelled.signal, 1);
   const rejected = assert.rejects(discarded, { name: 'AbortError' });

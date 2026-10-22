@@ -1,5 +1,6 @@
 import { all, one, run, db, hash } from './db';
 import type { Mention } from './mentions';
+
 export function ensureUsername(userId: string) {
   const saved = one(
     'SELECT username FROM user_handles WHERE user_id=?',
@@ -20,8 +21,8 @@ export function ensureUsername(userId: string) {
         userId,
       );
       if (current) return current.username as string;
-      let username = base,
-        suffix = 1;
+      let username = base;
+      let suffix = 1;
       while (one('SELECT 1 FROM user_handles WHERE username=?', username))
         username = base + '_' + suffix++;
       run('INSERT INTO user_handles VALUES (?,?)', userId, username);
@@ -29,6 +30,7 @@ export function ensureUsername(userId: string) {
     })
     .immediate();
 }
+
 export function publicProfile(username: string) {
   const user = one(
     'SELECT u.id,u.name,h.username,(EXISTS(SELECT 1 FROM user_avatars WHERE user_id=u.id) OR EXISTS(SELECT 1 FROM accounts WHERE user_id=u.id AND disk_enabled=1)) hasAvatar FROM users u JOIN user_handles h ON h.user_id=u.id WHERE h.username=?',
@@ -43,6 +45,7 @@ export function publicProfile(username: string) {
       }
     : undefined;
 }
+
 export function findProfiles(query: string) {
   const q = query.replace(/^@/, '').trim().slice(0, 80);
   if (q.length < 1) return [];
@@ -53,6 +56,7 @@ export function findProfiles(query: string) {
     q,
   );
 }
+
 export function descriptionMentions(
   tripId: string,
   description: string,
@@ -63,6 +67,7 @@ export function descriptionMentions(
   ) as Mention[];
   return resolveMentions(description, explicit);
 }
+
 export function resolveMentions(
   description: string,
   existing: Mention[],
@@ -71,8 +76,8 @@ export function resolveMentions(
   for (const match of description.matchAll(
     /(?<![\p{L}\p{N}_@])@([a-zA-Z0-9_]{3,30})(?![a-zA-Z0-9_])/gu,
   )) {
-    const start = match.index!,
-      end = start + match[0].length;
+    const start = match.index!;
+    const end = start + match[0].length;
     if (explicit.some((m) => start < m.end && end > m.start)) continue;
     const user = publicProfile(match[1]);
     if (user)

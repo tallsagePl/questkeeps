@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 test('description balances automatic lines while retaining authored breaks and one-word paragraphs', async ({
   page,
 }) => {
@@ -42,8 +43,8 @@ test('description balances automatic lines while retaining authored breaks and o
     const paragraphs = await copy.evaluate((el) => {
       return [...el.querySelectorAll('.trip-description-paragraph')].map(
         (paragraph) => {
-          const node = paragraph.firstChild!,
-            text = node.textContent!;
+          const node = paragraph.firstChild!;
+          const text = node.textContent!;
           const lines = new Map<number, string[]>();
           for (const match of text.matchAll(/\S+/g)) {
             const range = document.createRange();

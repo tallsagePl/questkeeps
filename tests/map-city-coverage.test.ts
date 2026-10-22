@@ -1,16 +1,24 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+
 process.env.DATABASE_PATH =
   './data/map-city-coverage-' + randomUUID() + '.sqlite';
+
 const { db, run, one } = await import('../lib/db');
+
 const { discoverPhotoRegion } = await import('../lib/map-area-suggestions');
+
 const { photoSearchRegions, PHOTO_SEARCH_RADIUS_METERS } =
   await import('../lib/photo-search-regions');
+
 const regionAt = (lat: number, lon: number) =>
   photoSearchRegions([{ lat, lon }])[0];
+
 const { photoInArea } = await import('../lib/area-membership');
+
 after(() => db.close());
+
 const street = (id: number, nodes: number[], geometry: any[]) => ({
   type: 'way',
   id,
@@ -18,6 +26,7 @@ const street = (id: number, nodes: number[], geometry: any[]) => ({
   geometry,
   tags: { name: 'Old town street', highway: 'residential' },
 });
+
 const first = street(
   101,
   [1, 2],
@@ -26,6 +35,7 @@ const first = street(
     { lat: 36.885, lon: 30.705 },
   ],
 );
+
 const second = street(
   102,
   [2, 3],
@@ -34,6 +44,7 @@ const second = street(
     { lat: 36.887, lon: 30.705 },
   ],
 );
+
 const district = {
   type: 'relation',
   id: 103,
@@ -58,9 +69,10 @@ const district = {
     },
   ],
 };
+
 test('photo-centred lookup covers Antalya old town, refreshes truncated streets and replaces city cache', async () => {
-  const lat = 36.90812,
-    lon = 30.69556;
+  const lat = 36.90812;
+  const lon = 30.69556;
   const region = regionAt(36.886, 30.705);
   run(
     'INSERT INTO map_area_city_cache VALUES (?,?,?)',
@@ -146,6 +158,7 @@ test('photo-centred lookup covers Antalya old town, refreshes truncated streets 
     global.fetch = original;
   }
 });
+
 test('incomplete boundary geometry remains retryable instead of being cached for a day', async () => {
   const original = global.fetch;
   let calls = 0;
@@ -196,6 +209,7 @@ test('new neighbouring cells retain every previously downloaded segment of a str
     global.fetch = original;
   }
 });
+
 test('provider outages preserve stale public geometry but leave the result incomplete', async () => {
   const original = global.fetch;
   const key = regionAt(55.5991, 37.3552).key;

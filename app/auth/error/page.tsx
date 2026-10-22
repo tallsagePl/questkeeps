@@ -1,5 +1,6 @@
 import OAuthError from '@/components/oauth-error';
 import { oauthErrorReason, oauthReturnPath } from '@/lib/oauth-errors';
+
 export default async function OAuthErrorPage({
   searchParams,
 }: {

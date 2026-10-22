@@ -3,16 +3,18 @@ import {
   type PhotoSearchRegion,
 } from './photo-search-regions';
 import { russianAreaTitle, russianAreaDescription } from './area-localization';
-import { all, one, run, db, id, type Row } from './db';
+import { all, one, run, db, id } from './db';
 import { closestCity } from './city-lookup';
 import { overpass, geometryFromOsm } from './place-geometry';
 import { photoInArea } from './area-membership';
 import { MemoryCache } from './memory-cache';
 import { membership, fail } from './access';
+
 const discovered = new MemoryCache<
   string,
   Promise<{ ids: string[]; incomplete: boolean }>
 >();
+
 export const osmAreaId = (url: string) => {
   const match = url.match(
     new RegExp(
@@ -21,12 +23,14 @@ export const osmAreaId = (url: string) => {
   );
   return match ? 'osm-' + match[1] + '-' + match[2] : null;
 };
+
 const normal = (s: string) =>
   s
     .normalize('NFKD')
     .replace(/\p{M}/gu, '')
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]/gu, '');
+
 export function eligibleAreaObject(e: any) {
   const t = e.tags || {};
   return (
@@ -54,6 +58,7 @@ export function eligibleAreaObject(e: any) {
         ['neighbourhood', 'quarter', 'suburb'].includes(t.place)))
   );
 }
+
 export async function discoverPhotoRegion(region: PhotoSearchRegion) {
   const { key, lat, lon, radius } = region;
   let pending = discovered.get(key);
@@ -170,8 +175,8 @@ export async function discoverPhotoRegion(region: PhotoSearchRegion) {
         if (Number.isFinite(coords[i]) && Number.isFinite(coords[i + 1]))
           pairs.push([coords[i], coords[i + 1]]);
       if (!pairs.length) continue;
-      const x = pairs.reduce((n, p) => n + p[0], 0) / pairs.length,
-        y = pairs.reduce((n, p) => n + p[1], 0) / pairs.length;
+      const x = pairs.reduce((n, p) => n + p[0], 0) / pairs.length;
+      const y = pairs.reduce((n, p) => n + p[1], 0) / pairs.length;
       run(
         'INSERT INTO map_areas VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,summary=excluded.summary,geometry=excluded.geometry,updated=excluded.updated',
         areaId,
@@ -221,6 +226,7 @@ export async function discoverPhotoRegion(region: PhotoSearchRegion) {
   );
   return pending;
 }
+
 export function accessibleAreaPhotos(tripId: string, userId: string) {
   const trip = membership(tripId, userId);
   const photos = all(
@@ -233,6 +239,7 @@ export function accessibleAreaPhotos(tripId: string, userId: string) {
   );
   return { trip, photos };
 }
+
 export async function areaSuggestions(tripId: string, userId: string) {
   const { photos } = accessibleAreaPhotos(tripId, userId);
   const regions = photoSearchRegions(photos as { lat: number; lon: number }[]);
@@ -337,6 +344,7 @@ export async function areaSuggestions(tripId: string, userId: string) {
   }
   return { candidates, incomplete };
 }
+
 export function addAreaToPhotos(
   tripId: string,
   userId: string,

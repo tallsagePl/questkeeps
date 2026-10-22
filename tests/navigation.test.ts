@@ -6,15 +6,25 @@ import {
   navigationTab,
   goBack,
 } from '../lib/navigation';
-const savedWindow = Object.getOwnPropertyDescriptor(globalThis, 'window'),
-  savedDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
-let state: any = null,
-  length = 1,
-  href = 'https://fixture.invalid/profile',
-  referrer = '',
-  backs = 0,
-  assigned = '',
-  delta = 0;
+
+const savedWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+
+const savedDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+
+let state: any = null;
+
+let length = 1;
+
+let href = 'https://fixture.invalid/profile';
+
+let referrer = '';
+
+let backs = 0;
+
+let assigned = '';
+
+let delta = 0;
+
 const browser = {
   location: {
     get href() {
@@ -51,10 +61,12 @@ const browser = {
     },
   },
 };
+
 Object.defineProperty(globalThis, 'window', {
   configurable: true,
   value: browser,
 });
+
 Object.defineProperty(globalThis, 'document', {
   configurable: true,
   value: {
@@ -63,6 +75,7 @@ Object.defineProperty(globalThis, 'document', {
     },
   },
 });
+
 after(() => {
   if (savedWindow) Object.defineProperty(globalThis, 'window', savedWindow);
   else delete (globalThis as any).window;
@@ -70,6 +83,7 @@ after(() => {
     Object.defineProperty(globalThis, 'document', savedDocument);
   else delete (globalThis as any).document;
 });
+
 function reset(previous = '', count = 1) {
   state = { __NA: true };
   length = count;
@@ -79,6 +93,7 @@ function reset(previous = '', count = 1) {
   assigned = '';
   delta = 0;
 }
+
 test('direct and external entry fall back to home; internal previous page can go back', () => {
   reset();
   goBack();
@@ -97,6 +112,7 @@ test('direct and external entry fall back to home; internal previous page can go
   assert.equal(assigned, '');
   assert.equal(state.__NA, true);
 });
+
 test('navigation preserves router state, deduplicates same tab and stores no private URL', () => {
   reset();
   href = 'https://fixture.invalid/s/private-capability?share=secret';

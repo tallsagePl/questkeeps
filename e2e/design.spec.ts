@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+
 async function axe(page: Page, label: string) {
   const result = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -16,6 +17,7 @@ async function axe(page: Page, label: string) {
     label,
   ).toEqual([]);
 }
+
 test('RU/EN, обе темы, сохранение предпочтений и контраст входа', async ({
   page,
 }) => {
@@ -75,6 +77,7 @@ test('RU/EN, обе темы, сохранение предпочтений и �
     page.getByText('Неверный email, никнейм или пароль', { exact: true }),
   ).toBeVisible();
 });
+
 test('English owner screens, keyboard dialogs, journal, invitation and guest', async ({
   page,
   browser,
@@ -218,6 +221,7 @@ test('English owner screens, keyboard dialogs, journal, invitation and guest', a
     fullPage: true,
   });
 });
+
 test('system theme follows device changes and zoom keeps controls available', async ({
   page,
 }) => {

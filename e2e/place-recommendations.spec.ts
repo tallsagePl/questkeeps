@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
+
 test('лента предлагает уникальные места, сохраняет связь с фото и не повторяет открытые места', async ({
   page,
 }) => {
@@ -71,15 +72,15 @@ test('лента предлагает уникальные места, сохр�
   await page.route('**/api/media/*/places/*/image', (r) =>
     r.fulfill({ json: { image: null } }),
   );
-  let posts = 0,
-    lookups = 0,
-    failedLookup = true;
+  let posts = 0;
+  let lookups = 0;
+  let failedLookup = true;
   await page.route('**/api/media/*/places', async (r) => {
     const id = r
-        .request()
-        .url()
-        .match(/media\/(photo\d)/)![1],
-      i = Number(id.slice(5));
+      .request()
+      .url()
+      .match(/media\/(photo\d)/)![1];
+    const i = Number(id.slice(5));
     if (r.request().method() === 'GET') {
       lookups++;
       if (i === 0 && failedLookup) {
@@ -258,8 +259,8 @@ test('следующая порция загружается, лимит не в
   await page.route('**/api/media/*/preview*', (r) =>
     r.fulfill({ status: 404, json: { error: 'Preview' } }),
   );
-  let limited = true,
-    laterCalls = 0;
+  let limited = true;
+  let laterCalls = 0;
   await page.route('**/api/media/*/places', async (r) => {
     const index = Number(
       r
@@ -300,10 +301,13 @@ test('следующая порция загружается, лимит не в
     .getByRole('button', { name: 'Открытые места', exact: true })
     .click();
   const rail = page.getByRole('region', {
-      name: 'Места, которые ещё не добавлены',
-      exact: true,
-    }),
-    more = rail.getByRole('button', { name: 'Найти ещё места', exact: true });
+    name: 'Места, которые ещё не добавлены',
+    exact: true,
+  });
+  const more = rail.getByRole('button', {
+    name: 'Найти ещё места',
+    exact: true,
+  });
   await expect(
     rail.getByRole('heading', { name: 'Первое место', exact: true }),
   ).toBeVisible();
@@ -387,8 +391,8 @@ test('не больше 20 карточек, фон прогревает пои�
     });
   });
   const descriptions = new Map<number, number>();
-  let activeDescriptions = 0,
-    peakDescriptions = 0;
+  let activeDescriptions = 0;
+  let peakDescriptions = 0;
   await page.route('**/api/media/*/places/description?*', async (r) => {
     const id = Number(new URL(r.request().url()).searchParams.get('pageId'));
     const count = (descriptions.get(id) || 0) + 1;
@@ -444,10 +448,10 @@ test('не больше 20 карточек, фон прогревает пои�
     exact: true,
   });
   const checkArrowLayout = async () => {
-    const bounds = await strip.boundingBox(),
-      first = await rail.locator('article').first().boundingBox();
-    const left = await previous.boundingBox(),
-      right = await next.boundingBox();
+    const bounds = await strip.boundingBox();
+    const first = await rail.locator('article').first().boundingBox();
+    const left = await previous.boundingBox();
+    const right = await next.boundingBox();
     expect(left!.x + left!.width).toBeLessThanOrEqual(bounds!.x);
     expect(right!.x).toBeGreaterThanOrEqual(bounds!.x + bounds!.width);
     expect(
@@ -458,8 +462,8 @@ test('не больше 20 карточек, фон прогревает пои�
     ).toBeLessThan(2);
   };
   await checkArrowLayout();
-  const railBounds = await rail.boundingBox(),
-    stripBounds = await strip.boundingBox();
+  const railBounds = await rail.boundingBox();
+  const stripBounds = await strip.boundingBox();
   expect(Math.abs(railBounds!.x - stripBounds!.x)).toBeLessThan(1);
   expect(Math.abs(railBounds!.width - stripBounds!.width)).toBeLessThan(1);
   await page.screenshot({

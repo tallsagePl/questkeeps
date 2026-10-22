@@ -1,5 +1,7 @@
 import { retryPlaceWhenIdle } from './place-resource-queue';
+
 export type BackgroundTask = { run: () => Promise<unknown> };
+
 // One small unit at a time; foreground queues and hidden/offline pages take precedence.
 export function startBackgroundTasks(
   tasks: BackgroundTask[],

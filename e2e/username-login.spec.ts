@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+
 test('login accepts email, username and @username; registration remains email-only', async ({
   page,
 }) => {
-  const suffix = Date.now().toString(36),
-    email = 'owl-' + suffix + '@fixture.invalid',
-    username = 'owl_' + suffix,
-    password = 'FixturePassword123!';
+  const suffix = Date.now().toString(36);
+  const email = 'owl-' + suffix + '@fixture.invalid';
+  const username = 'owl_' + suffix;
+  const password = 'FixturePassword123!';
   const origin = { origin: 'http://127.0.0.1:3101' };
   const registered = await page.request.post('/api/auth/register', {
     headers: origin,

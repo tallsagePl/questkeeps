@@ -3,16 +3,27 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { NextRequest } from 'next/server';
+
 process.env.DATABASE_PATH = './data/profile-' + randomUUID() + '.sqlite';
+
 process.env.APP_URL = 'http://localhost:3000';
+
 const { db, run, one, id, encrypt } = await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const { session } = await import('../lib/access');
+
 const { accountToken } = await import('../lib/yandex');
+
 const { syncDue } = await import('../lib/sync');
-const uid = id(),
-  other = id(),
-  aid = id();
+
+const uid = id();
+
+const other = id();
+
+const aid = id();
+
 for (const user of [uid, other])
   run(
     'INSERT INTO users VALUES (?,?,?,?,?)',
@@ -22,6 +33,7 @@ for (const user of [uid, other])
     null,
     Date.now(),
   );
+
 run(
   'INSERT INTO accounts(id,user_id,yandex_id,label,token,refresh,disk_enabled) VALUES (?,?,?,?,?,?,1)',
   aid,
@@ -31,8 +43,11 @@ run(
   encrypt('token'),
   encrypt('refresh'),
 );
-const cookie = 'ta_session=' + session(uid),
-  stranger = 'ta_session=' + session(other);
+
+const cookie = 'ta_session=' + session(uid);
+
+const stranger = 'ta_session=' + session(other);
+
 async function request(
   path: string,
   method = 'GET',
@@ -59,7 +74,9 @@ async function request(
     path.split('?')[0].split('/'),
   );
 }
+
 after(() => db.close());
+
 test('профиль: никнейм, фото с приоритетом над Яндексом и приватность', async () => {
   const changed = await request('me', 'PATCH', { name: '  Explorer  ' });
   assert.equal(changed.status, 200);
@@ -168,6 +185,7 @@ test('профиль: никнейм, фото с приоритетом над 
     413,
   );
 });
+
 test('второй Яндекс не подключается, повторное подключение своего доступно', async () => {
   process.env.YANDEX_CLIENT_ID = 'test-client';
   let profileId = 'another-yandex';
@@ -211,9 +229,10 @@ test('второй Яндекс не подключается, повторно�
     globalThis.fetch = original;
   }
 });
+
 test('отключение удаляет токены, сохраняет историю и останавливает синхронизацию', async () => {
-  const trip = id(),
-    source = id();
+  const trip = id();
+  const source = id();
   run(
     'INSERT INTO trips(id,owner_id,title,destination,start,end,created) VALUES (?,?,?,?,?,?,?)',
     trip,

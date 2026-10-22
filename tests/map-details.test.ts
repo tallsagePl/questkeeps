@@ -1,12 +1,18 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+
 process.env.DATABASE_PATH = './data/map-details-' + randomUUID() + '.sqlite';
+
 const { db, run, hash } = await import('../lib/db');
+
 const { addMapDetails, mapCity, captureClock } =
   await import('../lib/map-details');
+
 const { mapRegions, mapDateTime } = await import('../lib/map-regions');
+
 after(() => db.close());
+
 test('области имеют локализованные названия, время сохраняется без смещения и внутренние поля не выдаются', () => {
   assert.equal(mapCity(55.75, 37.62)?.names?.ru, 'Москва');
   assert.equal(mapCity(41.02, 28.96)?.names?.ru, 'Стамбул');

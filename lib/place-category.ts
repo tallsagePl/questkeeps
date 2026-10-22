@@ -1,6 +1,8 @@
 import { placeAreaKind } from './place-kind';
+
 export type PlaceCategory =
   'attraction' | 'street' | 'district' | 'square' | 'park';
+
 export function placeCategory(place: {
   title: string;
   summary?: string;

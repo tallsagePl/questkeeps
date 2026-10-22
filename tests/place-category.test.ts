@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { placeCategory } from '../lib/place-category';
+
 test('place filters distinguish streets, districts, squares, parks and individual attractions', () => {
   for (const [title, summary, kind] of [
     ['Улица Банкалар', 'Улица Банкалар — улица в районе Каракёй.', 'street'],

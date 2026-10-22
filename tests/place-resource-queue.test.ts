@@ -6,7 +6,9 @@ import {
   retryPlaceWhenIdle,
 } from '../lib/place-resource-queue';
 import { queuePreview } from '../lib/preview-queue';
+
 const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
+
 test('idle retries wait for resource and preview queues, obey visibility and can be cancelled', async (t) => {
   const nav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   Object.defineProperty(globalThis, 'navigator', {
@@ -16,8 +18,8 @@ test('idle retries wait for resource and preview queues, obey visibility and can
   (globalThis as any).document = { visibilityState: 'visible' };
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
   try {
-    let finish!: () => void,
-      count = 0;
+    let finish!: () => void;
+    let count = 0;
     const foreground = queuePlaceResource(
       () =>
         new Promise<void>((resolve) => {
@@ -79,10 +81,10 @@ test('background work reserves foreground slots and queued resources can be prom
       priority,
       key,
     );
-  const a = add('background-a', 2),
-    b = add('background-b', 2),
-    c = add('promoted', 2),
-    d = add('background-d', 2);
+  const a = add('background-a', 2);
+  const b = add('background-b', 2);
+  const c = add('promoted', 2);
+  const d = add('background-d', 2);
   const visible = add('visible', 0);
   try {
     await flush();

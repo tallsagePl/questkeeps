@@ -4,6 +4,7 @@ import {
   photoSearchRegions,
   PHOTO_SEARCH_RADIUS_METERS,
 } from '../lib/photo-search-regions';
+
 const distance = (
   a: { lat: number; lon: number },
   b: { lat: number; lon: number },
@@ -16,6 +17,7 @@ const distance = (
       Math.sin(((a.lon - b.lon) * rad) / 2) ** 2;
   return 12742000 * Math.asin(Math.sqrt(Math.min(1, h)));
 };
+
 test('every photo has a buffered search region, including remote points with no nearby city', () => {
   const points = [
     { lat: 36.886, lon: 30.705 },
@@ -47,6 +49,7 @@ test('every photo has a buffered search region, including remote points with no 
     'order does not affect cells or cache keys',
   );
 });
+
 test('identical or nearby photos reuse cells; distant photos add only their own region', () => {
   const first = { lat: 36.886, lon: 30.705 };
   const cells = photoSearchRegions([

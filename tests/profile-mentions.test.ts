@@ -3,11 +3,17 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { moveMentions } from '../lib/mentions';
+
 process.env.DATABASE_PATH = './data/mentions-' + randomUUID() + '.sqlite';
+
 process.env.APP_URL = 'http://localhost:3000';
+
 const { db, run, one } = await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const { session, userProfile, tripData } = await import('../lib/access');
+
 for (const [id, name] of [
   ['owner', 'Сова'],
   ['friend', 'Андрей'],
@@ -23,6 +29,7 @@ for (const [id, name] of [
   );
   userProfile(id);
 }
+
 run(
   'INSERT INTO trips(id,owner_id,title,destination,start,end,created,share_hash) VALUES (?,?,?,?,?,?,?,?)',
   'trip',
@@ -34,12 +41,14 @@ run(
   Date.now(),
   null,
 );
+
 const cookies = Object.fromEntries(
   ['owner', 'friend', 'stranger'].map((id) => [
     id,
     'ta_session=' + session(id),
   ]),
 );
+
 async function req(
   path: string,
   method = 'GET',
@@ -55,7 +64,9 @@ async function req(
     path.split('?')[0].split('/'),
   );
 }
+
 after(() => db.close());
+
 test('display name and unique case-insensitive username are independent; profiles expose no private fields', async () => {
   let res = await req('me', 'PATCH', { username: 'Tallsage' });
   assert.equal(res.status, 200);
@@ -97,9 +108,10 @@ test('display name and unique case-insensitive username are independent; profile
   const search = await req('profiles?q=' + encodeURIComponent('андрей'));
   assert.equal((await search.json()).users[0].username, 'andrey');
 });
+
 test('selected names and typed mentions link accounts, preserve authored text and enforce owner rights', async () => {
-  const description = '  Поездка с Сашей и @andrey.\nОтдых  ',
-    start = description.indexOf('Сашей');
+  const description = '  Поездка с Сашей и @andrey.\nОтдых  ';
+  const start = description.indexOf('Сашей');
   const res = await req('trips/trip', 'PATCH', {
     description,
     mentions: [{ start, end: start + 5, userId: 'owner' }],
@@ -166,6 +178,7 @@ test('selected names and typed mentions link accounts, preserve authored text an
     0,
   );
 });
+
 test('editing text shifts intact mentions and removes only edited names', () => {
   const links = [{ start: 8, end: 12, userId: 'a' }];
   assert.deepEqual(moveMentions('Поездка Саша', 'Наша поездка Саша', links), [

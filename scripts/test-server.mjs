@@ -3,9 +3,13 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+
 const scratch = resolve('data/test-server', randomUUID());
+
 mkdirSync(scratch, { recursive: true });
+
 const env = {};
+
 for (const name of [
   'PATH',
   'Path',
@@ -15,6 +19,7 @@ for (const name of [
   'PATHEXT',
 ])
   if (process.env[name]) env[name] = process.env[name];
+
 Object.assign(env, {
   HOME: scratch,
   USERPROFILE: scratch,
@@ -31,8 +36,10 @@ Object.assign(env, {
   NEXT_TELEMETRY_DISABLED: '1',
   QUESTKEEPS_E2E: '1',
 });
+
 env.NODE_OPTIONS =
   '--import=' + pathToFileURL(resolve('scripts/test-network.mjs')).href;
+
 const server = spawn(
   process.execPath,
   [
@@ -45,11 +52,15 @@ const server = spawn(
   ],
   { env, stdio: 'inherit', windowsHide: true },
 );
+
 process.on('SIGTERM', () => server.kill());
+
 process.on('SIGINT', () => server.kill());
+
 server.on('error', () => {
   process.exitCode = 1;
 });
+
 server.on('exit', (code) => {
   process.exitCode = code || 0;
 });

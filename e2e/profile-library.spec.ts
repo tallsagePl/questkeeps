@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
+
 test('profile files stay collapsed, load bounded pages and previews, open modal, and keep footer at bottom', async ({
   page,
 }) => {
@@ -17,8 +18,8 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
   })
     .png()
     .toBuffer();
-  let pages = 0,
-    previews = 0;
+  let pages = 0;
+  let previews = 0;
   const files = Array.from({ length: 65 }, (_, i) => ({
     id: 'file-' + i,
     name: 'Photo ' + i + '.jpg',
@@ -38,8 +39,8 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
   );
   await page.route('**/api/my-media?*', (r) => {
     pages++;
-    const c = new URL(r.request().url()).searchParams.get('cursor'),
-      start = c ? Number(c) : 0;
+    const c = new URL(r.request().url()).searchParams.get('cursor');
+    const start = c ? Number(c) : 0;
     return r.fulfill({
       json: {
         media: files.slice(start, start + 30),
@@ -54,8 +55,8 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
       contentType: 'image/png',
     });
   });
-  let releaseUpdate: () => void = () => {},
-    holdUpdate = false;
+  let releaseUpdate: () => void = () => {};
+  let holdUpdate = false;
   const updateGate = new Promise<void>((resolve) => {
     releaseUpdate = resolve;
   });
@@ -201,8 +202,8 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
     page.getByRole('link', { name: 'Редактировать профиль', exact: true }),
   ).toBeVisible();
   const metrics = await page.evaluate(() => {
-    const element = document.querySelector('footer')!,
-      rect = element.getBoundingClientRect();
+    const element = document.querySelector('footer')!;
+    const rect = element.getBoundingClientRect();
     return {
       footerBottom: rect.bottom + scrollY,
       pageBottom: Math.max(innerHeight, document.documentElement.scrollHeight),
