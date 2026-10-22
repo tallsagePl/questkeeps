@@ -1,0 +1,26 @@
+[Unit]
+Description=QuestKeeps web application and sync worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=questkeeps
+Group=questkeeps
+WorkingDirectory=/opt/questkeeps/app
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=NODE_OPTIONS=--max-old-space-size=512
+ExecStart=/usr/local/bin/node --env-file=.env.local scripts/serve.mjs start
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=45
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

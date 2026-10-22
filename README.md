@@ -124,7 +124,7 @@ app/ — страницы и API-маршрут; components/ — интерфе�
 
 ## Версия и история
 
-Текущий выпуск: **1.1.0**. Правила версионирования описаны в [docs/VERSIONING.md](docs/VERSIONING.md), изменения — в [CHANGELOG.md](CHANGELOG.md).
+Текущий выпуск: **1.10.1**. Правила версионирования описаны в [docs/VERSIONING.md](docs/VERSIONING.md), изменения — в [CHANGELOG.md](CHANGELOG.md). Инструкция по запуску на VPS и откату — в [deploy/README.md](deploy/README.md).
 
 ## Профиль и друзья
 

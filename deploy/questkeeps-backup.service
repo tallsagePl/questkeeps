@@ -1,0 +1,15 @@
+[Unit]
+Description=QuestKeeps SQLite online backup
+
+[Service]
+Type=oneshot
+User=questkeeps
+Group=questkeeps
+WorkingDirectory=/opt/questkeeps/app
+ExecStart=/usr/local/bin/node --env-file=.env.local --import tsx scripts/backup.ts
+ExecStartPost=/usr/bin/find /opt/questkeeps/app/data/backups -maxdepth 1 -type f -name travel-*.sqlite -mtime +14 -delete
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
