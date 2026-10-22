@@ -1,5 +1,4 @@
 'use client';
-import BackButton from './back-button';
 import { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLocale } from './appearance';
@@ -49,7 +48,6 @@ export default function PublicProfile({ profile }: { profile: Person }) {
         tabIndex={-1}
         className="social-page public-person-page"
       >
-        <BackButton />
         <section className="public-person-identity">
           <PersonAvatar person={profile} />
           <div>

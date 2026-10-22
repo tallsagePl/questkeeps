@@ -1,5 +1,4 @@
 'use client';
-import BackButton from './back-button';
 import { useEffect, useState } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
@@ -55,7 +54,6 @@ function ProfileContents() {
         className="social-page profile-page"
         tabIndex={-1}
       >
-        <BackButton />
         <div className="social-page-intro">
           <div>
             <h1>

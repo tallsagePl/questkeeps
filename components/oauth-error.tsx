@@ -1,6 +1,5 @@
 'use client';
-import BackButton from '@/components/back-button';
-import Brand from './brand';
+import Brand, { HeaderBrand } from './brand';
 import { useLocale, AppearanceControls } from './appearance';
 import { oauthErrors, type OAuthErrorReason } from '@/lib/oauth-errors';
 export default function OAuthError({
@@ -19,14 +18,13 @@ export default function OAuthError({
   return (
     <>
       <header className="topbar">
-        <Brand />
+        <HeaderBrand />
         <AppearanceControls />
       </header>
       <main
         className="invite-page"
         style={{ maxWidth: 680, margin: '60px auto', padding: '0 24px' }}
       >
-        <BackButton />
         <section className="panel stack" aria-labelledby="oauth-error-title">
           <span className="eyebrow">
             {en ? 'YANDEX CONNECTION' : 'ПОДКЛЮЧЕНИЕ ЯНДЕКСА'}

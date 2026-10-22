@@ -13,7 +13,8 @@ let state: any = null,
   href = 'https://fixture.invalid/profile',
   referrer = '',
   backs = 0,
-  assigned = '';
+  assigned = '',
+  delta = 0;
 const browser = {
   location: {
     get href() {
@@ -40,6 +41,10 @@ const browser = {
       state = value;
       length++;
       href = url;
+    },
+    go(value: number) {
+      delta = value;
+      backs++;
     },
     back() {
       backs++;
@@ -72,6 +77,7 @@ function reset(previous = '', count = 1) {
   href = 'https://fixture.invalid/profile';
   backs = 0;
   assigned = '';
+  delta = 0;
 }
 test('direct and external entry fall back to home; internal previous page can go back', () => {
   reset();
@@ -103,6 +109,7 @@ test('navigation preserves router state, deduplicates same tab and stores no pri
     version: 1,
     back: true,
     tab: 'map',
+    sectionSteps: 0,
   });
   assert.ok(!JSON.stringify(state).includes('private-capability'));
   assert.ok(!JSON.stringify(state).includes('secret'));
@@ -125,5 +132,69 @@ test('native same-origin navigation works without referrers and refuses an exter
   goBack();
   assert.equal(backs, 0);
   assert.equal(assigned, '/');
+  delete (browser as any).navigation;
+});
+
+test('section back skips trip tabs and profile anchors without storing their URLs', () => {
+  reset('', 5);
+  href = 'https://fixture.invalid/?trip=fixture';
+  (browser as any).navigation = {
+    canGoBack: true,
+    currentEntry: { index: 3 },
+    entries: () => [
+      { index: 0, url: 'https://fixture.invalid/' },
+      { index: 1, url: href },
+      { index: 2, url: href },
+      { index: 3, url: href },
+    ],
+  };
+  goBack();
+  assert.equal(delta, -3);
+  reset('', 3);
+  href = 'https://fixture.invalid/profile#friends';
+  (browser as any).navigation = {
+    canGoBack: true,
+    currentEntry: { index: 2 },
+    entries: () => [
+      { index: 0, url: 'https://fixture.invalid/about' },
+      { index: 1, url: 'https://fixture.invalid/profile' },
+      { index: 2, url: href },
+    ],
+  };
+  goBack();
+  assert.equal(delta, -2);
+  delete (browser as any).navigation;
+  reset('https://fixture.invalid/', 2);
+  href = 'https://fixture.invalid/?trip=fixture';
+  initializeNavigation();
+  pushNavigation(href, 'map');
+  pushNavigation(href, 'notes');
+  goBack();
+  assert.equal(delta, -3);
+});
+
+test('hidden document URLs retain section skip count after reload', () => {
+  reset('', 4);
+  href = 'https://fixture.invalid/?trip=fixture';
+  state = {
+    questkeepsNavigation: {
+      version: 1,
+      back: true,
+      tab: 'notes',
+      sectionSteps: 3,
+    },
+  };
+  (browser as any).navigation = {
+    canGoBack: true,
+    currentEntry: { index: 3 },
+    entries: () => [
+      { index: 0, url: null },
+      { index: 1, url: null },
+      { index: 2, url: null },
+      { index: 3, url: href },
+    ],
+  };
+  goBack();
+  assert.equal(delta, -3);
   delete (browser as any).navigation;
 });

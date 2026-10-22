@@ -40,7 +40,6 @@ import VirtualGallery from './virtual-gallery';
 import MediaPreview from './media-preview';
 import PhotoViewer from './photo-viewer';
 import Modal from './modal';
-import BackButton from './back-button';
 import {
   initializeNavigation,
   navigationTab,
@@ -61,7 +60,7 @@ import TripPreloader, { tripMapScope } from './trip-preloader';
 import { distanceMeters } from '../lib/geo';
 import { BackToTop, FavoriteButton, MediaTitle } from './media-controls';
 import CreateTrip from './create-trip';
-import Brand, { LogoMark } from './brand';
+import Brand, { LogoMark, HeaderBrand } from './brand';
 import {
   ApiError,
   FeedbackProvider,
@@ -739,7 +738,7 @@ function ArchiveContent({
       </a>
       <BackToTop />
       <header className="topbar" tabIndex={-1}>
-        <Brand />
+        <HeaderBrand back={!!(selected || share || invite)} />
         <span className="top-caption">{t('КОЛЛЕКЦИЯ ВАШИХ ПУТЕШЕСТВИЙ')}</span>
         <div className="top-actions">
           {!guest && user && (
@@ -814,7 +813,6 @@ function ArchiveContent({
         </main>
       ) : invite ? (
         <main id="main-content" tabIndex={-1} className="invite-page">
-          <BackButton />
           <PageFeedback />
           <span className="eyebrow">{t('ХОРОШЕЕ ПУТЕШЕСТВИЕ — ОБЩЕЕ')}</span>
           <h1>{invitation?.title || t('Приглашение в поездку')}</h1>
@@ -899,7 +897,6 @@ function ArchiveContent({
         </main>
       ) : guest && !trip ? (
         <main id="main-content" tabIndex={-1} className="invite-page">
-          <BackButton />
           <PageFeedback />
           <h1>{t('Ссылка недоступна')}</h1>
           <p>
@@ -1007,7 +1004,6 @@ function ArchiveContent({
       ) : (
         <main id="main-content" tabIndex={-1} className="trip-page">
           <PageFeedback />
-          <BackButton />
           <div className="trip-heading">
             <div>
               <span className="eyebrow">

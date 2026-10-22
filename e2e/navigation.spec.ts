@@ -83,7 +83,26 @@ test('trip tabs restore back, forward and after reload; main has no back button'
   await expect(
     nav.getByRole('button', { name: 'Дневник', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
-  await page.getByRole('button', { name: 'Назад', exact: true }).click();
+  await expect(page.locator('main button.page-back')).toHaveCount(0);
+  const back = page
+    .locator('header')
+    .getByRole('button', { name: 'Назад', exact: true });
+  const position = await page
+    .locator('header .header-brand')
+    .evaluate((element) => {
+      const back = element.querySelector('button')!.getBoundingClientRect(),
+        logo = element.querySelector('a')!.getBoundingClientRect();
+      return back.right <= logo.left;
+    });
+  expect(position).toBeTruthy();
+  await back.click();
+  await expect(
+    page.getByRole('heading', { name: 'Ваши путешествия.' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Назад', exact: true }),
+  ).toHaveCount(0);
+  await page.goForward();
   await expect(
     nav.getByRole('button', { name: 'Галерея', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
@@ -91,14 +110,21 @@ test('trip tabs restore back, forward and after reload; main has no back button'
   await expect(
     nav.getByRole('button', { name: 'Дневник', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
-  await page.getByRole('button', { name: 'Назад', exact: true }).click();
-  await page.getByRole('button', { name: 'Назад', exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(back).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
+  await page.screenshot({
+    path: 'test-results/header-section-back-mobile.png',
+    fullPage: true,
+  });
+  await back.click();
   await expect(
     page.getByRole('heading', { name: 'Ваши путешествия.' }),
   ).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Назад', exact: true }),
-  ).toHaveCount(0);
 });
 test('a late trip response cannot undo Back', async ({ page }) => {
   await page.route('**/api/me', (r) =>

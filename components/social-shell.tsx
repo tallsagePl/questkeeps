@@ -4,7 +4,7 @@ import {
   observeSessionChanges,
 } from '../lib/browser-session';
 import { useEffect, useState, type ReactNode } from 'react';
-import Brand from './brand';
+import Brand, { HeaderBrand } from './brand';
 import { AppearanceControls, useLocale } from './appearance';
 import UserAvatar, { type ProfileUser } from './user-avatar';
 import { api } from './api';
@@ -69,7 +69,7 @@ export function SocialShell({
         {t('Перейти к содержимому')}
       </a>
       <header className="topbar social-topbar">
-        <Brand />
+        <HeaderBrand />
         <nav className="social-nav" aria-label={t('Главная навигация')}>
           <a href="/">{t('Путешествия')}</a>
           <a

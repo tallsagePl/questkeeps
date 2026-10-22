@@ -3925,3 +3925,26 @@ a:any-link:focus-visible,
 .topbar .social-nav a[aria-current='page'] {
   color: var(--accent);
 }
+
+.header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.header-brand .page-back {
+  align-self: center;
+  margin: 0;
+  min-height: 42px;
+}
+@media (max-width: 680px) {
+  .header-brand {
+    gap: 10px;
+  }
+  .header-brand .page-back {
+    padding: 9px;
+  }
+  .header-brand .page-back .back-label {
+    display: none;
+  }
+}

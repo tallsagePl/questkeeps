@@ -13,6 +13,8 @@ export default function BackButton() {
     <button
       type="button"
       className="back text-button page-back"
+      aria-label={t('Назад')}
+      title={t('Назад')}
       disabled={!ready}
       onClick={goBack}
     >
@@ -29,7 +31,7 @@ export default function BackButton() {
       >
         <path d="m10 6-6 6 6 6M4 12h16" />
       </svg>
-      {t('Назад')}
+      <span className="back-label">{t('Назад')}</span>
     </button>
   );
 }

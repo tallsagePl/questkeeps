@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { SocialShell, useViewer } from './social-shell';
 import { useLocale } from './appearance';
 import { api } from './api';
-import BackButton from './back-button';
 export default function VerifyEmail() {
   const { t } = useLocale(),
     viewer = useViewer();
@@ -20,7 +19,6 @@ export default function VerifyEmail() {
   return (
     <SocialShell user={viewer.user}>
       <main id="main-content" className="social-page" tabIndex={-1}>
-        <BackButton />
         <h1>{t('Подтверждение почты')}</h1>
         <p>{t('Подтверди адрес, чтобы завершить регистрацию.')}</p>
         {!done && (

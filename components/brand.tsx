@@ -1,4 +1,5 @@
 'use client';
+import BackButton from './back-button';
 
 export function LogoMark({ className = '' }: { className?: string }) {
   return (
@@ -34,5 +35,14 @@ export default function Brand({ footer = false }: { footer?: boolean }) {
       <LogoMark />
       <span className="qk-wordmark">QuestKeeps</span>
     </a>
+  );
+}
+
+export function HeaderBrand({ back = true }: { back?: boolean }) {
+  return (
+    <div className="header-brand">
+      {back && <BackButton />}
+      <Brand />
+    </div>
   );
 }
