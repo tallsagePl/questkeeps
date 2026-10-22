@@ -675,7 +675,7 @@ function ArchiveContent({
       )}
       <Field
         label={t(
-          register ? 'Электронная почта' : 'Электронная почта или @никнейм',
+          register ? 'Электронная почта' : 'Электронная почта или никнейм',
         )}
         name="email"
         type={register ? 'email' : 'text'}

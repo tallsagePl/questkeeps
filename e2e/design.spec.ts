@@ -50,7 +50,7 @@ test('RU/EN, обе темы, сохранение предпочтений и �
     .click();
   await axe(page, 'English light welcome');
   await page
-    .getByLabel('Email or @username', { exact: true })
+    .getByLabel('Email or username', { exact: true })
     .fill('incorrect@example.test');
   await page.getByLabel('Password', { exact: true }).fill('WrongPassword123');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();

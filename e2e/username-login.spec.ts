@@ -27,7 +27,7 @@ test('login accepts email, username and @username; registration remains email-on
     await expect(
       page.getByRole('heading', { name: 'Рады вас видеть', exact: true }),
     ).toBeVisible();
-    const input = page.getByLabel('Электронная почта или @никнейм', {
+    const input = page.getByLabel('Электронная почта или никнейм', {
       exact: true,
     });
     await expect(input).toHaveAttribute('type', 'text');
