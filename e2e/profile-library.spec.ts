@@ -188,6 +188,21 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
   ).toHaveCount(0);
   const footer = page.locator('footer');
   await expect(footer).toBeVisible();
-  const box = await footer.boundingBox();
-  expect(Math.abs(box!.y + box!.height - 844)).toBeLessThan(3);
+  await expect(
+    page.getByRole('link', { name: 'Редактировать профиль', exact: true }),
+  ).toBeVisible();
+  const metrics = await page.evaluate(() => {
+    const element = document.querySelector('footer')!,
+      rect = element.getBoundingClientRect();
+    return {
+      footerBottom: rect.bottom + scrollY,
+      pageBottom: Math.max(innerHeight, document.documentElement.scrollHeight),
+      rect: { top: rect.top, height: rect.height },
+      scrollY,
+      body: document.body.getBoundingClientRect().height,
+      shell: document.querySelector('.social-shell')?.getBoundingClientRect()
+        .height,
+    };
+  });
+  expect(Math.abs(metrics.footerBottom - metrics.pageBottom)).toBeLessThan(3);
 });

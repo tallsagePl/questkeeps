@@ -1,4 +1,5 @@
 'use client';
+import BackButton from './back-button';
 import { useLocale } from './appearance';
 import { SocialShell, useViewer } from './social-shell';
 export default function About() {
@@ -7,6 +8,7 @@ export default function About() {
   return (
     <SocialShell user={viewer.user} current="about">
       <main id="main-content" tabIndex={-1} className="social-page about-page">
+        <BackButton />
         <section className="about-intro">
           <h1>
             {t('Путешествия заканчиваются. Истории остаются')}

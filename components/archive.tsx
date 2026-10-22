@@ -36,6 +36,12 @@ import VirtualGallery from './virtual-gallery';
 import MediaPreview from './media-preview';
 import PhotoViewer from './photo-viewer';
 import Modal from './modal';
+import BackButton from './back-button';
+import {
+  initializeNavigation,
+  navigationTab,
+  pushNavigation,
+} from '../lib/navigation';
 import PlaceDelete from './place-delete';
 import PhotoLocation from './photo-location';
 import TripDayCalendar from './trip-day-calendar';
@@ -217,6 +223,7 @@ function ArchiveContent({
   };
   const mounted = useRef(true);
   const identityGeneration = useRef(0);
+  const navigationGeneration = useRef(0);
   const action = useCallback(
     async (task: () => Promise<void>) => {
       setBusy(true);
@@ -267,9 +274,24 @@ function ArchiveContent({
     setTrips(r.trips);
   }, []);
   const loadTrip = useCallback(async (tid: string) => {
-    const generation = identityGeneration.current;
-    const r = await api('trips/' + tid);
-    if (generation !== identityGeneration.current) return;
+    const generation = identityGeneration.current,
+      navigation = navigationGeneration.current;
+    let r;
+    try {
+      r = await api('trips/' + tid);
+    } catch (error) {
+      if (
+        generation !== identityGeneration.current ||
+        navigation !== navigationGeneration.current
+      )
+        return;
+      throw error;
+    }
+    if (
+      generation !== identityGeneration.current ||
+      navigation !== navigationGeneration.current
+    )
+      return;
     setData(r);
     setSelected(tid);
   }, []);
@@ -352,11 +374,43 @@ function ArchiveContent({
     setDay('');
     setTab('gallery');
     setError('');
-    void action(async () => {
-      await loadTrip(tid);
-      window.history.replaceState(null, '', '/?trip=' + tid);
-    });
+    navigationGeneration.current++;
+    pushNavigation('/?trip=' + encodeURIComponent(tid), 'gallery');
+    void action(() => loadTrip(tid));
   };
+  const openTab = (next: string) => {
+    const view = guest && next === 'settings' ? 'gallery' : next;
+    pushNavigation(window.location.href, view);
+    setTab(view);
+    setError('');
+  };
+  useEffect(() => {
+    initializeNavigation();
+    const view = navigationTab();
+    setTab(guest && view === 'settings' ? 'gallery' : view);
+  }, [guest]);
+  useEffect(() => {
+    const restore = () => {
+      navigationGeneration.current++;
+      setModal('');
+      setActiveMedia(null);
+      setDay('');
+      setError('');
+      const view = navigationTab();
+      setTab(guest && view === 'settings' ? 'gallery' : view);
+      if (share || invite) return;
+      const tid = new URLSearchParams(window.location.search).get('trip');
+      if (tid) {
+        if (tid !== selected) void action(() => loadTrip(tid));
+      } else {
+        setSelected(null);
+        setData(null);
+        if (user) void action(loadTrips);
+      }
+    };
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, [selected, user?.id, share, invite, guest, action, loadTrip, loadTrips]);
   const reloadSettings = async () => {
     if (!selected) return;
     setSources((await api('trips/' + selected + '/sources')).sources);
@@ -679,6 +733,7 @@ function ArchiveContent({
         </main>
       ) : invite ? (
         <main id="main-content" tabIndex={-1} className="invite-page">
+          <BackButton />
           <PageFeedback />
           <span className="eyebrow">{t('ХОРОШЕЕ ПУТЕШЕСТВИЕ — ОБЩЕЕ')}</span>
           <h1>{invitation?.title || t('Приглашение в поездку')}</h1>
@@ -763,6 +818,7 @@ function ArchiveContent({
         </main>
       ) : guest && !trip ? (
         <main id="main-content" tabIndex={-1} className="invite-page">
+          <BackButton />
           <PageFeedback />
           <h1>{t('Ссылка недоступна')}</h1>
           <p>
@@ -870,20 +926,7 @@ function ArchiveContent({
       ) : (
         <main id="main-content" tabIndex={-1} className="trip-page">
           <PageFeedback />
-          {!guest && (
-            <FeedbackButton
-              className="back text-button"
-              onClick={() => {
-                setSelected(null);
-                setData(null);
-                setTab('gallery');
-                window.history.replaceState(null, '', '/');
-                void action(loadTrips);
-              }}
-            >
-              {t('← Все путешествия')}
-            </FeedbackButton>
-          )}
+          <BackButton />
           <div className="trip-heading">
             <div>
               <span className="eyebrow">
@@ -948,8 +991,7 @@ function ArchiveContent({
                   className={tab === key ? 'active' : ''}
                   aria-current={tab === key ? 'page' : undefined}
                   onClick={() => {
-                    setTab(key);
-                    setError('');
+                    openTab(key);
                   }}
                 >
                   <Icon name={icon} size={18} />
@@ -1165,7 +1207,7 @@ function ArchiveContent({
                             setGalleryTarget(m.id);
                             setFilter('all');
                             setDay('');
-                            setTab('gallery');
+                            openTab('gallery');
                           }}
                         >
                           <svg
@@ -1263,7 +1305,7 @@ function ArchiveContent({
                     ) : (
                       <FeedbackButton
                         className="secondary"
-                        onClick={() => setTab('settings')}
+                        onClick={() => openTab('settings')}
                       >
                         <Icon name="cloud" />
                         {t(
@@ -2329,7 +2371,7 @@ function ArchiveContent({
                               if (!includesDate(place.day, day)) setDay('');
                               setPlaceTarget(place.url);
                               setActiveMedia(null);
-                              setTab('places');
+                              openTab('places');
                             }}
                           >
                             {t('Перейти к карточке места')} →
