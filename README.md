@@ -1,128 +1,130 @@
 # QuestKeeps
 
+**English** | [Русский](README.ru.md)
+
 ![QuestKeeps](public/brand/questkeeps-blue.svg)
 
-**Путешествия заканчиваются. Истории остаются.**
+**Trips end. Stories stay.**
 
-QuestKeeps собирает фотографии, маршруты, открытые места и записи в дневнике в историю поездки — вместе с людьми, которые были рядом. Оригиналы фото и видео остаются на Яндекс Диске, а приложение связывает их с датами, местами и воспоминаниями.
+QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-Full-stack пет-проект на **Next.js, React и TypeScript** с SQLite, фоновым индексированием, OAuth и серверной проверкой прав доступа. Текущая версия — **1.10.1**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.10.1**.
 
-## Как это выглядит
+## Screenshots
 
-Скриншоты сняты с работающего интерфейса на вымышленных данных; превью фотографий заменены демонстрационными заглушками. Личные аккаунты, фотографии и секретные ссылки в них не используются.
+These screenshots show the running application with fictional data and placeholder photo previews. They contain no personal accounts, private photos or secret sharing links.
 
-### Коллекция путешествий
+### Your travel collection
 
-![Коллекция поездок и друзья в светлой теме](docs/screenshots/ru-light-trips.webp)
+![Travel collection and friends in the light theme](docs/screenshots/en-light-trips.webp)
 
-### Места на карте
+### Places on the map
 
-![Карта демонстрационной поездки по Стамбулу](docs/screenshots/ru-light-map.webp)
+![Map of a demonstration trip to Istanbul](docs/screenshots/en-light-map.webp)
 
-### Дневник в тёмной теме
+### A shared journal in dark mode
 
-![Совместный дневник поездки в тёмной теме](docs/screenshots/ru-dark-journal.webp)
+![Shared trip journal in the dark theme](docs/screenshots/en-dark-journal.webp)
 
 <details>
-<summary>Страница «О проекте»</summary>
+<summary>About the project</summary>
 
-![Страница «О проекте» с композицией скриншотов приложения](docs/screenshots/ru-light-about.webp)
+![About page with a layered showcase of application screenshots](docs/screenshots/en-light-about.webp)
 
 </details>
 
-Светлая и тёмная темы, русский и английский интерфейс, адаптивная вёрстка. Шрифт Onest хранится локально. Композиция скриншотов на странице «О проекте» поддерживает клавиатуру и уменьшенное движение.
+Light and dark themes, English and Russian interfaces, and responsive layouts. The Onest font is served locally. The screenshot showcase on the About page supports keyboard navigation and reduced motion.
 
-## Возможности
+## Features
 
-- **Поездки и общая история.** Направление, даты, описание с упоминаниями друзей и участники с собственными периодами доступа.
-- **Фото и видео из Яндекс Диска.** Подключение выбранной папки, рекурсивное индексирование, ручная и периодическая синхронизация без дублирования файлов.
-- **Галерея.** Фильтры по дням и типам, избранное, собственные названия кадров, просмотр и скачивание оригиналов. Автор может скрыть свои публикации, в том числе после выхода из поездки.
-- **Карта и открытия.** Координаты из доступных EXIF-метаданных, ручной выбор места, предложения достопримечательностей из Wikipedia и подтверждённые места рядом с кадрами.
-- **Дневник.** Записи по дням поездки и ответы участников.
-- **Профиль и друзья.** Никнейм, аватарка, публичная страница, поиск людей, заявки и ссылки для добавления в друзья.
-- **Несколько способов входа.** Email или никнейм с паролем, Яндекс ID. После привязки Яндекса оба способа ведут в один профиль.
-- **Гостевой просмотр.** Отдельная от приглашения участника ссылка на опубликованную историю поездки. Её можно заменить или отозвать.
+- **Trips and shared stories.** Destinations, dates, descriptions with friend mentions, and participants with individual access periods.
+- **Photos and videos from Yandex Disk.** Connect a selected folder, index it recursively, and synchronize manually or periodically without duplicating files.
+- **Gallery.** Filter by day and media type, save favorites, rename photos within the application, view and download originals. Authors can hide their own publications, including after leaving a trip.
+- **Maps and discoveries.** Coordinates from available EXIF metadata, manual location selection, Wikipedia landmark suggestions, and confirmed places near photos.
+- **Journal.** Entries organized by trip day, with replies from participants.
+- **Profiles and friends.** Usernames, avatars, public profiles, people search, friend requests and invitation links.
+- **Multiple sign-in options.** Email or username and password, plus Yandex ID. Once Yandex is linked, either method opens the same profile.
+- **Guest access.** A separate link to the published trip story, distinct from participant invitations. The owner can replace or revoke it.
 
-Дружба сама по себе не открывает поездки. Участник видит данные в пределах выданных дат; обладатель гостевой ссылки — опубликованную историю всей поездки.
+Friendship alone does not grant access to trips. Participants see content within their assigned dates; a guest link grants access to the published story of the entire trip.
 
-## Устройство проекта
+## Architecture
 
 ```mermaid
 flowchart LR
-    Browser["Браузер: React, галерея, карта"] --> Web["Next.js: страницы и API"]
-    Web --> Access["Сессии и проверка доступа"]
+    Browser["Browser: React, gallery, map"] --> Web["Next.js: pages and API"]
+    Web --> Access["Sessions and access control"]
     Access --> DB[("SQLite / WAL")]
-    Web --> Drive["Яндекс ID и Диск"]
-    Worker["Фоновый worker"] --> Drive
+    Web --> Drive["Yandex ID and Disk"]
+    Worker["Background worker"] --> Drive
     Worker --> DB
     Web --> Places["Wikipedia / OpenStreetMap"]
 ```
 
-- **Интерфейс:** React 19, Next.js 16 App Router, TypeScript, Leaflet и CSS с общими токенами оформления.
-- **Сервер:** API Route Handlers, Zod, SQLite через `better-sqlite3`, версионируемые миграции.
-- **Идентификация:** bcrypt, HttpOnly-сессии, OAuth state и PKCE. OAuth-токены шифруются AES-256-GCM; токены сессий и секретных ссылок хранятся в виде хешей.
-- **Синхронизация:** отдельный процесс, блокировка параллельных проходов, повторное индексирование без дублей. Неуспешный проход не очищает существующий индекс.
-- **Медиа:** потоковая передача через сервер с проверкой доступа, Range-запросы для видео, ограниченное чтение EXIF и кеш превью в браузере.
-- **Эксплуатация:** Nginx, systemd, HTTPS и онлайн-бэкапы SQLite на постоянном диске VPS.
+- **Frontend:** React 19, Next.js 16 App Router, TypeScript, Leaflet, and CSS with shared design tokens.
+- **Backend:** API Route Handlers, Zod, SQLite through `better-sqlite3`, and versioned database migrations.
+- **Identity:** bcrypt, HttpOnly sessions, OAuth state and PKCE. OAuth tokens are encrypted with AES-256-GCM; session and secret-link tokens are stored as hashes.
+- **Synchronization:** a separate process, protection against concurrent scans, and repeatable indexing without duplicates. Failed scans do not clear the existing index.
+- **Media:** streaming through the server with access checks, video Range requests, bounded EXIF reads, and browser-side preview caching.
+- **Operations:** Nginx, systemd, HTTPS, and online SQLite backups on persistent VPS storage.
 
-В SQLite хранятся пользователи, поездки, права, метаданные медиа, места, заметки и служебные задания. Оригиналы медиа не складываются на сервер приложения. JSON используется для переводов, справочников и фикстур, а не как хранилище аккаунтов и поездок.
+SQLite stores users, trips, permissions, media metadata, places, notes and background jobs. Original media files are not stored on the application server. JSON files hold translations, reference datasets and test fixtures, rather than user accounts or trips.
 
-## Локальный запуск
+## Run locally
 
-Нужны **Node.js 24 LTS**, npm и постоянная папка для SQLite. Для нативных зависимостей при отсутствии готового бинарного пакета могут потребоваться инструменты сборки ОС.
+You need **Node.js 24 LTS**, npm, and persistent storage for SQLite. Native dependencies may require your operating system's build tools if a prebuilt binary is unavailable.
 
-### 1. Установить зависимости
+### 1. Install dependencies
 
-Склонируй репозиторий и открой его корневую папку:
+Clone this repository and open its root directory:
 
 ```sh
 npm ci
 node -e "const fs = require('node:fs'); fs.copyFileSync('.env.example', '.env.local', fs.constants.COPYFILE_EXCL)"
 ```
 
-Команда копирования не перезаписывает существующий `.env.local`.
+The copy command does not overwrite an existing `.env.local`.
 
-### 2. Настроить окружение
+### 2. Configure the environment
 
-Сгенерируй два независимых секрета:
+Generate two independent secrets:
 
 ```sh
 node -e "const { randomBytes } = require('node:crypto'); for (const key of ['TOKEN_ENCRYPTION_KEY', 'CRON_SECRET']) console.log(key + '=' + randomBytes(32).toString('hex'))"
 ```
 
-Вставь полученные строки в `.env.local` вместо значений-заглушек. Остальные основные параметры:
+Replace the corresponding placeholders in `.env.local` with the generated lines. Other main settings:
 
-- `APP_URL=http://localhost:3000` — адрес приложения.
-- `DATABASE_PATH=./data/travel.sqlite` — путь к базе.
-- `YANDEX_CLIENT_ID` и `YANDEX_CLIENT_SECRET` — нужны для Яндекс ID и синхронизации Диска; для знакомства с остальным интерфейсом их можно оставить пустыми.
+- `APP_URL=http://localhost:3000` — application URL.
+- `DATABASE_PATH=./data/travel.sqlite` — database path.
+- `YANDEX_CLIENT_ID` and `YANDEX_CLIENT_SECRET` — required for Yandex ID and Disk synchronization; leave them empty to explore the rest of the application.
 
-Секреты и пользовательская папка `data/` исключены из Git. Сохрани `TOKEN_ENCRYPTION_KEY`: при его замене существующие OAuth-токены перестанут расшифровываться.
+Secrets and the user-data directory `data/` are excluded from Git. Keep `TOKEN_ENCRYPTION_KEY` safe: replacing it makes existing encrypted OAuth tokens unreadable.
 
-### 3. Запустить приложение
+### 3. Start the application
 
 ```sh
 npm run migrate
 npm run dev
 ```
 
-Открой [localhost:3000](http://localhost:3000). Можно зарегистрироваться по email, создать поездку и написать первую запись. Сайт и worker запускаются вместе; остановка — `Ctrl+C`. Worker проверяет задания каждые 30 секунд, очередная синхронизация источника выполняется с интервалом 15 минут.
+Open [localhost:3000](http://localhost:3000). Register with an email address, create a trip and write your first journal entry. The web application and worker start together; press `Ctrl+C` to stop them. The worker checks jobs every 30 seconds, with each source scheduled for synchronization at 15-minute intervals.
 
-## Подключение Яндекс Диска
+## Connect Yandex Disk
 
-1. Создай приложение для авторизации в [Яндекс OAuth](https://oauth.yandex.ru/).
-2. Для веб-платформы добавь Redirect URI: `http://localhost:3000/api/auth/callback`.
-3. Настрой разрешения `login:info`, `login:email`, `cloud_api:disk.read` и доступ к аватарке `login:avatar`. Приложение запрашивает аватарку как необязательное разрешение.
-4. Заполни `YANDEX_CLIENT_ID` и `YANDEX_CLIENT_SECRET` в `.env.local`, перезапусти приложение.
-5. Войди в существующий профиль и подключи Яндекс через настройки профиля. Затем в поездке открой «Участники и Диски» и выбери папку.
+1. Create a sign-in application in [Yandex OAuth](https://oauth.yandex.ru/).
+2. Add a web-platform Redirect URI: `http://localhost:3000/api/auth/callback`.
+3. Configure `login:info`, `login:email`, `cloud_api:disk.read`, and avatar access through `login:avatar`. Avatar access is requested as an optional permission.
+4. Set `YANDEX_CLIENT_ID` and `YANDEX_CLIENT_SECRET` in `.env.local`, then restart the application.
+5. Sign in to your existing profile and link Yandex in your profile settings. Open Participants & Disks in a trip and select a folder.
 
-Одновременно у пользователя может быть один активный подключённый Диск. Участники подключают свои аккаунты; папка другого участника требует одобрения владельца поездки. Отключение Диска удаляет токены и приостанавливает синхронизацию, сохраняя историю поездок.
+Each user can have one active connected Disk account at a time. Participants connect their own accounts; another participant's folder requires approval from the trip owner. Disconnecting Disk removes tokens and pauses synchronization while keeping trip history.
 
-**Граница разрешения:** Яндекс выдаёт OAuth-доступ на чтение Диска, а ограничение индексирования выбранной папкой реализовано самим QuestKeeps. Это не разрешение провайдера на одну папку. Приложение не запрашивает доступ на запись.
+**Permission boundary:** Yandex grants OAuth read access to Disk. Restricting indexing to the selected folder is enforced by QuestKeeps itself, rather than a provider-issued permission for that single folder. The application does not request write access.
 
-Для сервера добавь соответствующий HTTPS callback в то же OAuth-приложение и укажи публичный адрес в `APP_URL`.
+For a deployment, add the matching HTTPS callback to the same OAuth application and set its public URL in `APP_URL`.
 
-## Проверки
+## Checks
 
 ```sh
 npm run typecheck
@@ -131,22 +133,22 @@ npm run build
 npm run test:e2e
 ```
 
-Unit/API-тесты используют отдельные SQLite-файлы, фиктивные ключи и подмену внешних запросов. Проверяют права владельца, участника и гостя, даты доступа, авторство файлов, сессии, OAuth, миграции, синхронизацию и ссылки дружбы.
+Unit/API tests use separate SQLite files, dummy keys and mocked external requests. They cover owner, participant and guest permissions, date boundaries, file ownership, sessions, OAuth, migrations, synchronization and friend links.
 
-Браузерные тесты запускают отдельный стенд на порту `3101` с изолированной базой и без фоновой синхронизации. Конфигурация Playwright использует **установленный Microsoft Edge** (`channel: msedge`). Есть проверки обеих тем, локализации, клавиатуры и доступности через axe. Личные аккаунты и файлы для тестов не нужны.
+Browser tests start a separate environment on port `3101` with an isolated database and no background synchronization. Playwright is configured to use **an installed Microsoft Edge browser** (`channel: msedge`). Tests include both themes, localization, keyboard interaction and axe accessibility checks. No personal accounts or files are required.
 
-Дополнительные команды:
+Additional commands:
 
 ```sh
 npm run health
 npm run backup
 ```
 
-Первая проверяет схему, целостность базы и наличие настроек, вторая создаёт согласованную SQLite-копию в `data/backups/` с учётом WAL.
+The first checks database schema, integrity and configuration presence. The second creates a consistent SQLite snapshot in `data/backups/`, accounting for WAL.
 
-## Развёртывание
+## Deployment
 
-Нужен постоянно работающий Node.js-сервер с постоянным диском. Для SQLite и фонового worker эфемерная файловая система serverless-платформы не подходит.
+Use an always-running Node.js server with persistent storage. An ephemeral serverless filesystem is unsuitable for this SQLite database and background worker.
 
 ```sh
 npm ci
@@ -155,38 +157,38 @@ npm run build
 npm start
 ```
 
-`npm start` уже запускает worker. Команду `npm run worker` не нужно запускать дополнительно. Приложение слушает loopback; внешние запросы принимает Nginx с HTTPS.
+`npm start` already starts the worker. Do not run `npm run worker` alongside it. The application listens on loopback; Nginx handles external HTTPS requests.
 
-Инструкция по конфигурации сервера, сертификатам, резервным копиям и откату — в [deploy/README.md](deploy/README.md). Сборку и нативные зависимости нужно создавать на целевой ОС. База и ключ шифрования переносятся отдельно от исходников.
+See [deploy/README.md](deploy/README.md) for server configuration, certificates, backups and rollback. Build the application and native dependencies on the target operating system. Transfer the database and encryption key separately from the source code.
 
-## Текущие ограничения
+## Current limitations
 
-- Интеграция облачного хранилища реализована для Яндекс Диска; Google Drive пока не подключён.
-- Подготовлены очередь подтверждения email и отправка через Resend. По умолчанию подтверждение выключено; для включения нужны отправитель, домен и API-ключ. Уведомления Telegram о регистрациях пока не реализованы.
-- Воспроизведение видео зависит от формата и кодеков браузера; серверного перекодирования нет. Чтение EXIF ограничено объёмом данных и поддержкой формата, координаты можно задать вручную.
-- Ссылку гостя можно отозвать, но уже просмотренные или скачанные материалы отозвать невозможно.
-- Восстановление пароля, смена email и удаление аккаунта пока не реализованы.
-- Автоматические тесты не заменяют ручную проверку с реальными медиа и завершённый аудит безопасности. Статус и границы проверок описаны в [docs/SECURITY.md](docs/SECURITY.md).
+- Cloud storage integration supports Yandex Disk; Google Drive is not connected yet.
+- An email-verification queue and Resend delivery are implemented. Verification is disabled by default and requires a configured sender, domain and API key. Telegram notifications for new registrations are not implemented yet.
+- Video playback depends on browser format and codec support; there is no server-side transcoding. EXIF extraction is bounded by data size and format support; locations can be set manually.
+- Revoking a guest link cannot revoke files that have already been viewed or downloaded.
+- Password recovery, email changes and account deletion are not implemented yet.
+- Automated tests do not replace manual testing with real media or a completed security audit. Review scope and status are documented in [docs/SECURITY.md (Russian)](docs/SECURITY.md).
 
-## Навигация по исходникам
+## Source layout
 
-- `app/` — страницы и API-маршруты.
-- `components/` — интерфейс, галерея, карта, профиль и страница «О проекте».
-- `lib/access.ts`, `lib/api.ts` — проверка прав и обработчики запросов.
-- `lib/db.ts`, `lib/migrations/` — база, шифрование и миграции.
-- `lib/yandex.ts`, `lib/sync.ts`, `lib/photo-metadata.ts` — Диск, индексирование и метаданные.
-- `lib/places.ts`, `lib/data/` — места и локализованные географические названия.
-- `scripts/` — запуск, worker, проверки, бэкапы и съёмка демонстрационных экранов.
-- `tests/`, `e2e/` — автоматические проверки.
-- `deploy/` — конфигурация VPS.
+- `app/` — pages and API routes.
+- `components/` — interface, gallery, map, profile and About page.
+- `lib/access.ts`, `lib/api.ts` — access control and request handlers.
+- `lib/db.ts`, `lib/migrations/` — database, encryption and migrations.
+- `lib/yandex.ts`, `lib/sync.ts`, `lib/photo-metadata.ts` — Disk integration, indexing and metadata.
+- `lib/places.ts`, `lib/data/` — places and localized geographic names.
+- `scripts/` — startup, worker, checks, backups and demonstration screenshots.
+- `tests/`, `e2e/` — automated checks.
+- `deploy/` — VPS configuration.
 
-## Материалы и история
+## Credits and project history
 
-Фотографии экрана входа — Pexels; географические данные — GeoNames; карта — Esri и OpenStreetMap; описания достопримечательностей — Wikipedia. Источники и атрибуция:
+Sign-in photography comes from Pexels; geographic data from GeoNames; maps from Esri and OpenStreetMap; landmark descriptions from Wikipedia. Sources and attribution:
 
-- [Фотографии](docs/WELCOME-PHOTOS.md).
-- [Демонстрационные скриншоты и повторная съёмка](docs/ABOUT-SCREENSHOTS.md).
-- [Справочник GeoNames](lib/data/README.md).
-- [История изменений](CHANGELOG.md) и [правила версионирования](docs/VERSIONING.md).
+- [Photography credits (Russian)](docs/WELCOME-PHOTOS.md).
+- [Demonstration screenshots and capture instructions (Russian)](docs/ABOUT-SCREENSHOTS.md).
+- [GeoNames reference data](lib/data/README.md).
+- [Changelog (Russian)](CHANGELOG.md) and [versioning policy (Russian)](docs/VERSIONING.md).
 
-Документация и скриншоты относятся к текущему интерфейсу. Эксперимент с новым дизайном будет отдельным изменением.
+Documentation and screenshots reflect the current interface. The proposed design experiment will be a separate change.
