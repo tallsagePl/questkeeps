@@ -238,12 +238,12 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                 {t('Загружаем…')}
               </p>
             )}
-            {!busy && (!loaded || next || error) && (
+            {!busy && error && (
               <button
                 className="text-button file-load-more"
                 onClick={() => void load(next || undefined)}
               >
-                {t(error ? 'Повторить' : 'Загрузить ещё')}
+                {t('Повторить')}
               </button>
             )}
             {loaded && !files.length && (
