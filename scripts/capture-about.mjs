@@ -5,7 +5,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 const base = new URL(process.env.ABOUT_CAPTURE_URL || 'http://localhost:3000');
 if (!['localhost', '127.0.0.1', '[::1]'].includes(base.hostname))
   throw Error('Only loopback capture is allowed');
-const output = 'public/about/screenshots';
+const readme = process.env.ABOUT_CAPTURE_README === '1';
+const output = readme ? 'docs/screenshots' : 'public/about/screenshots';
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const thumb = await sharp({
@@ -14,11 +15,11 @@ const thumb = await sharp({
   .png()
   .toBuffer();
 try {
-  for (const language of ['ru', 'en'])
+  for (const language of readme ? ['ru'] : ['ru', 'en'])
     for (const theme of ['light', 'dark']) {
       const en = language === 'en',
         context = await browser.newContext({
-          viewport: { width: 1280, height: 800 },
+          viewport: { width: 1280, height: readme ? 960 : 800 },
           deviceScaleFactor: 1,
           reducedMotion: 'reduce',
           colorScheme: theme,
@@ -161,11 +162,23 @@ try {
         const buffer = await page.screenshot({
           type: 'png',
           animations: 'disabled',
+          fullPage: readme && ['trips', 'about'].includes(name),
         });
         await writeFile(
           output + '/' + language + '-' + theme + '-' + name + '.webp',
           await sharp(buffer).webp({ quality: 86 }).toBuffer(),
         );
+      }
+      if (readme) {
+        await page.goto(new URL('/about', base).href);
+        await page.locator('.about-showcase').waitFor();
+        await page
+          .locator('.about-showcase img')
+          .first()
+          .evaluate(async (img) => {
+            await img.decode();
+          });
+        await capture('about');
       }
       await page.goto(base.href);
       await page.locator('.trip-card').first().waitFor();
