@@ -86,6 +86,7 @@ export function SocialShell({
                 className="text-button user-button"
                 href="/profile"
                 aria-label={t('Мой профиль')}
+                aria-current={current === 'profile' ? 'page' : undefined}
               >
                 <UserAvatar user={user} />
                 <span>{user.name}</span>

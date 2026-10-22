@@ -3853,3 +3853,29 @@ a:any-link:focus-visible,
   color: var(--muted);
   background: var(--soft);
 }
+
+/* One compact target for the avatar and display name. */
+.topbar .top-actions .user-button {
+  padding: 6px 10px;
+  min-height: 46px;
+  max-width: 260px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  font-weight: 600;
+}
+.topbar .user-button > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar .top-actions .user-button[aria-current='page'] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--selection);
+}
+.topbar .user-button[aria-current='page'] .user-avatar {
+  color: var(--accent);
+  background: var(--selection);
+}
