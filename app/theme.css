@@ -3556,14 +3556,26 @@ a:any-link:focus-visible,
 }
 .profile-avatar-editor .avatar-edit {
   position: absolute;
-  right: -12px;
-  top: -10px;
+  right: -6px;
+  top: -6px;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 50%;
-  width: 34px;
-  height: 34px;
-  padding: 6px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 5px;
+}
+.profile-avatar-editor .avatar-edit svg {
+  width: 16px;
+  height: 16px;
+}
+.profile-avatar-editor .avatar-edit::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
 }
 .profile-handle-display {
   display: flex;

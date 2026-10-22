@@ -82,6 +82,10 @@ test('профиль: никнейм, своя аватарка, отдельн�
   await expect(
     page.getByRole('status').filter({ hasText: 'Аватарка обновлена' }),
   ).toBeVisible();
+  await expect(page.locator('.avatar-edit-controls')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Изменить аватарку', exact: true }),
+  ).toBeFocused();
   await expect(page.locator('.profile-avatar img')).toBeVisible();
   await expect(page.locator('.profile-avatar img')).toHaveJSProperty(
     'naturalWidth',

@@ -28,6 +28,7 @@ export default function ProfileSettings({
   const { t } = useLocale();
   const feedback = useFeedback();
   const file = useRef<HTMLInputElement>(null);
+  const avatarEdit = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [handle, setHandle] = useState(user.username || '');
   const [message, setMessage] = useState('');
@@ -77,6 +78,7 @@ export default function ProfileSettings({
           <UserAvatar user={user} large />
           <button
             type="button"
+            ref={avatarEdit}
             className="icon-button avatar-edit"
             aria-label={t('Изменить аватарку')}
             aria-expanded={editingAvatar}
@@ -187,17 +189,17 @@ export default function ProfileSettings({
                     headers: { 'Content-Type': image.type },
                     body: image,
                   });
-                  const value = await response
-                    .json()
-                    .catch(() => ({
-                      error: t('Не удалось загрузить аватарку'),
-                    }));
+                  const value = await response.json().catch(() => ({
+                    error: t('Не удалось загрузить аватарку'),
+                  }));
                   if (!response.ok)
                     throw new ApiError(
                       value.error || 'Не удалось загрузить аватарку',
                     );
                   onUserChange(value.user);
                   setMessage('Аватарка обновлена');
+                  setEditingAvatar(false);
+                  avatarEdit.current?.focus();
                 });
               }}
             />
