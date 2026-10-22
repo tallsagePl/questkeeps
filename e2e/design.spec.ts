@@ -50,12 +50,12 @@ test('RU/EN, обе темы, сохранение предпочтений и �
     .click();
   await axe(page, 'English light welcome');
   await page
-    .getByLabel('Email', { exact: true })
+    .getByLabel('Email or @username', { exact: true })
     .fill('incorrect@example.test');
   await page.getByLabel('Password', { exact: true }).fill('WrongPassword123');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(
-    page.getByText('Incorrect email or password', { exact: true }),
+    page.getByText('Incorrect email, username or password', { exact: true }),
   ).toBeVisible();
   await axe(page, 'English invalid inputs');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -72,7 +72,7 @@ test('RU/EN, обе темы, сохранение предпочтений и �
     .getByRole('button', { name: 'Switch to Russian', exact: true })
     .click();
   await expect(
-    page.getByText('Неверный email или пароль', { exact: true }),
+    page.getByText('Неверный email, никнейм или пароль', { exact: true }),
   ).toBeVisible();
 });
 test('English owner screens, keyboard dialogs, journal, invitation and guest', async ({

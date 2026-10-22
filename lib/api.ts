@@ -317,12 +317,26 @@ export async function handle(
         return r;
       }
       if (p[1] === 'register' || p[1] === 'login') {
+        const registering = p[1] === 'register';
+        const emailAddress = z
+          .string()
+          .trim()
+          .toLowerCase()
+          .pipe(z.email().max(254));
+        const loginIdentity = z
+          .string()
+          .trim()
+          .toLowerCase()
+          .max(254)
+          .refine(
+            (value) =>
+              z.email().safeParse(value).success ||
+              /^@?[a-z0-9_]{3,30}$/.test(value),
+            'Введите email или уникальный никнейм',
+          );
         const input = z
           .object({
-            email: z
-              .email()
-              .max(254)
-              .transform((s) => s.toLowerCase().trim()),
+            email: registering ? emailAddress : loginIdentity,
             password: z
               .string()
               .min(10, 'Пароль — минимум 10 символов')
@@ -330,8 +344,18 @@ export async function handle(
             name: z.string().trim().min(1).max(80).optional(),
           })
           .parse(await body(req));
-        throttle('auth:' + input.email, 10);
-        let u = one('SELECT * FROM users WHERE email=?', input.email);
+        const byEmail = z.email().safeParse(input.email).success;
+        const identity = byEmail ? input.email : input.email.replace(/^@/, '');
+        throttle('auth:identity:' + hash(identity), 10);
+        let u =
+          registering || byEmail
+            ? one('SELECT * FROM users WHERE email=?', input.email)
+            : one(
+                'SELECT u.* FROM users u JOIN user_handles h ON h.user_id=u.id WHERE h.username=?',
+                identity,
+              );
+        // Email, @handle and handle share one account budget, including renamed handles.
+        if (!registering && u) throttle('auth:account:' + u.id, 10);
         if (p[1] === 'register') {
           if (u) fail(409, 'Этот email уже зарегистрирован');
           const userId = id();
@@ -351,7 +375,7 @@ export async function handle(
               '$2b$12$u4KaOyrGniR5wMopNUZs7eKXiaP6cCcu8KMxD5N0p6d45EswI1/sG',
           );
           if (!u || !u.password || !valid)
-            fail(401, 'Неверный email или пароль');
+            fail(401, 'Неверный email, никнейм или пароль');
         }
         const r = json({ user: userProfile(u!.id) });
         r.headers.set('Set-Cookie', sessionCookie(session(u!.id)));
@@ -1426,8 +1450,8 @@ export async function handle(
           fieldErrors:
             p[0] === 'auth' && p[1] === 'login' && error.status === 401
               ? {
-                  email: 'Проверьте email',
-                  password: 'Неверный email или пароль',
+                  email: 'Проверьте email или никнейм',
+                  password: 'Неверный email, никнейм или пароль',
                 }
               : p[0] === 'auth' && p[1] === 'register' && error.status === 409
                 ? { email: error.message }

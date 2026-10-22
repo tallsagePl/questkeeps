@@ -633,10 +633,15 @@ function ArchiveContent({
         />
       )}
       <Field
-        label={t('Электронная почта')}
+        label={t(
+          register ? 'Электронная почта' : 'Электронная почта или @никнейм',
+        )}
         name="email"
-        type="email"
-        autoComplete="email"
+        type={register ? 'email' : 'text'}
+        autoComplete={register ? 'email' : 'username'}
+        maxLength={254}
+        autoCapitalize="none"
+        spellCheck={false}
         required
       />
       <Field

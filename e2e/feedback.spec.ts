@@ -13,12 +13,12 @@ test('ошибки входа показаны у полей и снимаютс
   await expect(email).toHaveAttribute('aria-invalid', 'true');
   await expect(password).toHaveAttribute('aria-invalid', 'true');
   await expect(
-    page.getByText('Неверный email или пароль', { exact: true }),
+    page.getByText('Неверный email, никнейм или пароль', { exact: true }),
   ).toBeVisible();
   const description = await password.getAttribute('aria-describedby');
   expect(description).toBeTruthy();
   await expect(page.locator('[id="' + description + '"]')).toContainText(
-    'Неверный email или пароль',
+    'Неверный email, никнейм или пароль',
   );
   await expect(page.locator('.error-bar,.toast')).toHaveCount(0);
   await page.screenshot({
@@ -31,7 +31,7 @@ test('ошибки входа показаны у полей и снимаютс
   await email.fill('corrected@example.test');
   await expect(email).not.toHaveAttribute('aria-invalid', 'true');
   await expect(
-    page.getByText('Неверный email или пароль', { exact: true }),
+    page.getByText('Неверный email, никнейм или пароль', { exact: true }),
   ).toHaveCount(0);
   await page
     .getByRole('button', { name: 'Первый раз здесь? Зарегистрироваться' })
