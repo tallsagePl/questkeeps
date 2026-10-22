@@ -3484,20 +3484,6 @@ a:any-link:focus-visible,
   }
 }
 
-.profile-section-nav {
-  display: flex;
-  gap: 28px;
-  margin: -20px 0 36px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 14px;
-}
-.profile-section-nav a {
-  text-decoration: none;
-  color: var(--muted);
-}
-.profile-section-nav a:hover {
-  color: var(--accent);
-}
 #friends,
 #profile-settings,
 #my-files,
@@ -3525,11 +3511,6 @@ a:any-link:focus-visible,
     margin: 0;
     justify-content: flex-start;
     padding: 6px 0;
-  }
-  .profile-section-nav {
-    gap: 24px;
-    margin: -10px 0 28px;
-    font-size: 0.9375rem;
   }
 }
 

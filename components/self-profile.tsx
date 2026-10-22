@@ -70,11 +70,6 @@ function ProfileContents() {
             </a>
           )}
         </div>
-        <nav className="profile-section-nav" aria-label={t('Разделы профиля')}>
-          <a href="#friends">{t('Друзья')}</a>
-          <a href="#profile-settings">{t('Настройки')}</a>
-          <a href="#my-files">{t('Файлы')}</a>
-        </nav>
         <PageFeedback />
         {!viewer.ready && <p role="status">{t('Загружаем профиль…')}</p>}
         {viewer.error && (
