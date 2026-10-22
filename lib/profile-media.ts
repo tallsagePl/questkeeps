@@ -41,7 +41,7 @@ export function profileMediaPage(userId: string, url: URL) {
     }
   }
   const rows = all(
-    'SELECT m.id,m.name,m.kind,m.revision,m.taken,m.hidden,m.missing FROM media m WHERE m.user_id=? AND m.trip_id=?' +
+    'SELECT m.id,m.name,m.kind,m.revision,m.taken,m.hidden,m.missing,COALESCE((SELECT title FROM media_titles WHERE media_id=m.id),(SELECT substr(title,1,160) FROM confirmed_places WHERE media_id=m.id ORDER BY rowid DESC LIMIT 1)) title FROM media m WHERE m.user_id=? AND m.trip_id=?' +
       (cursor ? ' AND (m.taken<? OR (m.taken=? AND m.id<?))' : '') +
       ' ORDER BY m.taken DESC,m.id DESC LIMIT 31',
     userId,

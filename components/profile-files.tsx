@@ -11,12 +11,16 @@ type Group = { id: string; title: string; count: number };
 type File = {
   id: string;
   name: string;
+  title?: string | null;
   kind: string;
   taken: string;
   hidden: number;
   missing: number;
   revision: string;
 };
+const fileTitle = (file: File) =>
+  file.title || file.name.replace(/\.[^.]+$/, '');
+
 export default function ProfileFiles({ userId }: { userId: string }) {
   const { t } = useLocale(),
     [groups, setGroups] = useState<Group[]>([]),
@@ -205,7 +209,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                       }}
                     >
                       <span>
-                        <strong>{m.name}</strong>
+                        <strong>{fileTitle(m)}</strong>
                         <small>
                           {new Date(
                             m.taken.slice(0, 10) + 'T12:00:00',
@@ -254,7 +258,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
       </Collapse>
       {selected && (
         <Modal
-          title={selected.name}
+          title={fileTitle(selected)}
           wide
           doubleBackdropClick
           onClose={() => setSelected(null)}
@@ -275,7 +279,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                 preview={url(selected, 'preview')}
                 original={url(selected, 'original')}
                 scope={scope}
-                title={selected.name}
+                title={fileTitle(selected)}
               />
             )}
           </PreviewPriority.Provider>

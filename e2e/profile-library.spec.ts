@@ -22,6 +22,7 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
   const files = Array.from({ length: 65 }, (_, i) => ({
     id: 'file-' + i,
     name: 'Photo ' + i + '.jpg',
+    title: i === 0 ? 'Вечер у Босфора' : null,
     kind: 'photo',
     taken: '2026-10-13T12:00:00',
     revision: '1',
@@ -79,6 +80,12 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
   await toggle.click();
   await expect(page.locator('.profile-file-row').first()).toBeVisible();
   expect(pages).toBe(1);
+  await expect(page.locator('.profile-file-row strong').first()).toHaveText(
+    'Вечер у Босфора',
+  );
+  await expect(page.locator('.profile-file-row strong').nth(1)).toHaveText(
+    'Photo 1',
+  );
   expect(await page.locator('.profile-file-row').count()).toBeLessThanOrEqual(
     15,
   );
@@ -106,7 +113,9 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
     fullPage: true,
   });
   await page.locator('.profile-file-row').first().click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'Вечер у Босфора' }),
+  ).toBeVisible();
   await expect(
     page.getByRole('dialog').getByRole('button', { name: 'Скрыть мой кадр' }),
   ).toBeVisible();

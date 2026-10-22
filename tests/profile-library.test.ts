@@ -167,3 +167,27 @@ test('private author preview may read own hidden departed files, never another a
   run('UPDATE media SET missing=1 WHERE id=?', 'media-001');
   assert.throws(() => ownProfileMedia(own, 'media-001'));
 });
+
+test('profile library uses saved gallery titles and reflects later edits', async () => {
+  const read = async () =>
+    (
+      await (await request(alice, 'my-media?trip=' + departed)).json()
+    ).media.find((m: any) => m.id === 'media-064');
+  assert.equal((await read()).title, null);
+  run(
+    'INSERT INTO media_titles(media_id,title) VALUES (?,?)',
+    'media-064',
+    'Evening by the sea',
+  );
+  assert.equal((await read()).title, 'Evening by the sea');
+  run(
+    'UPDATE media_titles SET title=? WHERE media_id=?',
+    'A new gallery title',
+    'media-064',
+  );
+  assert.equal((await read()).title, 'A new gallery title');
+  run('DELETE FROM media_titles WHERE media_id=?', 'media-064');
+  const original = await read();
+  assert.equal(original.title, null);
+  assert.equal(original.name, 'media-064.jpg');
+});
