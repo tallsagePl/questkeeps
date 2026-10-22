@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
+import FriendLink from './friend-link';
 
 export type Person = {
   id: string;
@@ -348,36 +349,39 @@ export default function Friends({
         </>
       )}
       {!compact && (
-        <div className="find-people" id="find-people">
-          <h3>{t('Найти друзей')}</h3>
-          <label className="field">
-            <span>{t('Имя или @юзернейм')}</span>
-            <input
-              type="search"
-              autoComplete="off"
-              value={query}
-              maxLength={80}
-              placeholder={t('Кого позовём в следующую историю?')}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
-          {searching && (
-            <p role="status" className="fine">
-              {t('Ищем людей…')}
-            </p>
-          )}
-          {searchError && <p role="alert">{t(searchError)}</p>}
-          {!searching &&
-            !searchError &&
-            query.trim().length >= 2 &&
-            !people.length && (
-              <p className="fine">
-                {t('Никого не нашли. Попробуй другой юзернейм.')}
+        <div className="friend-discovery">
+          <div className="find-people" id="find-people">
+            <h3>{t('Найти друзей')}</h3>
+            <label className="field">
+              <span>{t('Имя или @юзернейм')}</span>
+              <input
+                type="search"
+                autoComplete="off"
+                value={query}
+                maxLength={80}
+                placeholder={t('Кого позовём в следующую историю?')}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+            {searching && (
+              <p role="status" className="fine">
+                {t('Ищем людей…')}
               </p>
             )}
-          {people.length > 0 && (
-            <ul className="friends-list">{people.map((p) => row(p))}</ul>
-          )}
+            {searchError && <p role="alert">{t(searchError)}</p>}
+            {!searching &&
+              !searchError &&
+              query.trim().length >= 2 &&
+              !people.length && (
+                <p className="fine">
+                  {t('Никого не нашли. Попробуй другой юзернейм.')}
+                </p>
+              )}
+            {people.length > 0 && (
+              <ul className="friends-list">{people.map((p) => row(p))}</ul>
+            )}
+          </div>
+          <FriendLink />
         </div>
       )}
     </section>

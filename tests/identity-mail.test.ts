@@ -42,10 +42,10 @@ test('numbered migrations preserve legacy records, apply once, and reject newer 
     .run('legacy', 'legacy@example.invalid', 'Legacy', 'hashed-fixture', 123);
   migrate(legacy);
   migrate(legacy);
-  assert.equal(legacy.pragma('user_version', { simple: true }), 2);
+  assert.equal(legacy.pragma('user_version', { simple: true }), 3);
   assert.equal(
     (legacy.prepare('SELECT count(*) n FROM schema_migrations').get() as any).n,
-    2,
+    3,
   );
   assert.equal(
     (legacy.prepare('SELECT password FROM users').get() as any).password,
@@ -57,7 +57,7 @@ test('numbered migrations preserve legacy records, apply once, and reject newer 
   legacy.close();
   const fresh = new Database(':memory:');
   migrate(fresh);
-  assert.equal(fresh.pragma('user_version', { simple: true }), 2);
+  assert.equal(fresh.pragma('user_version', { simple: true }), 3);
   fresh.close();
 });
 test('new passwords require Latin upper/lowercase and six characters; legacy login remains compatible', async () => {

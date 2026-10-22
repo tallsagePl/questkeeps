@@ -27,6 +27,7 @@ const required = [
   'email_status',
   'email_verifications',
   'delivery_jobs',
+  'friend_links',
 ];
 const tables = (
   db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as {
@@ -67,7 +68,7 @@ if (
   report.database.integrity !== 'ok' ||
   report.database.foreignKeyViolations ||
   report.database.missingTables.length ||
-  report.database.schemaVersion !== 2 ||
+  report.database.schemaVersion !== 3 ||
   !report.configuration.encryptionKeyValid ||
   !report.configuration.schedulerSecretConfigured
 )

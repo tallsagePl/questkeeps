@@ -690,5 +690,17 @@
   "Места, куда хочется отправиться": "Places you would love to visit",
   "Слайд-шоу": "Slideshow",
   "Продолжить смену фотографий": "Resume slideshow",
-  "Приостановить смену фотографий": "Pause slideshow"
+  "Приостановить смену фотографий": "Pause slideshow",
+  "Пригласить по ссылке": "Invite with a link",
+  "Отправь ссылку другу — после входа вы сразу станете друзьями. Ссылка действует 30 дней.": "Send the link to a friend — once they sign in, you become friends right away. The link is valid for 30 days.",
+  "Ссылка для друзей": "Friend invitation link",
+  "Сгенерировать ссылку": "Generate link",
+  "Отключить ссылку": "Disable link",
+  "Ссылка активна. Чтобы отправить её снова, создай новую — старая перестанет работать.": "Your link is active. To share it again, create a new one — the old link will stop working.",
+  "Не удалось скопировать. Выдели ссылку и скопируй её вручную.": "Could not copy. Select the link and copy it manually.",
+  "Вы теперь друзья: ": "You are now friends: ",
+  "Принимаем приглашение…": "Accepting invitation…",
+  "Войди или зарегистрируйся, чтобы принять приглашение в друзья.": "Sign in or register to accept the friend invitation.",
+  "Ссылка недействительна или истекла": "This link is invalid or has expired",
+  "Это твоя ссылка для друзей": "This is your own friend invitation link"
 }

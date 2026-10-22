@@ -1,9 +1,11 @@
 import type Database from 'better-sqlite3';
 import { baseline } from './001-baseline';
 import { identityMail } from './002-identity-mail';
+import { friendLinks } from './003-friend-links';
 export const migrations = [
   { version: 1, name: 'baseline', up: baseline },
   { version: 2, name: 'identity-mail', up: identityMail },
+  { version: 3, name: 'friend-links', up: friendLinks },
 ];
 export function migrate(db: Database.Database) {
   db.transaction(() => {

@@ -1,4 +1,11 @@
 import {
+  friendLinkStatus,
+  createFriendLink,
+  revokeFriendLink,
+  acceptFriendLink,
+  pendingFriendCookie,
+} from './friend-links';
+import {
   verificationRequired,
   mailConfigured,
   emailPending,
@@ -846,6 +853,46 @@ export async function handle(
       }
     }
     const u = requireUser(req);
+    if (p[0] === 'friends' && p[1] === 'link') {
+      if (!p[2]) {
+        if (method === 'GET') return json(friendLinkStatus(u.id));
+        if (method === 'POST') {
+          throttle('friend-link-create:' + u.id, 20, 60000);
+          const link = createFriendLink(u.id);
+          return json({
+            url: new URL('/friend/' + link.token, appURL()).href,
+            expires: link.expires,
+          });
+        }
+        if (method === 'DELETE') {
+          revokeFriendLink(u.id);
+          return json({ ok: true });
+        }
+      }
+      if (p[2] === 'accept' && !p[3] && method === 'POST') {
+        const value = cookie(req, pendingFriendCookie);
+        if (!value) return json({ accepted: false });
+        const clear = (response: NextResponse) => {
+          response.cookies.set(pendingFriendCookie, '', {
+            path: '/',
+            maxAge: 0,
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: new URL(appURL()).protocol === 'https:',
+          });
+          return response;
+        };
+        try {
+          throttle('friend-link-accept:' + u.id, 30, 60000);
+          return clear(json(acceptFriendLink(u.id, value)));
+        } catch (error) {
+          if (error instanceof HttpError)
+            return clear(json({ error: error.message }, error.status));
+          throw error;
+        }
+      }
+      fail(404, 'Маршрут не найден');
+    }
     if (p[0] === 'friends') {
       if (!p[1] && method === 'GET') return json(friendLists(u.id));
       if (p[1] && !p[2]) {

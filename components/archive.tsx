@@ -1,4 +1,5 @@
 'use client';
+import { FriendLinkArrival } from './friend-link';
 import {
   registrationPasswordPattern,
   registrationPasswordHint,
@@ -794,6 +795,7 @@ function ArchiveContent({
           )}
         </div>
       </header>
+      <FriendLinkArrival userId={user?.id} />
       {!ready ? (
         <main id="main-content" tabIndex={-1} className="loading">
           <PageFeedback />
