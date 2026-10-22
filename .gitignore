@@ -18,3 +18,5 @@ test-results/
 Thumbs.db
 .DS_Store
 work-test-results.txt
+
+.next-e2e/

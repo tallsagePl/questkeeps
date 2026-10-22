@@ -1,52 +1,72 @@
 'use client';
 import { useState } from 'react';
 import { useLocale } from './appearance';
-import Brand from './brand';
-export default function PublicProfile({
-  profile,
-}: {
-  profile: { name: string; username: string; hasAvatar: boolean };
-}) {
-  const { t } = useLocale();
-  const [failed, setFailed] = useState(false),
-    [copied, setCopied] = useState(false);
+import { SocialShell, useViewer } from './social-shell';
+import { PersonAvatar, FriendshipAction, type Person } from './friends';
+export default function PublicProfile({ profile }: { profile: Person }) {
+  const { t } = useLocale(),
+    viewer = useViewer(),
+    [copied, setCopied] = useState(false),
+    [copyError, setCopyError] = useState('');
   return (
-    <main className="public-profile-page">
-      <Brand />
-      <section className="public-profile-identity">
-        <span className="public-profile-avatar" aria-hidden="true">
-          {profile.name.slice(0, 1).toUpperCase()}
-          {profile.hasAvatar && !failed && (
-            <img
-              src={'/api/profiles/' + profile.username + '/avatar'}
-              alt=""
-              onError={() => setFailed(true)}
-            />
+    <SocialShell user={viewer.user}>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="social-page public-person-page"
+      >
+        <a className="text-button" href="/">
+          {t('К путешествиям')}
+        </a>
+        <section className="public-person-identity">
+          <PersonAvatar person={profile} />
+          <div>
+            <h1>{profile.name}</h1>
+            <p className="muted">@{profile.username}</p>
+          </div>
+        </section>
+        <div className="public-person-actions">
+          {viewer.user ? (
+            <FriendshipAction person={profile} viewerId={viewer.user.id} />
+          ) : viewer.ready ? (
+            <a className="primary" href="/">
+              {t('Войти, чтобы добавить в друзья')}
+            </a>
+          ) : (
+            <p role="status" className="fine">
+              {t('Загружаем…')}
+            </p>
           )}
-        </span>
-        <h1>{profile.name}</h1>
-        <p>@{profile.username}</p>
-        <div className="public-profile-actions">
-          <a className="secondary" href="/">
-            {t('Все путешествия')}
-          </a>
           <button
-            className="secondary"
+            className="text-button"
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(
                   location.origin + '/@' + profile.username,
                 );
                 setCopied(true);
+                setCopyError('');
               } catch {
-                setCopied(false);
+                setCopyError(
+                  'Не удалось скопировать ссылку. Скопируй адрес из строки браузера.',
+                );
               }
             }}
           >
             {t(copied ? 'Ссылка скопирована' : 'Скопировать ссылку')}
           </button>
         </div>
-      </section>
-    </main>
+        {copyError && <p role="alert">{t(copyError)}</p>}
+        {viewer.error && <p role="alert">{t(viewer.error)}</p>}
+        <div className="public-profile-privacy">
+          <h2>{t('Истории для своего круга')}</h2>
+          <p>
+            {t(
+              'Поездки открываются по приглашению или гостевой ссылке. В публичном профиле нет личных фотографий и контактных данных.',
+            )}
+          </p>
+        </div>
+      </main>
+    </SocialShell>
   );
 }

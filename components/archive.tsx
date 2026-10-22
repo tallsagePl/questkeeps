@@ -1,5 +1,9 @@
 'use client';
 import { isAreaPlace } from '../lib/place-kind';
+import {
+  announceSessionChange,
+  observeSessionChanges,
+} from '../lib/browser-session';
 
 import { Collapse } from './smooth-details';
 import NoteThread from './note-thread';
@@ -26,7 +30,9 @@ import {
   FolderSearchButton,
 } from './folder-search';
 import UserAvatar from './user-avatar';
-import ProfileSettings from './profile-settings';
+import Friends from './friends';
+import { migratePrivateStorage } from '../lib/browser-storage';
+import { signOut } from './social-shell';
 import VirtualGallery from './virtual-gallery';
 import MediaPreview from './media-preview';
 import PhotoViewer from './photo-viewer';
@@ -44,7 +50,6 @@ import PlaceRecommendations from './place-recommendations';
 import TripPreloader, { tripMapScope } from './trip-preloader';
 import { distanceMeters } from '../lib/geo';
 import { BackToTop, FavoriteButton, MediaTitle } from './media-controls';
-import { clearPreviewCache } from '../lib/preview-cache';
 import CreateTrip from './create-trip';
 import Brand, { LogoMark } from './brand';
 import {
@@ -304,8 +309,7 @@ function ArchiveContent({
     [mediaFocusPlaceUrl, setMediaFocusPlaceUrl] = useState<string | null>(null),
     [suggestions, setSuggestions] = useState<Row[]>([]),
     [placesOpen, setPlacesOpen] = useState(false),
-    [invitation, setInvitation] = useState<Row | null>(null),
-    [myMedia, setMyMedia] = useState<Row[]>([]);
+    [invitation, setInvitation] = useState<Row | null>(null);
   const trip = data?.trip;
   const isOwner = trip?.role === 'owner',
     guest = !!share;
@@ -319,6 +323,7 @@ function ArchiveContent({
     report,
   };
   const mounted = useRef(true);
+  const identityGeneration = useRef(0);
   const action = useCallback(
     async (task: () => Promise<void>) => {
       setBusy(true);
@@ -334,12 +339,44 @@ function ArchiveContent({
     },
     [active],
   );
+  useEffect(() => {
+    void migratePrivateStorage().catch(() => {});
+    const stop = observeSessionChanges();
+    const ending = () => {
+      identityGeneration.current++;
+      setUser(null);
+      setTrips([]);
+      setSelected(null);
+      setData(null);
+      setAccounts([]);
+      setMembers([]);
+      setSources([]);
+      setTripOwner(null);
+      setAccount('');
+      setFolder('disk:/');
+      setFolders([]);
+      setGenerated('');
+      setActiveMedia(null);
+      setSuggestions([]);
+      setInvitation(null);
+      setModal('');
+    };
+    window.addEventListener('questkeeps:session-ending', ending);
+    return () => {
+      stop();
+      window.removeEventListener('questkeeps:session-ending', ending);
+    };
+  }, []);
   const loadTrips = useCallback(async () => {
+    const generation = identityGeneration.current;
     const r = await api('trips');
+    if (generation !== identityGeneration.current) return;
     setTrips(r.trips);
   }, []);
   const loadTrip = useCallback(async (tid: string) => {
+    const generation = identityGeneration.current;
     const r = await api('trips/' + tid);
+    if (generation !== identityGeneration.current) return;
     setData(r);
     setSelected(tid);
   }, []);
@@ -440,6 +477,7 @@ function ArchiveContent({
         'POST',
         input,
       );
+      announceSessionChange();
       setUser(r.user);
       setModal('');
       await loadTrips();
@@ -700,6 +738,9 @@ function ArchiveContent({
         <Brand />
         <span className="top-caption">{t('КОЛЛЕКЦИЯ ВАШИХ ПУТЕШЕСТВИЙ')}</span>
         <div className="top-actions">
+          <a className="text-button about-nav-link" href="/about">
+            {t('О проекте')}
+          </a>
           <AppearanceControls />
           {guest ? (
             <span className="pill">
@@ -708,31 +749,21 @@ function ArchiveContent({
             </span>
           ) : user ? (
             <>
-              <FeedbackButton
+              <a
                 className="text-button user-button"
-                onClick={() => {
-                  setModal('profile');
-                  void action(async () => {
-                    setAccounts((await api('accounts')).accounts);
-                    setMyMedia((await api('my-media')).media);
-                  });
-                }}
+                href="/profile"
+                aria-label={t('Мой профиль')}
               >
                 <UserAvatar user={user as { id: string; name: string }} />
                 <span>{user.name}</span>
-              </FeedbackButton>
+              </a>
               <FeedbackButton
                 className="icon-button"
                 title={t('Выйти')}
                 aria-label={t('Выйти')}
                 onClick={() =>
                   void action(async () => {
-                    await api('auth/logout', 'POST', {});
-                    await clearPreviewCache();
-                    setUser(null);
-                    setSelected(null);
-                    setData(null);
-                    window.history.replaceState(null, '', '/');
+                    await signOut();
                   })
                 }
               >
@@ -865,6 +896,7 @@ function ArchiveContent({
               {t('Новая поездка')}
             </FeedbackButton>
           </div>
+          {user && <Friends key={user.id} viewerId={user.id} compact />}
           <div className="section-line">
             <span>{t('ВСЕ ПУТЕШЕСТВИЯ')}</span>
             <span>{String(trips.length).padStart(2, '0')}</span>
@@ -1769,7 +1801,7 @@ function ArchiveContent({
       <footer>
         <Brand footer />
         <p>{t('Не просто где вы были. А что вы чувствовали.')}</p>
-        <span>{t('СОБИРАЙТЕ МОМЕНТЫ')}</span>
+        <a href="/about">{t('О проекте')}</a>
       </footer>
       {modal === 'create' && (
         <Modal
@@ -1789,53 +1821,6 @@ function ArchiveContent({
               })
             }
           />
-        </Modal>
-      )}
-      {modal === 'profile' && (
-        <Modal title={t('Ваш профиль')} onClose={() => setModal('')}>
-          <div className="stack">
-            {user && (
-              <ProfileSettings
-                user={user as { id: string; name: string }}
-                accounts={accounts as { id: string; label: string }[]}
-                yandexEnabled={yandex}
-                onUserChange={setUser}
-                onAccountsChange={setAccounts}
-              />
-            )}
-            <h3>{t('Мои опубликованные файлы')}</h3>
-            <p className="muted">
-              {t('Вы можете скрыть свои кадры даже после выхода из поездки.')}
-            </p>
-            <div className="profile-media">
-              {myMedia.map((m) => (
-                <div className="source" key={m.id}>
-                  <div>
-                    <strong>{m.name}</strong>
-                    <small>
-                      {m.title} · {date(m.taken)}
-                    </small>
-                  </div>
-                  <FeedbackButton
-                    className="text-button"
-                    disabled={busy}
-                    onClick={() =>
-                      void action(async () => {
-                        await api('media/' + m.id, 'PATCH', {
-                          hidden: !m.hidden,
-                        });
-                        setMyMedia((await api('my-media')).media);
-                        if (data) await refresh();
-                      })
-                    }
-                  >
-                    {m.hidden ? t('Показать') : t('Скрыть')}
-                  </FeedbackButton>
-                </div>
-              ))}
-              {!myMedia.length && <p>{t('Пока нет фотографий.')}</p>}
-            </div>
-          </div>
         </Modal>
       )}
       {modal === 'source' && (

@@ -9,6 +9,13 @@ const requests = new MemoryCache<
   string,
   Promise<{ suggestions: SavedSuggestion[] }>
 >();
+let generation = 0;
+function coordinateVersion(photo: Photo) {
+  let value = 2166136261;
+  for (const c of String(photo.lat) + ':' + String(photo.lon))
+    value = Math.imul(value ^ c.charCodeAt(0), 16777619);
+  return (value >>> 0).toString(16);
+}
 export const photoSearchKey = (photo: Photo, scope: string) =>
   scope +
   ':' +
@@ -16,16 +23,15 @@ export const photoSearchKey = (photo: Photo, scope: string) =>
   ':' +
   photo.revision +
   ':' +
-  photo.lat +
-  ':' +
-  photo.lon;
+  coordinateVersion(photo);
 export async function searchPhotoPlaces(
   photo: Photo,
   scope: string,
   tripId: string,
 ) {
+  const version = generation;
   const key = photoSearchKey(photo, scope),
-    storageKey = 'questkeeps:found-places:v1:' + scope + ':' + tripId;
+    storageKey = 'questkeeps:found-places:v2:' + scope + ':' + tripId;
   try {
     const saved = readSavedSearches(
       localStorage.getItem(storageKey),
@@ -41,6 +47,7 @@ export async function searchPhotoPlaces(
       undefined,
       AbortSignal.timeout(20000),
     ).then((result) => {
+      if (generation !== version) return result;
       try {
         const entries = JSON.parse(localStorage.getItem(storageKey) || '[]');
         const valid = Array.isArray(entries)
@@ -59,5 +66,6 @@ export async function searchPhotoPlaces(
   return pending;
 }
 export function clearPlaceSearchRequests() {
+  generation++;
   requests.clear();
 }

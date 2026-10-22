@@ -19,7 +19,7 @@ test('профиль: никнейм, своя аватарка, отдельн�
   await expect(
     page.getByRole('heading', { name: 'Ваши путешествия.' }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Before', exact: true }).click();
+  await page.locator('.user-button').click();
   await expect(page.getByLabel('Никнейм', { exact: true })).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Сохранить никнейм' }),
@@ -67,9 +67,7 @@ test('профиль: никнейм, своя аватарка, отдельн�
     512,
   );
   const custom = await page.locator('.profile-avatar img').getAttribute('src');
-  await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
   await page.reload();
-  await page.getByRole('button', { name: 'Explorer', exact: true }).click();
   await expect(page.locator('.profile-name-display')).toContainText('Explorer');
   await expect(page.getByLabel('Никнейм', { exact: true })).toHaveCount(0);
   await expect(page.locator('.profile-avatar img')).toHaveAttribute(
@@ -107,7 +105,6 @@ test('профиль: никнейм, своя аватарка, отдельн�
     return r.fulfill({ json: { user: { ...stored, yandexAccountId: null } } });
   });
   await page.reload();
-  await page.getByRole('button', { name: 'Explorer', exact: true }).click();
   await expect(
     page.locator('.profile-yandex .connected-account img'),
   ).toHaveAttribute('src', '/api/accounts/yandex-disk/avatar');
@@ -124,7 +121,7 @@ test('профиль: никнейм, своя аватарка, отдельн�
       theme,
     );
     const results = await new AxeBuilder({ page })
-      .include('dialog')
+      .include('#main-content')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze();
     expect(results.violations).toEqual([]);

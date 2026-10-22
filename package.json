@@ -1,6 +1,6 @@
 {
   "name": "questkeeps",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,12 +8,13 @@
     "build": "next build",
     "start": "node --env-file=.env.local scripts/serve.mjs start",
     "typecheck": "tsc --noEmit",
-    "test": "node --env-file=.env.local --import tsx --test tests/*.test.ts",
+    "test": "node --import ./scripts/test-env.mjs --import tsx --test tests/*.test.ts",
     "worker": "node --env-file=.env.local --import tsx scripts/worker.ts",
     "test:e2e": "playwright test",
     "format": "prettier --write app components lib scripts tests e2e *.ts *.json docs README.md",
     "health": "node --env-file=.env.local --import tsx scripts/health.ts",
-    "backup": "node --env-file=.env.local --import tsx scripts/backup.ts"
+    "backup": "node --env-file=.env.local --import tsx scripts/backup.ts",
+    "test:social": "playwright test e2e/social.spec.ts --workers=1"
   },
   "keywords": [],
   "author": "",

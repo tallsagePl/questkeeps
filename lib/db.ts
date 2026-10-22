@@ -107,6 +107,9 @@ db.transaction(() => {
   db.exec(
     'CREATE TABLE IF NOT EXISTS map_area_wiki_i18n (area_id TEXT NOT NULL REFERENCES map_areas(id),language TEXT NOT NULL,json TEXT NOT NULL,updated INTEGER NOT NULL,PRIMARY KEY(area_id,language))',
   );
+  db.exec(
+    "CREATE TABLE IF NOT EXISTS friendships (user_a TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,user_b TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,requested_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,status TEXT NOT NULL CHECK(status IN ('pending','accepted')),created INTEGER NOT NULL,PRIMARY KEY(user_a,user_b),CHECK(user_a < user_b),CHECK(requested_by=user_a OR requested_by=user_b)); CREATE INDEX IF NOT EXISTS friendships_recipient ON friendships(user_b,status);",
+  );
   db.pragma('user_version = 1');
   db.exec(
     'CREATE TABLE IF NOT EXISTS exif_cache (key TEXT PRIMARY KEY,json TEXT NOT NULL,updated INTEGER NOT NULL)',

@@ -11,10 +11,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'npm run dev -- --port 3101',
+    command: 'node scripts/test-server.mjs',
     url: 'http://127.0.0.1:3101',
     reuseExistingServer: false,
-    timeout: 90000,
+    timeout: 120000,
     env: {
       APP_URL: 'http://127.0.0.1:3101',
       DATABASE_PATH: './data/e2e.sqlite',

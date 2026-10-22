@@ -1,3 +1,4 @@
+import { opaqueCacheRequest } from './browser-storage';
 import {
   queuePlaceResource,
   promotePlaceResource,
@@ -12,7 +13,7 @@ export type PlaceText = {
   available?: boolean;
   language?: string;
 };
-const prefix = 'questkeeps-place-resources-v3-';
+const prefix = 'questkeeps-place-resources-v4-';
 const memory = new MemoryCache<string, Promise<unknown>>();
 const stores = new MemoryCache<string, Promise<Cache | null>>();
 let generation = 0;
@@ -72,7 +73,7 @@ async function cached<T>(
   const version = generation;
   const pending = (async () => {
     const cache = await store(scope),
-      request = new Request(new URL(endpoint, location.origin));
+      request = await opaqueCacheRequest(endpoint);
     const saved = await cache?.match(request).catch(() => undefined);
     let stale: T | undefined;
     if (saved) {
@@ -252,7 +253,7 @@ export async function clearPlaceClientCache() {
   if (typeof caches !== 'undefined')
     await Promise.all(
       (await caches.keys())
-        .filter((name) => name.startsWith(prefix))
+        .filter((name) => name.startsWith('questkeeps-place-resources-'))
         .map((name) => caches.delete(name)),
     );
 }
@@ -304,7 +305,5 @@ export async function invalidateMapResource(endpoint: string, scope: string) {
   memory.delete(key);
   freshUntil.delete(key);
   const cache = await store(namespace);
-  await cache
-    ?.delete(new Request(new URL(endpoint, location.origin)))
-    .catch(() => {});
+  await cache?.delete(await opaqueCacheRequest(endpoint)).catch(() => {});
 }

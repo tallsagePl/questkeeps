@@ -215,7 +215,7 @@ export default function PlaceRecommendations({
       photo.lat +
       ':' +
       photo.lon;
-    const resultsKey = 'questkeeps:found-places:v1:' + scope + ':' + tripId;
+    const resultsKey = 'questkeeps:found-places:v2:' + scope + ':' + tripId;
     {
       completed.current.clear();
       cardSnapshot.current = [];

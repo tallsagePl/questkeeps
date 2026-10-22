@@ -1,3 +1,10 @@
+import {
+  friendLists,
+  relationship,
+  requestFriend,
+  acceptFriend,
+  removeFriend,
+} from './friends';
 import { localizedWikiArticle } from './wiki-article';
 import {
   ensureUsername,
@@ -480,13 +487,14 @@ export async function handle(
             p[4] === 'image'
               ? {
                   image: info.pageId
-                    ? await placeImage(info.pageId, info.language)
+                    ? await placeImage(info.pageId, info.language, req.signal)
                     : null,
                 }
               : info,
           );
         }
-        if (p[4] === 'image') return json({ image: await placeImage(pageId) });
+        if (p[4] === 'image')
+          return json({ image: await placeImage(pageId, 'ru', req.signal) });
         if (p[4] === 'geometry')
           return json(await placeGeometry(pageId, place.title, place.summary));
         const existing = placeTextContent(place.summary || '');
@@ -610,6 +618,7 @@ export async function handle(
         const t = membership(m.trip_id, u.id);
         assertDay(m.taken.slice(0, 10), t);
         if (m.hidden || m.missing) fail(404, 'Файл недоступен');
+        mediaFor(req, m.id);
         if (method === 'DELETE' && p[3]) {
           if (m.user_id !== u.id && t.role !== 'owner')
             fail(403, 'Удалить место может автор или владелец');
@@ -698,6 +707,29 @@ export async function handle(
       }
     }
     const u = requireUser(req);
+    if (p[0] === 'friends') {
+      if (!p[1] && method === 'GET') return json(friendLists(u.id));
+      if (p[1] && !p[2]) {
+        const targetId = z.string().min(1).max(100).parse(p[1]);
+        if (!one('SELECT 1 FROM users WHERE id=?', targetId))
+          fail(404, 'Пользователь не найден');
+        if (method === 'GET')
+          return json({ relationship: relationship(u.id, targetId) });
+        if (method === 'POST') {
+          throttle('friend-request:' + u.id, 30, 60000);
+          return json({ relationship: requestFriend(u.id, targetId) });
+        }
+        if (method === 'PATCH') {
+          z.object({ action: z.literal('accept') })
+            .strict()
+            .parse(await body(req));
+          return json({ relationship: acceptFriend(u.id, targetId) });
+        }
+        if (method === 'DELETE')
+          return json({ relationship: removeFriend(u.id, targetId) });
+      }
+      fail(404, 'Маршрут не найден');
+    }
     if (p[0] === 'profiles' && !p[1] && method === 'GET') {
       throttle('profile-search:' + u.id, 120, 60000);
       return json({ users: findProfiles(url.searchParams.get('q') || '') });

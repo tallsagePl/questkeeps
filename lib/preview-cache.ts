@@ -1,8 +1,12 @@
+import {
+  opaqueCacheRequest,
+  clearPrivateLocalStorage,
+} from './browser-storage';
 import { clearPlaceClientCache } from './place-client-cache';
 import { clearPlaceSearchRequests } from './place-search-client';
 const PREVIEW_STORAGE_TTL = 86400000;
 // Only preview images are persisted; originals and video streams never enter this cache.
-const prefix = 'questkeeps-previews-v1-';
+const prefix = 'questkeeps-previews-v2-';
 let generation = 0;
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 const pruned = new Set<string>();
@@ -45,6 +49,7 @@ async function cacheFor(scope: string) {
 }
 export async function clearPreviewCache() {
   generation++;
+  clearPrivateLocalStorage();
   clearPlaceSearchRequests();
   await clearPlaceClientCache();
   timers.forEach((timer) => clearTimeout(timer));
@@ -53,13 +58,13 @@ export async function clearPreviewCache() {
   if (typeof caches !== 'undefined') {
     await Promise.all(
       (await caches.keys())
-        .filter((n) => n.startsWith(prefix))
+        .filter((n) => n.startsWith('questkeeps-previews-'))
         .map((n) => caches.delete(n)),
     );
   }
 }
 export async function discardPreview(src: string, scope: string) {
-  const request = new Request(new URL(src, location.origin));
+  const request = await opaqueCacheRequest(src);
   const key = scope + request.url;
   const timer = timers.get(key);
   if (timer) clearTimeout(timer);
@@ -89,7 +94,7 @@ export async function previewBlob(
     typeof caches !== 'undefined'
       ? await cacheFor(scope).catch(() => null)
       : null;
-  const request = new Request(new URL(src, location.origin));
+  const request = await opaqueCacheRequest(src);
   const saved = await cache?.match(request).catch(() => undefined);
   signal?.throwIfAborted();
   if (saved) {

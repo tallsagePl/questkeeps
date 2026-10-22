@@ -1,3 +1,4 @@
+import { setTimeout as delay } from 'node:timers/promises';
 import { MemoryCache, CACHE_TTL } from './memory-cache';
 import { fail } from './access';
 import { distanceMeters } from './geo';
@@ -9,23 +10,44 @@ import {
 } from './attractions';
 let wikiQueue: Promise<void> = Promise.resolve();
 let lastWikiRequest = 0;
-export function wiki(params: Record<string, string>, language: string = 'ru') {
+let pendingWikiRequests = 0;
+export function wiki(
+  params: Record<string, string>,
+  language: string = 'ru',
+  signal?: AbortSignal,
+) {
   if (!/^[a-z]{2,3}$/.test(language))
     throw new Error('Invalid Wikipedia language');
+  signal?.throwIfAborted();
+  if (pendingWikiRequests >= 64)
+    fail(429, 'Сервис мест занят. Попробуй немного позже.');
+  const lifetime = AbortSignal.any([
+    AbortSignal.timeout(45000),
+    ...(signal ? [signal] : []),
+  ]);
+  pendingWikiRequests++;
   const result = wikiQueue.then(async () => {
+    lifetime.throwIfAborted();
     const wait = Math.max(0, 500 - (Date.now() - lastWikiRequest));
-    if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+    if (wait) await delay(wait, undefined, { signal: lifetime });
     lastWikiRequest = Date.now();
-    return requestWiki(params, language);
+    return requestWiki(params, language, lifetime);
   });
   wikiQueue = result.then(
     () => undefined,
     () => undefined,
   );
-  return result;
+  return result.finally(() => {
+    pendingWikiRequests--;
+  });
 }
-async function requestWiki(params: Record<string, string>, language: string) {
+async function requestWiki(
+  params: Record<string, string>,
+  language: string,
+  signal: AbortSignal,
+) {
   for (let attempt = 0; attempt < 3; attempt++) {
+    signal.throwIfAborted();
     let res: Response;
     try {
       res = await fetch(
@@ -35,14 +57,13 @@ async function requestWiki(params: Record<string, string>, language: string) {
           new URLSearchParams({ action: 'query', format: 'json', ...params }),
         {
           headers: { 'User-Agent': 'QuestKeeps/0.1 (personal travel journal)' },
-          signal: AbortSignal.timeout(12000),
+          signal: AbortSignal.any([signal, AbortSignal.timeout(12000)]),
         },
       );
     } catch {
+      signal.throwIfAborted();
       if (attempt < 2) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 500 * (attempt + 1)),
-        );
+        await delay(500 * (attempt + 1), undefined, { signal });
         continue;
       }
       fail(
@@ -52,9 +73,7 @@ async function requestWiki(params: Record<string, string>, language: string) {
     }
     if ([429, 502, 503, 504].includes(res.status)) {
       if (attempt < 2) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 500 * (attempt + 1)),
-        );
+        await delay(500 * (attempt + 1), undefined, { signal });
         continue;
       }
       fail(503, 'Сервис поиска мест перегружен. Попробуй немного позже.');
@@ -66,9 +85,7 @@ async function requestWiki(params: Record<string, string>, language: string) {
         if (language === 'ru' && params.list === 'geosearch')
           fail(503, 'Сервис поиска мест перегружен. Попробуй немного позже.');
         if (attempt < 2) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, 500 * (attempt + 1)),
-          );
+          await delay(500 * (attempt + 1), undefined, { signal });
           continue;
         }
         fail(503, 'Сервис поиска мест перегружен. Попробуй немного позже.');
@@ -310,7 +327,32 @@ function wikiImageUrl(source: unknown): string | null {
   } catch {}
   return null;
 }
-export async function placeImage(pageId: number, language = 'ru') {
+const pendingImages = new Map<string, Promise<string | null>>();
+export async function placeImage(
+  pageId: number,
+  language = 'ru',
+  signal?: AbortSignal,
+) {
+  if (!/^[a-z]{2,3}$/.test(language))
+    throw new Error('Invalid Wikipedia language');
+  signal?.throwIfAborted();
+  const key = language + ':' + pageId;
+  let pending = pendingImages.get(key);
+  if (!pending) {
+    if (pendingImages.size >= 64)
+      fail(429, 'Сервис мест занят. Попробуй немного позже.');
+    pending = loadPlaceImage(pageId, language, signal).finally(() =>
+      pendingImages.delete(key),
+    );
+    pendingImages.set(key, pending);
+  }
+  return pending;
+}
+async function loadPlaceImage(
+  pageId: number,
+  language: string,
+  signal?: AbortSignal,
+) {
   const cached = imageCache.get(language + ':' + pageId);
   if (cached && cached.expires > Date.now()) return cached.image;
   const data = await wiki(
@@ -323,6 +365,7 @@ export async function placeImage(pageId: number, language = 'ru') {
       imlimit: '20',
     },
     language,
+    signal,
   );
   const page = data.query?.pages?.[pageId];
   let image = wikiImageUrl(page?.thumbnail?.source);
@@ -344,6 +387,7 @@ export async function placeImage(pageId: number, language = 'ru') {
           iiurlwidth: '800',
         },
         language,
+        signal,
       );
       const pages = Object.values(files.query?.pages || {}) as any[];
       for (const title of titles) {

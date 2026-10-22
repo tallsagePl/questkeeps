@@ -62,7 +62,7 @@ export default function TravelMap({
   );
   const mapScope = resourceScope || previewScope;
   const viewKey =
-    'questkeeps:map-view:v1:' +
+    'questkeeps:map-view:v2:' +
     previewScope +
     ':' +
     (suggestionPath || (geometryPaths || []).join('|'));
@@ -70,7 +70,11 @@ export default function TravelMap({
     if (compact) return 'all';
     try {
       return (
-        JSON.parse(localStorage.getItem(viewKey) || 'null')?.region || 'all'
+        JSON.parse(
+          (previewScope.startsWith('guest:')
+            ? null
+            : localStorage.getItem(viewKey)) || 'null',
+        )?.region || 'all'
       );
     } catch {
       return 'all';
@@ -80,7 +84,11 @@ export default function TravelMap({
   useEffect(() => {
     if (compact) return;
     try {
-      const saved = JSON.parse(localStorage.getItem(viewKey) || 'null');
+      const saved = JSON.parse(
+        (previewScope.startsWith('guest:')
+          ? null
+          : localStorage.getItem(viewKey)) || 'null',
+      );
       setSelectedRegion(saved?.region || 'all');
     } catch {}
     restoredView.current = viewKey;
@@ -88,7 +96,11 @@ export default function TravelMap({
   useEffect(() => {
     if (compact || restoredView.current !== viewKey) return;
     try {
-      localStorage.setItem(viewKey, JSON.stringify({ region: selectedRegion }));
+      if (!previewScope.startsWith('guest:'))
+        localStorage.setItem(
+          viewKey,
+          JSON.stringify({ region: selectedRegion }),
+        );
     } catch {}
   }, [selectedRegion, viewKey, compact]);
   const [mapReady, setMapReady] = useState(0);
