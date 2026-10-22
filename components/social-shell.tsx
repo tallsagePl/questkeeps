@@ -73,12 +73,6 @@ export function SocialShell({
         <nav className="social-nav" aria-label={t('Главная навигация')}>
           <a href="/">{t('Путешествия')}</a>
           <a
-            href="/profile"
-            aria-current={current === 'profile' ? 'page' : undefined}
-          >
-            {t('Мой профиль')}
-          </a>
-          <a
             href="/about"
             aria-current={current === 'about' ? 'page' : undefined}
           >
@@ -86,7 +80,6 @@ export function SocialShell({
           </a>
         </nav>
         <div className="top-actions">
-          <AppearanceControls />
           {user ? (
             <>
               <a
@@ -97,8 +90,10 @@ export function SocialShell({
                 <UserAvatar user={user} />
                 <span>{user.name}</span>
               </a>
+              <AppearanceControls />
               <button
-                className="text-button"
+                className="text-button header-logout"
+                aria-label={t('Выйти')}
                 disabled={busy}
                 onClick={() => {
                   setBusy(true);
@@ -108,13 +103,29 @@ export function SocialShell({
                   });
                 }}
               >
-                {t('Выйти')}
+                <span>{t('Выйти')}</span>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9 5H5v14h4M13 8l4 4-4 4M8 12h13" />
+                </svg>
               </button>
             </>
           ) : (
-            <a className="text-button" href="/">
-              {t('Войти')}
-            </a>
+            <>
+              <AppearanceControls />
+              <a className="text-button" href="/">
+                {t('Войти')}
+              </a>
+            </>
           )}
         </div>
       </header>

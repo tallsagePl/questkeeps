@@ -634,6 +634,16 @@ function ArchiveContent({
           <a className="text-button about-nav-link" href="/about">
             {t('О проекте')}
           </a>
+          {!guest && user && (
+            <a
+              className="text-button user-button"
+              href="/profile"
+              aria-label={t('Мой профиль')}
+            >
+              <UserAvatar user={user as { id: string; name: string }} />
+              <span>{user.name}</span>
+            </a>
+          )}
           <AppearanceControls />
           {guest ? (
             <span className="pill">
@@ -642,16 +652,8 @@ function ArchiveContent({
             </span>
           ) : user ? (
             <>
-              <a
-                className="text-button user-button"
-                href="/profile"
-                aria-label={t('Мой профиль')}
-              >
-                <UserAvatar user={user as { id: string; name: string }} />
-                <span>{user.name}</span>
-              </a>
               <FeedbackButton
-                className="icon-button"
+                className="icon-button header-logout"
                 title={t('Выйти')}
                 aria-label={t('Выйти')}
                 onClick={() =>
@@ -660,6 +662,7 @@ function ArchiveContent({
                   })
                 }
               >
+                <span>{t('Выйти')}</span>
                 <Icon name="logout" />
               </FeedbackButton>
             </>
