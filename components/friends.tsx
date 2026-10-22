@@ -269,12 +269,11 @@ export default function Friends({
             <span className="friend-count">{lists.friends.length}</span>
           )}
         </h2>
-        <a
-          className="text-button"
-          href={compact ? '/profile#friends' : '#find-people'}
-        >
-          {t(compact ? 'Все друзья' : 'Найти человека')}
-        </a>
+        {compact && (
+          <a className="text-button" href="/profile#friends">
+            {t('Все друзья')}
+          </a>
+        )}
       </div>
       {!ready && (
         <p className="fine" role="status">
@@ -302,9 +301,9 @@ export default function Friends({
               <p>
                 {t('Истории становятся ближе, когда есть с кем их разделить.')}
               </p>
-              <a href={compact ? '/profile#find-people' : '#find-people'}>
-                {t('Найти друзей')}
-              </a>
+              {compact && (
+                <a href="/profile#find-people">{t('Найти друзей')}</a>
+              )}
             </div>
           )}
           {compact && !!lists.incoming.length && (

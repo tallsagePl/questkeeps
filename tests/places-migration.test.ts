@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 process.env.DATABASE_PATH = './data/migration-' + randomUUID() + '.sqlite';
 const old = new Database(process.env.DATABASE_PATH);
 old.exec(
-  "CREATE TABLE trips(id TEXT PRIMARY KEY); CREATE TABLE media(id TEXT PRIMARY KEY,trip_id TEXT,taken TEXT); INSERT INTO trips VALUES ('trip'); INSERT INTO media VALUES ('photo','trip','2026-10-11'); CREATE TABLE places(id TEXT PRIMARY KEY,trip_id TEXT,media_id TEXT,title TEXT,summary TEXT,url TEXT,lat REAL,lon REAL,day TEXT,UNIQUE(trip_id,media_id)); INSERT INTO places VALUES ('legacy','trip','photo','Existing place','Existing summary','https://ru.wikipedia.org/?curid=1',40,20,'2026-10-11');",
+  "CREATE TABLE trips(id TEXT PRIMARY KEY); CREATE TABLE media(id TEXT PRIMARY KEY,trip_id TEXT,taken TEXT,user_id TEXT); INSERT INTO trips VALUES ('trip'); INSERT INTO media VALUES ('photo','trip','2026-10-11',NULL); CREATE TABLE places(id TEXT PRIMARY KEY,trip_id TEXT,media_id TEXT,title TEXT,summary TEXT,url TEXT,lat REAL,lon REAL,day TEXT,UNIQUE(trip_id,media_id)); INSERT INTO places VALUES ('legacy','trip','photo','Existing place','Existing summary','https://ru.wikipedia.org/?curid=1',40,20,'2026-10-11');",
 );
 old.close();
 const { db, one, run } = await import('../lib/db');

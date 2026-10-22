@@ -109,7 +109,10 @@ test('English owner screens, keyboard dialogs, journal, invitation and guest', a
   ).toBeFocused();
   await page.getByRole('button', { name: 'New trip', exact: true }).click();
   await page.getByLabel('Trip name').fill('Autumn trip');
-  await page.getByLabel('Destination', { exact: true }).fill('Georgia');
+  await page
+    .getByRole('combobox', { name: 'Country', exact: true })
+    .fill('Georgia');
+  await page.getByRole('option', { name: 'Georgia', exact: true }).click();
   await page.getByLabel('Start', { exact: true }).fill('2026-10-10');
   await page.getByLabel('End', { exact: true }).fill('2026-10-18');
   await axe(page, 'English create dialog');

@@ -181,7 +181,8 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
         if (!name.startsWith('questkeeps-place-resources-')) continue;
         const cache = await caches.open(name);
         for (const req of await cache.keys()) {
-          if (!new URL(req.url).pathname.endsWith('/geometry')) continue;
+          if (!new URL(req.url).pathname.startsWith('/__questkeeps_cache__/'))
+            continue;
           const saved = await cache.match(req);
           if (!saved) continue;
           const headers = new Headers(saved.headers);

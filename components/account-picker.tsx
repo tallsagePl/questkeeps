@@ -47,7 +47,7 @@ export function ConnectedAccount({ account }: { account: Account }) {
     <div className="connected-account">
       <AccountAvatar key={account.id} accountId={account.id} />
       <div className="account-identity">
-        <strong>{account.label}</strong>
+        <strong title={account.label}>{account.label}</strong>
         <span>{t('Яндекс Диск')}</span>
       </div>
       <span className="connection-state">

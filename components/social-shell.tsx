@@ -64,7 +64,7 @@ export function SocialShell({
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
   return (
-    <>
+    <div className="social-shell">
       <a className="skip-link" href="#main-content">
         {t('Перейти к содержимому')}
       </a>
@@ -129,6 +129,6 @@ export function SocialShell({
         <p>{t('Не просто где вы были. А что вы чувствовали.')}</p>
         <a href="/about">{t('О проекте')}</a>
       </footer>
-    </>
+    </div>
   );
 }

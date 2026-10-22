@@ -1587,7 +1587,7 @@ a:any-link:focus-visible,
 .map-credits {
   max-width: min(420px, 80vw);
   font-size: 11px;
-  color: #273142;
+  color: var(--ink);
 }
 .map-credits summary {
   cursor: pointer;
@@ -3530,5 +3530,245 @@ a:any-link:focus-visible,
     gap: 24px;
     margin: -10px 0 28px;
     font-size: 0.9375rem;
+  }
+}
+
+/* Profile disclosures and private file library. */
+.social-shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+.social-shell > main {
+  flex: 1;
+  min-height: 0;
+}
+.social-shell > header,
+.social-shell > footer {
+  flex-shrink: 0;
+}
+.social-shell > footer {
+  margin-top: auto;
+}
+.profile-avatar-editor {
+  position: relative;
+  flex-shrink: 0;
+}
+.profile-avatar-editor .avatar-edit {
+  position: absolute;
+  right: -12px;
+  top: -10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  padding: 6px;
+}
+.profile-handle-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.9375rem;
+}
+.profile-handle-display a {
+  overflow-wrap: anywhere;
+}
+.profile-handle-display .icon-button {
+  flex-shrink: 0;
+}
+.profile-handle-form .field-hint {
+  margin: 0 0 4px;
+}
+.avatar-edit-controls .field-hint {
+  margin: 10px 0 0;
+}
+.profile-settings-panel .profile-connection-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  text-align: center;
+}
+.profile-settings-panel .connected-account {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 6px 12px;
+}
+.profile-settings-panel .connected-account .account-avatar {
+  grid-row: 1 / 3;
+}
+.profile-settings-panel .account-identity {
+  min-width: 0;
+}
+.profile-settings-panel .account-identity strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+}
+.profile-settings-panel .connection-state {
+  grid-column: 2;
+  justify-self: start;
+}
+.friends-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.friends-heading .friend-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.friends-section:not(.friends-compact) .friends-empty {
+  padding: 12px 0 0;
+}
+.friends-section:not(.friends-compact) .friends-empty p {
+  margin: 0;
+  line-height: 1.5;
+}
+.friends-section:not(.friends-compact) .friend-privacy {
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+.profile-file-group {
+  border-bottom: 1px solid var(--line);
+}
+.profile-file-group h3 {
+  margin: 0;
+}
+.profile-group-toggle {
+  border: 0;
+  background: none;
+  border-radius: 0;
+  color: var(--ink);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 22px 0;
+  text-align: left;
+  font: inherit;
+  font-weight: 600;
+}
+.profile-group-toggle > span:first-child {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.profile-file-count {
+  font-size: 0.875rem;
+  font-weight: 450;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.profile-group-toggle svg {
+  flex-shrink: 0;
+  transition: transform var(--motion-disclosure) var(--ease-out);
+}
+.profile-group-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.profile-file-scroll {
+  max-height: 440px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.profile-file-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.profile-file-rows > li {
+  height: 88px;
+}
+.profile-file-row {
+  width: 100%;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 10px 8px;
+  color: var(--ink);
+  font: inherit;
+}
+.profile-file-row > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.profile-file-row strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9375rem;
+}
+.profile-file-row small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.profile-file-thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg);
+}
+.profile-file-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-file-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.file-load-more {
+  margin: 12px 0 20px;
+}
+.shared-profile-trips {
+  margin: 40px 0;
+}
+.shared-profile-trips ul {
+  list-style: none;
+  padding: 0;
+}
+.shared-profile-trips li {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+@media (hover: hover) {
+  .profile-file-row:hover {
+    background: var(--bg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-group-toggle svg {
+    transition: none;
   }
 }

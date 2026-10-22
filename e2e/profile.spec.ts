@@ -50,6 +50,27 @@ test('профиль: никнейм, своя аватарка, отдельн�
   await expect(
     page.getByRole('button', { name: 'Изменить никнейм', exact: true }),
   ).toBeFocused();
+  await expect(page.getByLabel('Юзернейм', { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Загрузить своё фото', exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole('button', { name: 'Изменить юзернейм', exact: true })
+    .click();
+  await expect(page.getByLabel('Юзернейм', { exact: true })).toBeFocused();
+  await page
+    .getByLabel('Юзернейм', { exact: true })
+    .fill('explorer_' + Date.now());
+  await page
+    .getByRole('button', { name: 'Сохранить юзернейм', exact: true })
+    .click();
+  await expect(page.getByLabel('Юзернейм', { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Изменить юзернейм', exact: true }),
+  ).toBeFocused();
+  await page
+    .getByRole('button', { name: 'Изменить аватарку', exact: true })
+    .click();
   const photo = await sharp({
     create: { width: 80, height: 100, channels: 3, background: '#dd4433' },
   })
@@ -93,7 +114,14 @@ test('профиль: никнейм, своя аватарка, отдельн�
   await page.route('**/api/accounts', (r) =>
     r.fulfill({
       json: {
-        accounts: connected ? [{ id: 'yandex-disk', label: 'My Yandex' }] : [],
+        accounts: connected
+          ? [
+              {
+                id: 'yandex-disk',
+                label: 'VeryLongYandexAccountName_12345678901234567890',
+              },
+            ]
+          : [],
       },
     }),
   );
@@ -112,6 +140,16 @@ test('профиль: никнейм, своя аватарка, отдельн�
     'src',
     custom!,
   );
+  await expect(
+    page.locator('.profile-yandex .account-identity strong'),
+  ).toHaveCSS('white-space', 'nowrap');
+  const loginBox = await page
+    .locator('.profile-yandex .account-identity')
+    .boundingBox();
+  const stateBox = await page
+    .locator('.profile-yandex .connection-state')
+    .boundingBox();
+  expect(stateBox!.y).toBeGreaterThanOrEqual(loginBox!.y + loginBox!.height);
   await expect(
     page.getByRole('link', { name: 'Подключить аккаунт Яндекса', exact: true }),
   ).toHaveCount(0);
@@ -143,6 +181,9 @@ test('профиль: никнейм, своя аватарка, отдельн�
     'src',
     custom!,
   );
+  await page
+    .getByRole('button', { name: 'Изменить аватарку', exact: true })
+    .click();
   await page
     .getByRole('button', { name: 'Удалить своё фото', exact: true })
     .click();

@@ -1244,7 +1244,7 @@ test('открытые места в отдельной вкладке без д
   expect(infoCalls).toBe(initialInfo);
   expect(imageCalls).toBe(initialImages);
   expect(textCalls).toBe(initialTexts);
-  await page.clock.fastForward(15 * 60 * 1000 + 1);
+  await page.clock.fastForward(24 * 60 * 60 * 1000 + 1);
   await page.getByRole('button', { name: 'Галерея', exact: true }).click();
   await page
     .getByRole('button', { name: 'Открытые места', exact: true })
@@ -1252,8 +1252,8 @@ test('открытые места в отдельной вкладке без д
   await expect(
     card.getByRole('img', { name: 'Ворота Адриана' }),
   ).toHaveJSProperty('naturalWidth', 640);
-  expect(infoCalls).toBeGreaterThan(initialInfo);
-  expect(imageCalls).toBeGreaterThan(initialImages);
+  await expect.poll(() => infoCalls).toBeGreaterThan(initialInfo);
+  await expect.poll(() => imageCalls).toBeGreaterThan(initialImages);
   const textBox = await card.locator('.discovered-place-content').boundingBox(),
     imageBox = await card.locator('.place-wiki-image').boundingBox();
   expect(imageBox!.x).toBeGreaterThanOrEqual(textBox!.x + textBox!.width - 1);

@@ -320,7 +320,7 @@ test('следующая порция загружается, лимит не в
   await expect(more).toHaveCount(0);
 });
 
-test('не больше 20 карточек, поиск останавливается на заполненной ленте и продолжается после удаления', async ({
+test('не больше 20 карточек, фон прогревает поиск и список пополняется после удаления', async ({
   page,
 }) => {
   const trip = {
@@ -365,6 +365,7 @@ test('не больше 20 карточек, поиск останавливае
   await page.route('**/api/media/*/preview*', (r) =>
     r.fulfill({ status: 404, json: { error: 'Preview' } }),
   );
+  const lookupsPerPhoto = new Map<number, number>();
   let requests = 0;
   await page.route('**/api/media/*/places', (r) => {
     requests++;
@@ -374,6 +375,7 @@ test('не больше 20 карточек, поиск останавливае
         .url()
         .match(/limit(\d+)/)![1],
     );
+    lookupsPerPhoto.set(i, (lookupsPerPhoto.get(i) || 0) + 1);
     return r.fulfill({
       json: {
         suggestions: Array.from({ length: 5 }, (_, j) => ({
@@ -498,18 +500,18 @@ test('не больше 20 карточек, поиск останавливае
   expect(descriptions.get(8)).toBe(2);
   expect(peakDescriptions).toBeLessThanOrEqual(2);
   await rail.locator('article').first().scrollIntoViewIfNeeded();
-  const beforeReload = requests;
+
   await page.reload();
   await page
     .getByRole('button', { name: 'Открытые места', exact: true })
     .click();
   await expect(rail.locator('article')).toHaveCount(20);
   await page.waitForTimeout(500);
-  expect(requests).toBe(beforeReload);
-  const full = requests;
+  expect(
+    [...lookupsPerPhoto.values()].filter((n) => n > 1).length,
+  ).toBeLessThanOrEqual(1);
   await page.waitForTimeout(400);
-  expect(requests).toBe(full);
-  expect(requests).toBeLessThanOrEqual(5);
+  expect(requests).toBeLessThanOrEqual(media.length + 1);
   await rail
     .getByRole('button', {
       name: 'Удалить возможное место: Место 1',
@@ -527,5 +529,9 @@ test('не больше 20 карточек, поиск останавливае
   await expect(
     rail.getByRole('heading', { name: 'Место 1', exact: true }),
   ).toHaveCount(0);
-  expect(requests).toBe(full + 1);
+  expect(requests).toBeLessThanOrEqual(media.length + 1);
+  expect([...lookupsPerPhoto.values()].every((n) => n <= 2)).toBe(true);
+  expect(
+    [...lookupsPerPhoto.values()].filter((n) => n > 1).length,
+  ).toBeLessThanOrEqual(1);
 });

@@ -93,7 +93,8 @@ test('carousel recovers a damaged cached preview and a later image decoding erro
       if (!name.startsWith('questkeeps-previews-')) continue;
       const cache = await caches.open(name);
       for (const request of await cache.keys()) {
-        if (!request.url.includes('/recovery-photo/preview')) continue;
+        if (!new URL(request.url).pathname.startsWith('/__questkeeps_cache__/'))
+          continue;
         await cache.put(
           request,
           new Response('truncated JPEG', {

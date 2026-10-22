@@ -158,7 +158,7 @@ export default function TravelMap({
         {
           url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
           attribution:
-            '<details class="map-credits"><summary aria-label="Источники карты">© <a href="https://www.esri.com/" target="_blank" rel="noopener noreferrer">Esri</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a></summary><div>Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, © OpenStreetMap contributors, and the GIS User Community.</div></details>',
+            '<span class="map-credit-links">© <a href="https://www.esri.com/" target="_blank" rel="noopener noreferrer">Esri</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a></span> <details class="map-credits"><summary aria-label="Источники карты">Источники</summary><div>Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, © OpenStreetMap contributors, and the GIS User Community.</div></details>',
         },
         {
           url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',

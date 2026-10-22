@@ -19,7 +19,6 @@ import {
   useMemo,
   FormEvent,
   ReactNode,
-  useId,
 } from 'react';
 import dynamic from 'next/dynamic';
 import { AppearanceControls } from './appearance';
@@ -36,6 +35,7 @@ import { signOut } from './social-shell';
 import VirtualGallery from './virtual-gallery';
 import MediaPreview from './media-preview';
 import PhotoViewer from './photo-viewer';
+import Modal from './modal';
 import PlaceDelete from './place-delete';
 import PhotoLocation from './photo-location';
 import TripDayCalendar from './trip-day-calendar';
@@ -157,113 +157,6 @@ function Icon({ name, size = 20 }: { name: string; size?: number }) {
     >
       {paths[name] || paths.compass}
     </svg>
-  );
-}
-function Modal({
-  title,
-  children,
-  onClose,
-  wide = false,
-  doubleBackdropClick = false,
-  onKeyDown,
-}: {
-  title: ReactNode;
-  children: ReactNode;
-  onClose: () => void;
-  wide?: boolean;
-  doubleBackdropClick?: boolean;
-  onKeyDown?: import('react').KeyboardEventHandler<HTMLDialogElement>;
-}) {
-  const { t } = useLocale();
-  const ref = useRef<HTMLDialogElement>(null);
-  const lastBackdropClick = useRef<number | null>(null);
-  const pointerStartedOutside = useRef(false);
-  const outside = (x: number, y: number) => {
-    const bounds = ref.current?.getBoundingClientRect();
-    return (
-      !!bounds &&
-      (x < bounds.left ||
-        x > bounds.right ||
-        y < bounds.top ||
-        y > bounds.bottom)
-    );
-  };
-  const titleId = useId();
-  useEffect(() => {
-    const previousFocus = document.activeElement as HTMLElement | null;
-    const dialog = ref.current;
-    dialog?.showModal();
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-      dialog?.close();
-      if (previousFocus?.isConnected) previousFocus.focus();
-    };
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      aria-labelledby={titleId}
-      className={'modal ' + (wide ? 'wide' : '')}
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onPointerDown={(event) => {
-        pointerStartedOutside.current =
-          event.button === 0 &&
-          event.target === ref.current &&
-          outside(event.clientX, event.clientY);
-        if (!pointerStartedOutside.current) lastBackdropClick.current = null;
-      }}
-      onPointerCancel={() => {
-        pointerStartedOutside.current = false;
-        lastBackdropClick.current = null;
-      }}
-      onKeyDown={(event) => {
-        lastBackdropClick.current = null;
-        onKeyDown?.(event);
-      }}
-      onInput={() => {
-        lastBackdropClick.current = null;
-      }}
-      onClick={(event) => {
-        const backdrop =
-          pointerStartedOutside.current &&
-          event.target === ref.current &&
-          outside(event.clientX, event.clientY);
-        pointerStartedOutside.current = false;
-        if (!backdrop) {
-          lastBackdropClick.current = null;
-          return;
-        }
-        if (!doubleBackdropClick) {
-          onClose();
-          return;
-        }
-        const now = performance.now();
-        if (
-          lastBackdropClick.current !== null &&
-          now - lastBackdropClick.current <= 700
-        ) {
-          lastBackdropClick.current = null;
-          onClose();
-        } else lastBackdropClick.current = now;
-      }}
-    >
-      <div className="modal-head">
-        <h2 id={titleId}>{title}</h2>
-        <FeedbackButton
-          className="icon-button"
-          aria-label={t('Закрыть')}
-          onClick={onClose}
-        >
-          <Icon name="close" />
-        </FeedbackButton>
-      </div>
-      <div className="modal-body">{children}</div>
-    </dialog>
   );
 }
 export default function Archive(props: { share?: string; invite?: string }) {

@@ -626,5 +626,13 @@
   "Путешествия заканчиваются. Истории остаются": "Journeys end. Stories stay",
   "Разделы профиля": "Profile sections",
   "Настройки": "Settings",
-  "Файлы": "Files"
+  "Файлы": "Files",
+  "Как меня видят": "How others see me",
+  "Изменить юзернейм": "Edit username",
+  "Изменить аватарку": "Edit profile photo",
+  "Совместные путешествия": "Shared trips",
+  "У вас пока нет совместных путешествий.": "You have no shared trips yet.",
+  "Загрузить ещё": "Load more",
+  "Выберите поездку": "Choose a trip",
+  "Некорректная страница": "Invalid page"
 }

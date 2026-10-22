@@ -110,6 +110,9 @@ db.transaction(() => {
   db.exec(
     "CREATE TABLE IF NOT EXISTS friendships (user_a TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,user_b TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,requested_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,status TEXT NOT NULL CHECK(status IN ('pending','accepted')),created INTEGER NOT NULL,PRIMARY KEY(user_a,user_b),CHECK(user_a < user_b),CHECK(requested_by=user_a OR requested_by=user_b)); CREATE INDEX IF NOT EXISTS friendships_recipient ON friendships(user_b,status);",
   );
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS media_author_trip_date ON media(user_id,trip_id,taken DESC,id DESC)',
+  );
   db.pragma('user_version = 1');
   db.exec(
     'CREATE TABLE IF NOT EXISTS exif_cache (key TEXT PRIMARY KEY,json TEXT NOT NULL,updated INTEGER NOT NULL)',

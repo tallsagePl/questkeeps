@@ -143,6 +143,9 @@ test('selected names, @ suggestions, profile usernames and short public links', 
   await page.screenshot({ path: 'test-results/public-profile-mobile.png' });
   await page.goto('/?trip=mention-trip');
   await page.locator('.user-button').click();
+  await page
+    .getByRole('button', { name: 'Изменить юзернейм', exact: true })
+    .click();
   await expect(page.getByLabel('Юзернейм', { exact: true })).toHaveValue(
     username,
   );
@@ -152,7 +155,7 @@ test('selected names, @ suggestions, profile usernames and short public links', 
     .getByRole('button', { name: 'Сохранить юзернейм', exact: true })
     .click();
   await expect(
-    page.getByRole('link', { name: '/@' + updated + ' ↗', exact: true }),
+    page.getByRole('link', { name: '@' + updated, exact: true }),
   ).toHaveAttribute('href', '/@' + updated);
   await page
     .locator('.profile-settings')

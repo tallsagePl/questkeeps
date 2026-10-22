@@ -1,4 +1,10 @@
 import {
+  ownProfileMedia,
+  profileMediaGroups,
+  profileMediaPage,
+  sharedProfileTrips,
+} from './profile-media';
+import {
   friendLists,
   relationship,
   requestFriend,
@@ -354,6 +360,10 @@ export async function handle(
     }
     if (p[0] === 'profiles' && p[1] && method === 'GET') {
       const profile = publicProfile(p[1]) || fail(404, 'Профиль не найден');
+      if (p[2] === 'shared-trips')
+        return json({
+          trips: sharedProfileTrips(requireUser(req).id, profile.id),
+        });
       if (p[2] === 'avatar') {
         const avatar = one(
           'SELECT image FROM user_avatars WHERE user_id=?',
@@ -437,7 +447,14 @@ export async function handle(
         return json({ tripId: invite.trip_id });
       }
     }
-    if (p[0] === 'media' && p[1]) {
+    if (
+      (p[0] === 'media' && p[1]) ||
+      (p[0] === 'my-media' &&
+        p[1] &&
+        method === 'GET' &&
+        ['preview', 'original', 'download'].includes(p[2]) &&
+        !p[3])
+    ) {
       if (
         method === 'GET' &&
         p[2] === 'places' &&
@@ -512,7 +529,10 @@ export async function handle(
         method === 'GET' &&
         ['preview', 'original', 'download'].includes(p[2])
       ) {
-        const m = mediaFor(req, p[1]);
+        const m =
+          p[0] === 'my-media'
+            ? ownProfileMedia(req, p[1])
+            : mediaFor(req, p[1]);
         const range = req.headers.get('range');
         if (range && !/^bytes=\d*-\d*$/.test(range))
           fail(416, 'Некорректный диапазон');
@@ -1367,13 +1387,11 @@ export async function handle(
         }
       }
     }
-    if (p[0] === 'my-media' && method === 'GET')
-      return json({
-        media: all(
-          'SELECT m.id,m.name,m.taken,m.hidden,t.title FROM media m JOIN trips t ON t.id=m.trip_id WHERE m.user_id=? ORDER BY taken DESC',
-          u.id,
-        ),
-      });
+    if (p[0] === 'my-media' && method === 'GET') {
+      if (p[1] === 'groups' && !p[2])
+        return json({ groups: profileMediaGroups(u.id) });
+      if (!p[1]) return json(profileMediaPage(u.id, new URL(req.url)));
+    }
     fail(404, 'Маршрут не найден');
   } catch (error) {
     if (p[0] === 'auth' && p[1] === 'callback') {
