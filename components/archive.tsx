@@ -1552,133 +1552,197 @@ function ArchiveContent({
           )}
           {tab === 'settings' && !guest && (
             <div className="settings-grid">
-              <section className="panel">
-                <div className="panel-title">
-                  <div>
-                    <span className="eyebrow">
-                      {t('ИСТОЧНИКИ ВОСПОМИНАНИЙ')}
-                    </span>
-                    <h2>{t('Яндекс Диск')}</h2>
+              <div className="settings-sources">
+                <section className="panel">
+                  <div className="panel-title">
+                    <div>
+                      <span className="eyebrow">
+                        {t('ИСТОЧНИКИ ВОСПОМИНАНИЙ')}
+                      </span>
+                      <h2>{t('Яндекс Диск')}</h2>
+                    </div>
+                    <Icon name="cloud" size={28} />
                   </div>
-                  <Icon name="cloud" size={28} />
-                </div>
-                <p className="muted">
-                  {t(
-                    'Индексируются только выбранные папки и даты поездки. Для папки участника нужно одобрение владельца.',
-                  )}
-                </p>
-                <div className="source-list">
-                  {sources.length ? (
-                    sources.map((s) => (
-                      <article className="source" key={s.id}>
-                        <div>
-                          <strong>{s.path.replace('disk:/', '')}</strong>
-                          <p>
-                            {s.author} · {s.label}
-                          </p>
-                          <span
-                            className={
-                              'status ' + (s.approved ? 'approved' : '')
-                            }
-                          >
-                            {s.approved
-                              ? t('Подключено')
-                              : t('Ожидает одобрения')}
-                          </span>
-                          <small>
-                            {s.last_sync
-                              ? t('Обновлено ') +
-                                new Date(s.last_sync).toLocaleString(
-                                  document.documentElement.lang === 'en'
-                                    ? 'en-GB'
-                                    : 'ru-RU',
-                                )
-                              : t('Ещё не синхронизировано')}
-                          </small>
-                          {s.error && (
-                            <p className="inline-error">{t(s.error)}</p>
-                          )}
-                        </div>
-                        <div className="source-actions">
-                          {isOwner && !s.approved && (
-                            <FeedbackButton
-                              className="secondary"
-                              disabled={busy}
-                              onClick={() =>
-                                void action(async () => {
-                                  await api(
-                                    'trips/' + trip.id + '/sources/' + s.id,
-                                    'PATCH',
-                                    {
-                                      approved: true,
-                                    },
-                                  );
-                                  await reloadSettings();
-                                })
+                  <p className="muted">
+                    {t(
+                      'Индексируются только выбранные папки и даты поездки. Для папки участника нужно одобрение владельца.',
+                    )}
+                  </p>
+                  <div className="source-list">
+                    {sources.length ? (
+                      sources.map((s) => (
+                        <article className="source" key={s.id}>
+                          <div>
+                            <strong>{s.path.replace('disk:/', '')}</strong>
+                            <p>
+                              {s.author} · {s.label}
+                            </p>
+                            <span
+                              className={
+                                'status ' + (s.approved ? 'approved' : '')
                               }
                             >
-                              {t('Одобрить')}
-                            </FeedbackButton>
-                          )}
-                          {!!s.approved && (
-                            <FeedbackButton
-                              className="icon-button"
-                              title={t('Синхронизировать папку')}
-                              aria-label={t('Синхронизировать папку')}
-                              disabled={busy}
-                              onClick={() =>
-                                void action(async () => {
-                                  const r = await api(
-                                    'trips/' +
-                                      trip.id +
-                                      '/sources/' +
-                                      s.id +
-                                      '/sync',
-                                    'POST',
-                                    {},
-                                  );
-                                  await reloadSettings();
-                                  await refresh();
-                                  setNotice(
-                                    r.busy
-                                      ? t('Синхронизация уже идёт')
-                                      : t('Синхронизация завершена: ') +
-                                          r.count +
-                                          t(' файлов'),
-                                  );
-                                })
-                              }
-                            >
-                              <Icon name="refresh" />
-                            </FeedbackButton>
-                          )}
-                        </div>
-                      </article>
-                    ))
-                  ) : (
-                    <p className="empty-small">
-                      {t('Пока не подключено ни одной папки.')}
-                    </p>
-                  )}
-                </div>
-                <FeedbackButton
-                  className="secondary"
-                  onClick={() => {
-                    setModal('source');
-                    setFolders([]);
-                    setAccount('');
-                    setFolder('disk:/');
-                  }}
-                >
-                  <Icon name="plus" />
-                  {t('Подключить папку')}
-                </FeedbackButton>
-                <p className="fine">
-                  {t(
-                    'Автоматическое обновление — каждые 15 минут при запущенном процессе синхронизации.',
-                  )}
-                </p>
-              </section>
+                              {s.approved
+                                ? t('Подключено')
+                                : t('Ожидает одобрения')}
+                            </span>
+                            <small>
+                              {s.last_sync
+                                ? t('Обновлено ') +
+                                  new Date(s.last_sync).toLocaleString(
+                                    document.documentElement.lang === 'en'
+                                      ? 'en-GB'
+                                      : 'ru-RU',
+                                  )
+                                : t('Ещё не синхронизировано')}
+                            </small>
+                            {s.error && (
+                              <p className="inline-error">{t(s.error)}</p>
+                            )}
+                          </div>
+                          <div className="source-actions">
+                            {isOwner && !s.approved && (
+                              <FeedbackButton
+                                className="secondary"
+                                disabled={busy}
+                                onClick={() =>
+                                  void action(async () => {
+                                    await api(
+                                      'trips/' + trip.id + '/sources/' + s.id,
+                                      'PATCH',
+                                      {
+                                        approved: true,
+                                      },
+                                    );
+                                    await reloadSettings();
+                                  })
+                                }
+                              >
+                                {t('Одобрить')}
+                              </FeedbackButton>
+                            )}
+                            {!!s.approved && (
+                              <FeedbackButton
+                                className="icon-button"
+                                title={t('Синхронизировать папку')}
+                                aria-label={t('Синхронизировать папку')}
+                                disabled={busy}
+                                onClick={() =>
+                                  void action(async () => {
+                                    const r = await api(
+                                      'trips/' +
+                                        trip.id +
+                                        '/sources/' +
+                                        s.id +
+                                        '/sync',
+                                      'POST',
+                                      {},
+                                    );
+                                    await reloadSettings();
+                                    await refresh();
+                                    setNotice(
+                                      r.busy
+                                        ? t('Синхронизация уже идёт')
+                                        : t('Синхронизация завершена: ') +
+                                            r.count +
+                                            t(' файлов'),
+                                    );
+                                  })
+                                }
+                              >
+                                <Icon name="refresh" />
+                              </FeedbackButton>
+                            )}
+                          </div>
+                        </article>
+                      ))
+                    ) : (
+                      <p className="empty-small">
+                        {t('Пока не подключено ни одной папки.')}
+                      </p>
+                    )}
+                  </div>
+                  <FeedbackButton
+                    className="secondary"
+                    onClick={() => {
+                      setModal('source');
+                      setFolders([]);
+                      setAccount('');
+                      setFolder('disk:/');
+                    }}
+                  >
+                    <Icon name="plus" />
+                    {t('Подключить папку')}
+                  </FeedbackButton>
+                  <p className="fine">
+                    {t(
+                      'Автоматическое обновление — каждые 15 минут при запущенном процессе синхронизации.',
+                    )}
+                  </p>
+                </section>
+                {isOwner && (
+                  <section className="panel share-panel">
+                    <div>
+                      <span className="eyebrow">
+                        {t('РАЗДЕЛИТЬ ВОСПОМИНАНИЯ')}
+                      </span>
+                      <h2>{t('Гостевой просмотр')}</h2>
+                      <p className="muted">
+                        {t(
+                          'Обладатель секретной ссылки увидит опубликованные фотографии, карту и дневник всей поездки без регистрации.',
+                        )}
+                      </p>
+                      <span className="status">
+                        {trip.sharing
+                          ? t('Ссылка активна')
+                          : t('Доступ по ссылке выключен')}
+                      </span>
+                    </div>
+                    <div className="stack">
+                      <FeedbackButton
+                        className="secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          void action(async () => {
+                            const r = await api(
+                              'trips/' + trip.id + '/share',
+                              'POST',
+                              {
+                                enabled: true,
+                              },
+                            );
+                            setGenerated(r.url);
+                            setModal('share');
+                            await refresh();
+                          })
+                        }
+                      >
+                        <Icon name="link" />
+                        {trip.sharing
+                          ? t('Заменить ссылку')
+                          : t('Создать ссылку')}
+                      </FeedbackButton>
+                      {trip.sharing && (
+                        <FeedbackButton
+                          className="text-button danger"
+                          disabled={busy}
+                          onClick={() =>
+                            void action(async () => {
+                              await api('trips/' + trip.id + '/share', 'POST', {
+                                enabled: false,
+                              });
+                              await refresh();
+                              setNotice(t('Гостевая ссылка отозвана'));
+                            })
+                          }
+                        >
+                          {t('Отозвать доступ')}
+                        </FeedbackButton>
+                      )}
+                    </div>
+                  </section>
+                )}
+              </div>
               <section className="panel">
                 <div className="panel-title">
                   <div>
@@ -1741,68 +1805,6 @@ function ArchiveContent({
                   </FeedbackButton>
                 )}
               </section>
-              {isOwner && (
-                <section className="panel share-panel">
-                  <div>
-                    <span className="eyebrow">
-                      {t('РАЗДЕЛИТЬ ВОСПОМИНАНИЯ')}
-                    </span>
-                    <h2>{t('Гостевой просмотр')}</h2>
-                    <p className="muted">
-                      {t(
-                        'Обладатель секретной ссылки увидит опубликованные фотографии, карту и дневник всей поездки без регистрации.',
-                      )}
-                    </p>
-                    <span className="status">
-                      {trip.sharing
-                        ? t('Ссылка активна')
-                        : t('Доступ по ссылке выключен')}
-                    </span>
-                  </div>
-                  <div className="stack">
-                    <FeedbackButton
-                      className="secondary"
-                      disabled={busy}
-                      onClick={() =>
-                        void action(async () => {
-                          const r = await api(
-                            'trips/' + trip.id + '/share',
-                            'POST',
-                            {
-                              enabled: true,
-                            },
-                          );
-                          setGenerated(r.url);
-                          setModal('share');
-                          await refresh();
-                        })
-                      }
-                    >
-                      <Icon name="link" />
-                      {trip.sharing
-                        ? t('Заменить ссылку')
-                        : t('Создать ссылку')}
-                    </FeedbackButton>
-                    {trip.sharing && (
-                      <FeedbackButton
-                        className="text-button danger"
-                        disabled={busy}
-                        onClick={() =>
-                          void action(async () => {
-                            await api('trips/' + trip.id + '/share', 'POST', {
-                              enabled: false,
-                            });
-                            await refresh();
-                            setNotice(t('Гостевая ссылка отозвана'));
-                          })
-                        }
-                      >
-                        {t('Отозвать доступ')}
-                      </FeedbackButton>
-                    )}
-                  </div>
-                </section>
-              )}
             </div>
           )}
         </main>
