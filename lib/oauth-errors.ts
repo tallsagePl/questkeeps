@@ -27,6 +27,10 @@ export const oauthErrors = {
     ru: 'У вас уже подключён Яндекс. Чтобы использовать другой аккаунт, сначала отключите текущий в профиле QuestKeeps.',
     en: 'You already have a Yandex account connected. Disconnect it in your QuestKeeps profile before connecting another account.',
   },
+  account_link_required: {
+    ru: 'Для этой почты уже есть профиль QuestKeeps. Войдите по email или никнейму и подключите Яндекс в настройках профиля.',
+    en: 'A QuestKeeps profile already uses this email. Sign in with your email or username and connect Yandex in profile settings.',
+  },
   unknown: {
     ru: 'Не удалось подключить Яндекс. Повторите попытку; если ошибка останется, проверьте настройки приложения в Яндекс OAuth.',
     en: 'Could not connect to Yandex. Try again; if the issue persists, check the app settings in Yandex OAuth.',

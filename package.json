@@ -1,6 +1,6 @@
 {
   "name": "questkeeps",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -14,7 +14,8 @@
     "format": "prettier --write app components lib scripts tests e2e *.ts *.json docs README.md",
     "health": "node --env-file=.env.local --import tsx scripts/health.ts",
     "backup": "node --env-file=.env.local --import tsx scripts/backup.ts",
-    "test:social": "playwright test e2e/social.spec.ts --workers=1"
+    "test:social": "playwright test e2e/social.spec.ts --workers=1",
+    "migrate": "node --env-file=.env.local --import tsx scripts/migrate.ts"
   },
   "keywords": [],
   "author": "",

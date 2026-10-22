@@ -51,7 +51,7 @@ test('ошибки входа показаны у полей и снимаютс
     'aria-invalid',
     'true',
   );
-  await expect(page.locator('.field-error')).toHaveCount(3);
+  await expect(page.locator('.field-error')).toHaveCount(4);
   await expect(page.locator('input[name="name"]')).toBeFocused();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
@@ -74,6 +74,9 @@ test('даты и текст дневника проверяются возле 
     .getByLabel('Электронная почта')
     .fill('fields-' + Date.now() + '@example.test');
   await page.getByLabel('Пароль', { exact: true }).fill('TravelPassword123');
+  await page
+    .getByLabel('Повторите пароль', { exact: true })
+    .fill('TravelPassword123');
   await page
     .getByRole('button', { name: 'Создать аккаунт', exact: true })
     .click();

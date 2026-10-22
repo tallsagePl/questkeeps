@@ -27,7 +27,17 @@ export function userProfile(userId: string): Row | undefined {
     'SELECT u.id,u.email,u.name,(SELECT version FROM user_avatars WHERE user_id=u.id) avatarVersion,(SELECT id FROM accounts WHERE user_id=u.id AND disk_enabled=1 LIMIT 1) yandexAccountId FROM users u WHERE u.id=?',
     userId,
   );
-  return user ? { ...user, username } : undefined;
+  return user
+    ? {
+        ...user,
+        username,
+        linkedEmails: all(
+          "SELECT DISTINCT provider_email email FROM accounts WHERE user_id=? AND provider_email IS NOT NULL AND provider_email<>COALESCE(?,'') ORDER BY provider_email",
+          userId,
+          user.email,
+        ).map((row) => row.email),
+      }
+    : undefined;
 }
 export function currentUser(req: Request) {
   const s = cookie(req, 'ta_session');

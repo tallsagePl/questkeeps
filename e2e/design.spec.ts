@@ -92,6 +92,9 @@ test('English owner screens, keyboard dialogs, journal, invitation and guest', a
     .fill('review-' + Date.now() + '@example.test');
   await page.getByLabel('Password', { exact: true }).fill('TravelPassword123');
   await page
+    .getByLabel('Repeat password', { exact: true })
+    .fill('TravelPassword123');
+  await page
     .getByRole('button', { name: 'Create account', exact: true })
     .click();
   await expect(
@@ -175,6 +178,9 @@ test('English owner screens, keyboard dialogs, journal, invitation and guest', a
     .getByLabel('Email', { exact: true })
     .fill('member-' + Date.now() + '@example.test');
   await guest.getByLabel('Password', { exact: true }).fill('TravelPassword123');
+  await guest
+    .getByLabel('Repeat password', { exact: true })
+    .fill('TravelPassword123');
   await guest
     .getByRole('button', { name: 'Create account', exact: true })
     .click();

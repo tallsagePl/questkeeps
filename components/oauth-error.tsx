@@ -42,8 +42,17 @@ export default function OAuthError({
           <p className="fine">
             {en ? 'Reason' : 'Причина'}: {reason}
           </p>
-          <a href={retry} className="primary">
-            {en ? 'Try connecting again' : 'Повторить подключение'}
+          <a
+            href={reason === 'account_link_required' ? '/' : retry}
+            className="primary"
+          >
+            {reason === 'account_link_required'
+              ? en
+                ? 'Sign in'
+                : 'Войти'
+              : en
+                ? 'Try connecting again'
+                : 'Повторить подключение'}
           </a>
           <a href={returnPath} className="text-button">
             {en ? 'Back to QuestKeeps' : 'Вернуться в QuestKeeps'}

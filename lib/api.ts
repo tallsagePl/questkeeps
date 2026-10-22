@@ -1,4 +1,15 @@
 import {
+  verificationRequired,
+  mailConfigured,
+  emailPending,
+  queueVerification,
+  confirmEmail,
+} from './email-verification';
+import {
+  validRegistrationPassword,
+  registrationPasswordHint,
+} from './password-policy';
+import {
   ownProfileMedia,
   profileMediaGroups,
   profileMediaPage,
@@ -211,6 +222,13 @@ async function oauth(req: NextRequest, p: string[]) {
     });
     if (!profile.ok) fail(502, 'Не удалось прочитать профиль Яндекса');
     const info = await profile.json();
+    if (!info.id || typeof info.login !== 'string')
+      fail(502, 'Некорректный профиль Яндекса');
+    const providerEmail = z.email().safeParse(
+      String(info.default_email || '')
+        .trim()
+        .toLowerCase(),
+    );
     const existing = one(
       'SELECT * FROM accounts WHERE yandex_id=?',
       String(info.id),
@@ -230,14 +248,9 @@ async function oauth(req: NextRequest, p: string[]) {
         fail(409, 'Этот Яндекс уже подключён к другому пользователю');
       if (!userId) {
         userId = id();
-        const email =
-          info.default_email &&
-          !one(
-            'SELECT id FROM users WHERE email=?',
-            info.default_email.toLowerCase(),
-          )
-            ? info.default_email.toLowerCase()
-            : null;
+        const email = providerEmail.success ? providerEmail.data : null;
+        if (email && one('SELECT id FROM users WHERE email=?', email))
+          fail(409, 'Войдите в существующий профиль и подключите Яндекс');
         run(
           'INSERT INTO users VALUES (?,?,?,?,?)',
           userId,
@@ -249,16 +262,17 @@ async function oauth(req: NextRequest, p: string[]) {
       }
       if (existing && s.intent === 'link')
         run(
-          'UPDATE accounts SET token=?,refresh=?,expires=?,label=?,disk_enabled=1 WHERE id=?',
+          'UPDATE accounts SET token=?,refresh=?,expires=?,label=?,provider_email=?,disk_enabled=1 WHERE id=?',
           encrypt(creds.access_token),
           creds.refresh_token ? encrypt(creds.refresh_token) : existing.refresh,
           creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
           info.login,
+          providerEmail.success ? providerEmail.data : null,
           existing.id,
         );
       else if (!existing)
         run(
-          'INSERT INTO accounts (id,user_id,yandex_id,label,token,refresh,expires,disk_enabled) VALUES (?,?,?,?,?,?,?,?)',
+          'INSERT INTO accounts (id,user_id,yandex_id,label,token,refresh,expires,disk_enabled,provider_email) VALUES (?,?,?,?,?,?,?,?,?)',
           id(),
           userId,
           String(info.id),
@@ -267,14 +281,37 @@ async function oauth(req: NextRequest, p: string[]) {
           creds.refresh_token ? encrypt(creds.refresh_token) : null,
           creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
           Number(s.intent === 'link'),
+          providerEmail.success ? providerEmail.data : null,
         );
     })();
+    // Login uses the already linked owner's id without replacing the Disk token
+    // with a token that only grants login scopes.
+    if (existing && s.intent === 'login')
+      run(
+        'UPDATE accounts SET provider_email=? WHERE id=?',
+        providerEmail.success ? providerEmail.data : null,
+        existing.id,
+      );
     const response = NextResponse.redirect(
       new URL(s.return_path || '/', appURL()),
     );
     if (s.intent === 'login')
-      response.headers.set('Set-Cookie', sessionCookie(session(userId)));
-    response.cookies.delete('ta_oauth');
+      response.cookies.set('ta_session', session(userId), {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: appURL().startsWith('https:'),
+        path: '/',
+        maxAge: 30 * 86400,
+      });
+    // Use one cookie API: mixing a raw Set-Cookie header and cookies.delete
+    // caused NextResponse to overwrite the newly issued login session.
+    response.cookies.set('ta_oauth', '', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: appURL().startsWith('https:'),
+      path: '/api/auth',
+      maxAge: 0,
+    });
     return response;
   }
   return undefined;
@@ -307,6 +344,29 @@ export async function handle(
       if (result) return result;
     }
     if (p[0] === 'auth' && method === 'POST') {
+      if (p[1] === 'verify-email') {
+        const input = z
+          .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
+          .parse(await body(req));
+        throttle('email:verify:' + hash(input.token), 6);
+        if (!confirmEmail(input.token))
+          fail(400, 'Ссылка подтверждения недействительна или истекла');
+        return json({ verified: true });
+      }
+      if (p[1] === 'resend-verification') {
+        const input = z
+          .object({ email: z.email().max(254) })
+          .parse(await body(req));
+        const email = input.email.toLowerCase();
+        throttle('email:resend:' + hash(email), 3, 3600000);
+        const user = one('SELECT id FROM users WHERE email=?', email);
+        if (user && emailPending(user.id) && mailConfigured())
+          queueVerification(user.id, email);
+        return json({
+          message: 'Если почта ожидает подтверждения, мы отправим письмо.',
+        });
+      }
+
       if (p[1] === 'logout') {
         run(
           'DELETE FROM sessions WHERE hash=?',
@@ -337,13 +397,31 @@ export async function handle(
         const input = z
           .object({
             email: registering ? emailAddress : loginIdentity,
-            password: z
-              .string()
-              .min(10, 'Пароль — минимум 10 символов')
-              .max(128),
+            password: z.string().min(1, 'Введите пароль').max(128),
+            passwordConfirmation: z.string().max(128).optional(),
             name: z.string().trim().min(1).max(80).optional(),
           })
           .parse(await body(req));
+        if (
+          registering &&
+          input.passwordConfirmation !== undefined &&
+          input.passwordConfirmation !== input.password
+        )
+          return json(
+            {
+              error: 'Пароли не совпадают',
+              fieldErrors: { passwordConfirmation: 'Пароли не совпадают' },
+            },
+            400,
+          );
+        if (registering && !validRegistrationPassword(input.password))
+          return json(
+            {
+              error: registrationPasswordHint,
+              fieldErrors: { password: registrationPasswordHint },
+            },
+            400,
+          );
         const byEmail = z.email().safeParse(input.email).success;
         const identity = byEmail ? input.email : input.email.replace(/^@/, '');
         throttle('auth:identity:' + hash(identity), 10);
@@ -358,15 +436,26 @@ export async function handle(
         if (!registering && u) throttle('auth:account:' + u.id, 10);
         if (p[1] === 'register') {
           if (u) fail(409, 'Этот email уже зарегистрирован');
+          if (verificationRequired() && !mailConfigured())
+            fail(503, 'Регистрация временно недоступна: почта не подключена');
           const userId = id();
-          run(
-            'INSERT INTO users VALUES (?,?,?,?,?)',
-            userId,
-            input.email,
-            input.name || input.email.split('@')[0],
-            await passwordHash(input.password, 12),
-            Date.now(),
-          );
+          const encodedPassword = await passwordHash(input.password, 12);
+          db.transaction(() => {
+            run(
+              'INSERT INTO users VALUES (?,?,?,?,?)',
+              userId,
+              input.email,
+              input.name || input.email.split('@')[0],
+              encodedPassword,
+              Date.now(),
+            );
+            run(
+              'INSERT INTO email_status (user_id,required) VALUES (?,?)',
+              userId,
+              Number(verificationRequired()),
+            );
+            if (verificationRequired()) queueVerification(userId, input.email);
+          }).immediate();
           u = one('SELECT * FROM users WHERE id=?', userId);
         } else {
           const valid = await compare(
@@ -377,6 +466,12 @@ export async function handle(
           if (!u || !u.password || !valid)
             fail(401, 'Неверный email, никнейм или пароль');
         }
+        if (emailPending(u!.id))
+          return json({
+            verificationRequired: true,
+            verificationEmail: u!.email,
+            message: 'Подтверди email по ссылке из письма.',
+          });
         const r = json({ user: userProfile(u!.id) });
         r.headers.set('Set-Cookie', sessionCookie(session(u!.id)));
         return r;
@@ -1425,9 +1520,13 @@ export async function handle(
           ? 'session_expired'
           : error instanceof Error &&
               error.message ===
-                'Сначала отключите текущий аккаунт Яндекса в профиле'
-            ? 'account_already_linked'
-            : 'unknown';
+                'Войдите в существующий профиль и подключите Яндекс'
+            ? 'account_link_required'
+            : error instanceof Error &&
+                error.message ===
+                  'Сначала отключите текущий аккаунт Яндекса в профиле'
+              ? 'account_already_linked'
+              : 'unknown';
       return oauthFailure(reason, currentUser(req) ? 'link' : 'login');
     }
     if (error instanceof z.ZodError)

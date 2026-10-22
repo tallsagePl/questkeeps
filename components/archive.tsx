@@ -1,4 +1,8 @@
 'use client';
+import {
+  registrationPasswordPattern,
+  registrationPasswordHint,
+} from '../lib/password-policy';
 import { isAreaPlace } from '../lib/place-kind';
 import {
   announceSessionChange,
@@ -182,6 +186,8 @@ function ArchiveContent({
   const { t } = useLocale();
   const [user, setUser] = useState<Row | null>(null),
     [ready, setReady] = useState(false),
+    [bootFailed, setBootFailed] = useState(false),
+    [verificationEmail, setVerificationEmail] = useState(''),
     [trips, setTrips] = useState<Row[]>([]),
     [selected, setSelected] = useState<string | null>(null),
     [data, setData] = useState<Row | null>(null),
@@ -336,7 +342,13 @@ function ArchiveContent({
   useEffect(() => {
     mounted.current = true;
     void action(async () => {
-      const me = await api('me');
+      let me;
+      try {
+        me = await api('me');
+      } catch (error) {
+        setBootFailed(true);
+        throw error;
+      }
       setUser(me.user);
       setYandex(me.yandexEnabled);
       if (share) setData(await api('share/' + share));
@@ -419,11 +431,20 @@ function ArchiveContent({
   const auth = (event: FormEvent<HTMLFormElement>) => {
     const input = values(event);
     void action(async () => {
+      if (register && input.password !== input.passwordConfirmation)
+        throw new ApiError(t('Пароли не совпадают'), {
+          passwordConfirmation: t('Пароли не совпадают'),
+        });
       const r = await api(
         'auth/' + (register ? 'register' : 'login'),
         'POST',
         input,
       );
+      if (r.verificationRequired) {
+        setVerificationEmail(r.verificationEmail);
+        setNotice(t(r.message));
+        return;
+      }
       announceSessionChange();
       setUser(r.user);
       setModal('');
@@ -623,6 +644,26 @@ function ArchiveContent({
       onSubmit={auth}
       className="stack"
     >
+      {verificationEmail && (
+        <div className="verification-pending" role="status">
+          <p>{t('Подтверди email по ссылке из письма.')}</p>
+          <FeedbackButton
+            type="button"
+            className="text-button"
+            disabled={busy}
+            onClick={() =>
+              void action(async () => {
+                const result = await api('auth/resend-verification', 'POST', {
+                  email: verificationEmail,
+                });
+                setNotice(t(result.message));
+              })
+            }
+          >
+            {t('Отправить письмо ещё раз')}
+          </FeedbackButton>
+        </div>
+      )}
       {register && (
         <Field
           label={t('Как вас зовут')}
@@ -648,12 +689,23 @@ function ArchiveContent({
         label={t('Пароль')}
         name="password"
         type="password"
-        minLength={10}
-        maxLength={128}
+        minLength={register ? 6 : undefined}
+        maxLength={register ? 72 : 128}
+        pattern={register ? registrationPasswordPattern : undefined}
+        hint={register ? t(registrationPasswordHint) : undefined}
         autoComplete={register ? 'new-password' : 'current-password'}
         required
-        placeholder={t('Минимум 10 символов')}
       />
+      {register && (
+        <Field
+          label={t('Повторите пароль')}
+          name="passwordConfirmation"
+          type="password"
+          autoComplete="new-password"
+          maxLength={72}
+          required
+        />
+      )}
       <FeedbackButton className="primary" disabled={busy}>
         {busy ? t('Подождите…') : register ? t('Создать аккаунт') : t('Войти')}
         <Icon name="arrow" />
@@ -690,6 +742,18 @@ function ArchiveContent({
         <Brand />
         <span className="top-caption">{t('КОЛЛЕКЦИЯ ВАШИХ ПУТЕШЕСТВИЙ')}</span>
         <div className="top-actions">
+          {!guest && user && (
+            <a
+              className="text-button trips-nav-link"
+              href="/"
+              aria-current={!invite ? 'page' : undefined}
+              onClick={(event) => {
+                if (!selected && !invite) event.preventDefault();
+              }}
+            >
+              {t('Путешествия')}
+            </a>
+          )}
           <a className="text-button about-nav-link" href="/about">
             {t('О проекте')}
           </a>
@@ -735,6 +799,18 @@ function ArchiveContent({
           <PageFeedback />
           <span className="spinner" />
           {t('Открываем архив…')}
+        </main>
+      ) : bootFailed ? (
+        <main id="main-content" tabIndex={-1} className="loading">
+          <h1>{t('Не удалось открыть архив')}</h1>
+          <p>{t('Не удалось связаться с сервером. Твой вход не сброшен.')}</p>
+          <PageFeedback />
+          <button
+            className="secondary"
+            onClick={() => window.location.reload()}
+          >
+            {t('Повторить')}
+          </button>
         </main>
       ) : invite ? (
         <main id="main-content" tabIndex={-1} className="invite-page">
@@ -882,8 +958,8 @@ function ArchiveContent({
                         {trip.destination}
                       </span>
                       <span>
-                        {trip.media_count}
-                        {t('кадров')} <Icon name="arrow" size={18} />
+                        {trip.media_count} {t('кадров')}{' '}
+                        <Icon name="arrow" size={18} />
                       </span>
                     </div>
                   </div>

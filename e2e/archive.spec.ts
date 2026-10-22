@@ -20,6 +20,9 @@ test('регистрация, поездка, дневник, гостевая �
     .getByLabel('Пароль', { exact: true })
     .fill('TravelTestPassword123');
   await page
+    .getByLabel('Повторите пароль', { exact: true })
+    .fill('TravelTestPassword123');
+  await page
     .getByRole('button', { name: 'Создать аккаунт', exact: true })
     .click();
   await expect(

@@ -5,6 +5,7 @@ export type ProfileUser = {
   name: string;
   username?: string;
   email?: string | null;
+  linkedEmails?: string[];
   avatarVersion?: string | null;
   yandexAccountId?: string | null;
 };

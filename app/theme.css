@@ -3896,3 +3896,32 @@ a:any-link:focus-visible,
     background: var(--soft);
   }
 }
+
+/* Password visibility uses a separate keyboard-accessible button. */
+.password-control {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.password-control input {
+  width: 100%;
+  padding-right: 48px;
+}
+.password-toggle {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+.topbar .top-actions .trips-nav-link[aria-current='page'],
+.topbar .social-nav a[aria-current='page'] {
+  color: var(--accent);
+}

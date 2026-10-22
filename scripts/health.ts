@@ -23,6 +23,10 @@ const required = [
   'oauth_states',
   'throttle',
   'exif_cache',
+  'schema_migrations',
+  'email_status',
+  'email_verifications',
+  'delivery_jobs',
 ];
 const tables = (
   db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as {
@@ -63,6 +67,7 @@ if (
   report.database.integrity !== 'ok' ||
   report.database.foreignKeyViolations ||
   report.database.missingTables.length ||
+  report.database.schemaVersion !== 2 ||
   !report.configuration.encryptionKeyValid ||
   !report.configuration.schedulerSecretConfigured
 )

@@ -639,5 +639,22 @@
   "Электронная почта или @никнейм": "Email or @username",
   "Введите email или уникальный никнейм": "Enter an email or unique username",
   "Проверьте email или никнейм": "Check your email or username",
-  "Неверный email, никнейм или пароль": "Incorrect email, username or password"
+  "Неверный email, никнейм или пароль": "Incorrect email, username or password",
+  "Показать пароль": "Show password",
+  "Скрыть пароль": "Hide password",
+  "Повторите пароль": "Repeat password",
+  "Пароли не совпадают": "Passwords do not match",
+  "Введите пароль": "Enter your password",
+  "От 6 до 72 символов: заглавная и строчная латинские буквы. Можно добавить цифры и знаки.": "6–72 characters: uppercase and lowercase Latin letters. Numbers and symbols are allowed.",
+  "Не удалось связаться с сервером. Твой вход не сброшен.": "Could not reach the server. Your sign-in has not been cleared.",
+  "Яндекс": "Yandex",
+  "Подтверждение почты": "Email verification",
+  "Подтверди адрес, чтобы завершить регистрацию.": "Confirm your address to finish signing up.",
+  "Подтвердить email": "Verify email",
+  "Email подтверждён. Теперь можно войти.": "Email verified. You can now sign in.",
+  "Ссылка подтверждения недействительна или истекла": "The verification link is invalid or has expired",
+  "Подтверди email по ссылке из письма.": "Verify your email using the link in the message.",
+  "Регистрация временно недоступна: почта не подключена": "Registration is temporarily unavailable: email delivery is not configured",
+  "Если почта ожидает подтверждения, мы отправим письмо.": "If the address is awaiting verification, we will send a message.",
+  "Отправить письмо ещё раз": "Resend verification email"
 }

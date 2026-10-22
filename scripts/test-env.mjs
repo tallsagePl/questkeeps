@@ -14,3 +14,7 @@ globalThis.fetch = async () => {
     'External requests are disabled in unit tests; install a fixture mock.',
   );
 };
+
+process.env.EMAIL_VERIFICATION_REQUIRED = 'false';
+process.env.RESEND_API_KEY = '';
+process.env.EMAIL_FROM = '';

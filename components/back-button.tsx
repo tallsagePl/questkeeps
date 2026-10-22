@@ -1,16 +1,19 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocale } from './appearance';
 import { initializeNavigation, goBack } from '../lib/navigation';
 export default function BackButton() {
   const { t } = useLocale();
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     initializeNavigation();
+    setReady(true);
   }, []);
   return (
     <button
       type="button"
       className="back text-button page-back"
+      disabled={!ready}
       onClick={goBack}
     >
       <svg

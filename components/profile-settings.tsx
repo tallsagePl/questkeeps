@@ -164,6 +164,11 @@ export default function ProfileSettings({
             </div>
           )}
           {user.email && <p className="muted">{user.email}</p>}
+          {user.linkedEmails?.map((email) => (
+            <p className="muted" key={email}>
+              {email} <small>({t('Яндекс')})</small>
+            </p>
+          ))}
         </div>
       </div>
       {editingAvatar && (

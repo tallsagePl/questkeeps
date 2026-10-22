@@ -327,6 +327,8 @@ export function Field({
 } & InputHTMLAttributes<HTMLInputElement>) {
   const { t } = useLocale();
   const id = useId();
+  const [shown, setShown] = useState(false);
+  const password = props.type === 'password';
   const { fields } = useContext(FormContext);
   const message = fields[props.name || ''];
   const errorId = id + '-error';
@@ -334,15 +336,58 @@ export function Field({
   return (
     <label className={'field' + (message ? ' field-invalid' : '')} htmlFor={id}>
       <span id={id + '-label'}>{label}</span>
-      <input
-        {...props}
-        id={id}
-        aria-labelledby={id + '-label'}
-        aria-invalid={message ? true : undefined}
-        aria-describedby={
-          message ? errorId : hint ? hintId : props['aria-describedby']
-        }
-      />
+      {password ? (
+        <span className="password-control">
+          <input
+            {...props}
+            type={password && shown ? 'text' : props.type}
+            id={id}
+            aria-labelledby={id + '-label'}
+            aria-invalid={message ? true : undefined}
+            aria-describedby={
+              message ? errorId : hint ? hintId : props['aria-describedby']
+            }
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            aria-label={t(shown ? 'Скрыть пароль' : 'Показать пароль')}
+            aria-pressed={shown}
+            aria-controls={id}
+            onClick={(event) => {
+              event.preventDefault();
+              setShown((value) => !value);
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+              <circle cx="12" cy="12" r="3" />
+              {shown && <path d="m3 3 18 18" />}
+            </svg>
+          </button>
+        </span>
+      ) : (
+        <input
+          {...props}
+          type={password && shown ? 'text' : props.type}
+          id={id}
+          aria-labelledby={id + '-label'}
+          aria-invalid={message ? true : undefined}
+          aria-describedby={
+            message ? errorId : hint ? hintId : props['aria-describedby']
+          }
+        />
+      )}
       {hint && !message && (
         <small id={hintId} className="field-hint">
           {typeof hint === 'string' ? t(hint) : hint}
