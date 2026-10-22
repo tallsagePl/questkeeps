@@ -1,4 +1,6 @@
 'use client';
+
+import type { TranslationKey } from '../lib/i18n/translate';
 import LocalizedArticle from './localized-article';
 import { placeCategory, type PlaceCategory } from '../lib/place-category';
 import { useContext, useEffect, useRef, useState } from 'react';
@@ -12,6 +14,7 @@ import { placeTextContent } from '../lib/place-text';
 import { usePlacePhotoSizing } from './use-place-photo-sizing';
 import PlaceDelete from './place-delete';
 import PhotoLocation from './photo-location';
+
 type Place = {
   id: string;
   title: string;
@@ -22,6 +25,7 @@ type Place = {
   lat?: number;
   lon?: number;
 };
+
 export function PlaceImage({
   endpoint,
   title,
@@ -38,14 +42,14 @@ export function PlaceImage({
   const { t, language } = useLocale();
   const sizing = usePlacePhotoSizing();
   const eligible = useContext(PreviewPriority) !== null;
-  const [attempt, setAttempt] = useState(0),
-    [retry, setRetry] = useState(0);
-  const [image, setImage] = useState<string | null>(null),
-    [failed, setFailed] = useState(false),
-    [loading, setLoading] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+  const [retry, setRetry] = useState(0);
+  const [image, setImage] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
-    let disposed = false,
-      objectUrl: string | undefined;
+    let disposed = false;
+    let objectUrl: string | undefined;
     setLoading(true);
     setImage(null);
     setFailed(false);
@@ -103,7 +107,7 @@ export function PlaceImage({
             <path d="m3 9 9-6 9 6H3ZM5 10v9m5-9v9m4-9v9m5-9v9M3 21h18" />
           </svg>
           <span>
-            {t(loading ? 'Загружаем изображение…' : 'Изображение недоступно')}
+            {t(loading ? 'places.loadingImage' : 'places.imageUnavailable')}
           </span>
         </span>
       )}
@@ -111,8 +115,8 @@ export function PlaceImage({
         <button
           type="button"
           className="icon-button place-image-retry"
-          aria-label={t('Повторить загрузку изображения')}
-          title={t('Повторить загрузку изображения')}
+          aria-label={t('places.retryLoadingTheImage')}
+          title={t('places.retryLoadingTheImage')}
           onPointerEnter={onRetryIntent}
           onFocus={onRetryIntent}
           onClick={() => {
@@ -140,6 +144,7 @@ export function PlaceImage({
     </div>
   );
 }
+
 function PlacePhotos({
   place,
   endpoint,
@@ -155,11 +160,11 @@ function PlacePhotos({
 }) {
   const { t } = useLocale();
   const ownSizing = usePlacePhotoSizing();
-  const ref = useRef<HTMLDivElement>(null),
-    pointer = useRef('');
-  const [near, setNear] = useState(false),
-    [hovered, setHovered] = useState(false),
-    [selected, setSelected] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const pointer = useRef('');
+  const [near, setNear] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [selected, setSelected] = useState(false);
   const own = !!photoSrc && (hovered || selected);
   useEffect(() => {
     if (!photoSrc) return;
@@ -211,7 +216,7 @@ function PlacePhotos({
               if (event.pointerType === 'mouse') setHovered(false);
             }}
             aria-pressed={own}
-            aria-label={t('Переключить фото места') + ': ' + place.title}
+            aria-label={t('places.switchPlacePhoto') + ': ' + place.title}
             onPointerDown={(event) => {
               pointer.current = event.pointerType;
             }}
@@ -233,6 +238,7 @@ function PlacePhotos({
     </div>
   );
 }
+
 export default function DiscoveredPlaces({
   places,
   imagePath,
@@ -265,14 +271,15 @@ export default function DiscoveredPlaces({
   useEffect(() => {
     if (targetUrl) setCategory('all');
   }, [targetUrl]);
-  const filters: { value: PlaceCategory | 'all'; label: string }[] = [
-    { value: 'all', label: 'Все места' },
-    { value: 'attraction', label: 'Достопримечательности' },
-    { value: 'street', label: 'Улицы' },
-    { value: 'district', label: 'Районы' },
-    { value: 'square', label: 'Площади' },
-    { value: 'park', label: 'Парки' },
-  ];
+  const filters: { value: PlaceCategory | 'all'; labelKey: TranslationKey }[] =
+    [
+      { value: 'all', labelKey: 'common.allPlaces' },
+      { value: 'attraction', labelKey: 'places.attractions' },
+      { value: 'street', labelKey: 'places.streets' },
+      { value: 'district', labelKey: 'places.districts' },
+      { value: 'square', labelKey: 'places.squares' },
+      { value: 'park', labelKey: 'places.parks' },
+    ];
   const filteredPlaces =
     category === 'all'
       ? places
@@ -280,13 +287,13 @@ export default function DiscoveredPlaces({
   return (
     <section
       className="places-section discovered-places"
-      aria-label={t('Открытые места')}
+      aria-label={t('common.discoveredPlaces')}
     >
       {places.length > 0 && (
         <div
           className="place-category-filters"
           role="group"
-          aria-label={t('Тип места')}
+          aria-label={t('places.placeType')}
         >
           {filters.map((filter) => (
             <button
@@ -295,7 +302,7 @@ export default function DiscoveredPlaces({
               aria-pressed={category === filter.value}
               onClick={() => setCategory(filter.value)}
             >
-              {t(filter.label)}{' '}
+              {t(filter.labelKey)}{' '}
               <span>
                 {filter.value === 'all'
                   ? places.length
@@ -350,7 +357,11 @@ export default function DiscoveredPlaces({
                             onPhotoSelect(place.media_id, place.url)
                           }
                         >
-                          {t(photoCount(place) > 1 ? 'Ваши фото' : 'Ваше фото')}
+                          {t(
+                            photoCount(place) > 1
+                              ? 'places.yourPhotos'
+                              : 'places.yourPhoto',
+                          )}
                         </button>
                       )}
                       {Number.isFinite(place.lat) &&
@@ -361,7 +372,7 @@ export default function DiscoveredPlaces({
                             lon={place.lon!}
                             title={place.title}
                             taken={place.day}
-                            heading={t('Место на карте')}
+                            heading={t('places.placeOnTheMap')}
                             geometryPath={geometryPath(place)}
                           />
                         )}
@@ -377,7 +388,7 @@ export default function DiscoveredPlaces({
                         className="text-button"
                         onClick={place.articleRetry}
                       >
-                        {t('Повторить')}
+                        {t('common.retry')}
                       </button>
                     )}
                     {place.sourceUrl && (
@@ -388,8 +399,8 @@ export default function DiscoveredPlaces({
                       >
                         {t(
                           place.url.includes('openstreetmap.org')
-                            ? 'Источник: OpenStreetMap'
-                            : 'Источник: Википедия',
+                            ? 'common.sourceOpenstreetmap'
+                            : 'common.sourceWikipedia',
                         )}{' '}
                         ↗
                       </a>
@@ -433,8 +444,8 @@ export default function DiscoveredPlaces({
           <h2>
             {t(
               places.length
-                ? 'Таких мест пока нет'
-                : 'Здесь появятся открытые места',
+                ? 'places.noPlacesInThisCategoryYet'
+                : 'places.yourDiscoveriesWillAppearHere',
             )}
           </h2>
           {places.length > 0 && (
@@ -443,14 +454,10 @@ export default function DiscoveredPlaces({
               className="text-button"
               onClick={() => setCategory('all')}
             >
-              {t('Показать все места')}
+              {t('places.showAllPlaces')}
             </button>
           )}
-          <p>
-            {t(
-              'Добавляйте места в просмотре фотографий — здесь соберутся их описания и изображения.',
-            )}
-          </p>
+          <p>{t('places.addPlacesWhileViewingPhotosToCollect')}</p>
         </div>
       )}
     </section>

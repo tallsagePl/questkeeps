@@ -1,4 +1,5 @@
 'use client';
+
 import {
   announceSessionChange,
   observeSessionChanges,
@@ -12,9 +13,9 @@ import { clearPreviewCache } from '../lib/preview-cache';
 import { migratePrivateStorage } from '../lib/browser-storage';
 
 export function useViewer() {
-  const [user, setUser] = useState<ProfileUser | null>(null),
-    [ready, setReady] = useState(false),
-    [error, setError] = useState('');
+  const [user, setUser] = useState<ProfileUser | null>(null);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => {
     const controller = new AbortController();
     void migratePrivateStorage().catch(() => {});
@@ -41,6 +42,7 @@ export function useViewer() {
   }, []);
   return { user, setUser, ready, error };
 }
+
 export async function signOut() {
   await api('auth/logout', 'POST', {});
   window.dispatchEvent(new Event('questkeeps:session-ending'));
@@ -51,6 +53,7 @@ export async function signOut() {
     window.location.replace('/');
   }
 }
+
 export function SocialShell({
   user,
   current,
@@ -60,23 +63,23 @@ export function SocialShell({
   current?: string;
   children: ReactNode;
 }) {
-  const { t } = useLocale(),
-    [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
+  const { t, m } = useLocale();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   return (
     <div className="social-shell">
       <a className="skip-link" href="#main-content">
-        {t('Перейти к содержимому')}
+        {t('common.skipToContent')}
       </a>
       <header className="topbar social-topbar">
         <HeaderBrand />
-        <nav className="social-nav" aria-label={t('Главная навигация')}>
-          <a href="/">{t('Путешествия')}</a>
+        <nav className="social-nav" aria-label={t('navigation.mainNavigation')}>
+          <a href="/">{t('navigation.trips')}</a>
           <a
             href="/about"
             aria-current={current === 'about' ? 'page' : undefined}
           >
-            {t('О проекте')}
+            {t('navigation.about')}
           </a>
         </nav>
         <div className="top-actions">
@@ -85,7 +88,7 @@ export function SocialShell({
               <a
                 className="text-button user-button"
                 href="/profile"
-                aria-label={t('Мой профиль')}
+                aria-label={t('profile.title')}
                 aria-current={current === 'profile' ? 'page' : undefined}
               >
                 <UserAvatar user={user} />
@@ -94,7 +97,7 @@ export function SocialShell({
               <AppearanceControls />
               <button
                 className="text-button header-logout"
-                aria-label={t('Выйти')}
+                aria-label={t('auth.signOut')}
                 disabled={busy}
                 onClick={() => {
                   setBusy(true);
@@ -104,7 +107,7 @@ export function SocialShell({
                   });
                 }}
               >
-                <span>{t('Выйти')}</span>
+                <span>{t('auth.signOut')}</span>
                 <svg
                   width="20"
                   height="20"
@@ -124,7 +127,7 @@ export function SocialShell({
             <>
               <AppearanceControls />
               <a className="text-button" href="/">
-                {t('Войти')}
+                {t('auth.signIn')}
               </a>
             </>
           )}
@@ -132,14 +135,14 @@ export function SocialShell({
       </header>
       {error && (
         <p className="social-page-error" role="alert">
-          {t(error)}
+          {m(error)}
         </p>
       )}
       {children}
       <footer>
         <Brand footer />
-        <p>{t('Не просто где вы были. А что вы чувствовали.')}</p>
-        <a href="/about">{t('О проекте')}</a>
+        <p>{t('common.moreThanWhereYouWentHowIt')}</p>
+        <a href="/about">{t('navigation.about')}</a>
       </footer>
     </div>
   );

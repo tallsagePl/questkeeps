@@ -1,16 +1,18 @@
 'use client';
+
 import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import { ApiError } from './feedback';
 import { useLocale } from './appearance';
+
 export default function FriendLink() {
-  const { t } = useLocale();
-  const [url, setUrl] = useState(''),
-    [active, setActive] = useState(false),
-    [ready, setReady] = useState(false),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(''),
-    [copied, setCopied] = useState(false);
+  const { t, m } = useLocale();
+  const [url, setUrl] = useState('');
+  const [active, setActive] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     const c = new AbortController();
     api('friends/link', 'GET', undefined, c.signal)
@@ -44,15 +46,11 @@ export default function FriendLink() {
   }
   return (
     <div className="friend-link-block" aria-busy={busy}>
-      <h3>{t('Пригласить по ссылке')}</h3>
-      <p className="fine">
-        {t(
-          'Отправь ссылку другу — после входа вы сразу станете друзьями. Ссылка действует 30 дней.',
-        )}
-      </p>
+      <h3>{t('friends.inviteWithALink')}</h3>
+      <p className="fine">{t('friends.sendTheLinkToAFriendOnce')}</p>
       {url && (
         <label className="field">
-          <span>{t('Ссылка для друзей')}</span>
+          <span>{t('friends.friendInvitationLink')}</span>
           <input readOnly value={url} onFocus={(e) => e.target.select()} />
         </label>
       )}
@@ -67,13 +65,11 @@ export default function FriendLink() {
                 setCopied(true);
                 setError('');
               } catch {
-                setError(
-                  'Не удалось скопировать. Выдели ссылку и скопируй её вручную.',
-                );
+                setError('friends.couldNotCopySelectTheLinkAnd');
               }
             }}
           >
-            {t(copied ? 'Скопировано' : 'Скопировать ссылку')}
+            {t(copied ? 'friends.copied' : 'common.copyLink')}
           </button>
         )}
         <button
@@ -83,10 +79,10 @@ export default function FriendLink() {
         >
           {t(
             busy
-              ? 'Подождите…'
+              ? 'common.pleaseWait'
               : active
-                ? 'Заменить ссылку'
-                : 'Сгенерировать ссылку',
+                ? 'common.replaceLink'
+                : 'friends.generateLink',
           )}
         </button>
         {active && (
@@ -95,38 +91,35 @@ export default function FriendLink() {
             disabled={busy}
             onClick={() => void change('DELETE')}
           >
-            {t('Отключить ссылку')}
+            {t('friends.disableLink')}
           </button>
         )}
       </div>
       {active && !url && (
-        <p className="fine">
-          {t(
-            'Ссылка активна. Чтобы отправить её снова, создай новую — старая перестанет работать.',
-          )}
-        </p>
+        <p className="fine">{t('friends.yourLinkIsActiveToShareIt')}</p>
       )}
       {copied && (
         <span className="fine" role="status">
-          {t('Ссылка скопирована')}
+          {t('common.linkCopied')}
         </span>
       )}
-      {error && <p role="alert">{t(error)}</p>}
+      {error && <p role="alert">{m(error)}</p>}
     </div>
   );
 }
+
 export function FriendLinkArrival({ userId }: { userId?: string }) {
-  const { t } = useLocale();
-  const [pending, setPending] = useState(false),
-    [name, setName] = useState(''),
-    [error, setError] = useState(''),
-    [attempt, setAttempt] = useState(0),
-    [retryable, setRetryable] = useState(false);
+  const { t, m } = useLocale();
+  const [pending, setPending] = useState(false);
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  const [retryable, setRetryable] = useState(false);
   const request = useRef<{ key: string; promise: Promise<any> } | null>(null);
   useEffect(() => {
     const marker = new URLSearchParams(location.search).get('friend');
     setPending(marker === '1');
-    if (marker === 'invalid') setError('Ссылка недействительна или истекла');
+    if (marker === 'invalid') setError('friends.thisLinkIsInvalidOrHasExpired');
   }, []);
   useEffect(() => {
     if (!userId) {
@@ -183,18 +176,18 @@ export function FriendLinkArrival({ userId }: { userId?: string }) {
     <aside className="friend-arrival">
       {name ? (
         <p role="status">
-          {t('Вы теперь друзья: ')}
-          {name}. <a href="/profile#friends">{t('Все друзья')}</a>
+          {t('friends.youAreNowFriends')}
+          {name}. <a href="/profile#friends">{t('common.allFriends')}</a>
         </p>
       ) : error ? (
         <p role="alert">
-          {t(error)}{' '}
+          {m(error)}{' '}
           {retryable && (
             <button
               className="text-button"
               onClick={() => setAttempt((n) => n + 1)}
             >
-              {t('Повторить')}
+              {t('common.retry')}
             </button>
           )}
         </p>
@@ -202,8 +195,8 @@ export function FriendLinkArrival({ userId }: { userId?: string }) {
         <p role="status">
           {t(
             userId
-              ? 'Принимаем приглашение…'
-              : 'Войди или зарегистрируйся, чтобы принять приглашение в друзья.',
+              ? 'friends.acceptingInvitation'
+              : 'friends.signInOrRegisterToAcceptThe',
           )}
         </p>
       )}

@@ -1,6 +1,8 @@
 'use client';
+
 import { useEffect, useId, useRef, useState } from 'react';
 import { useLocale } from './appearance';
+
 export default function DismissPlaceSuggestion({
   title,
   onDismiss,
@@ -10,11 +12,11 @@ export default function DismissPlaceSuggestion({
 }) {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null),
-    trigger = useRef<HTMLButtonElement>(null),
-    cancel = useRef<HTMLButtonElement>(null);
-  const heading = useId(),
-    hint = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const cancel = useRef<HTMLButtonElement>(null);
+  const heading = useId();
+  const hint = useId();
   useEffect(() => {
     if (!open) return;
     const node = dialog.current;
@@ -33,8 +35,8 @@ export default function DismissPlaceSuggestion({
         ref={trigger}
         type="button"
         className="icon-button place-dismiss"
-        aria-label={t('Удалить возможное место') + ': ' + title}
-        title={t('Удалить возможное место')}
+        aria-label={t('messages.dismissSuggestedPlace') + ': ' + title}
+        title={t('messages.dismissSuggestedPlace')}
         onClick={() => setOpen(true)}
       >
         <svg
@@ -60,13 +62,9 @@ export default function DismissPlaceSuggestion({
             close();
           }}
         >
-          <h2 id={heading}>
-            {t('Вы уверены, что хотите удалить возможное место?')}
-          </h2>
+          <h2 id={heading}>{t('messages.areYouSureYouWantToDismiss')}</h2>
           <strong>{title}</strong>
-          <p id={hint}>
-            {t('Вы всегда сможете добавить его через фотографию.')}
-          </p>
+          <p id={hint}>{t('messages.youCanAlwaysAddItThroughThe')}</p>
           <div className="place-confirm-actions">
             <button
               ref={cancel}
@@ -74,7 +72,7 @@ export default function DismissPlaceSuggestion({
               className="secondary"
               onClick={close}
             >
-              {t('Отмена')}
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -84,7 +82,7 @@ export default function DismissPlaceSuggestion({
                 onDismiss();
               }}
             >
-              {t('Удалить')}
+              {t('common.remove')}
             </button>
           </div>
         </dialog>

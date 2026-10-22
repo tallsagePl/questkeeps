@@ -1,9 +1,12 @@
 'use client';
+
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useLocale } from './appearance';
+
 const LocationMap = dynamic(() => import('./map'), { ssr: false });
+
 export default function PhotoLocation({
   id,
   lat,
@@ -25,9 +28,9 @@ export default function PhotoLocation({
 }) {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDialogElement>(null),
-    trigger = useRef<HTMLButtonElement>(null),
-    close = useRef<HTMLButtonElement>(null);
+  const ref = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const close = useRef<HTMLButtonElement>(null);
   const heading = useId();
   const points = useMemo(
     () => [{ id, lat, lon, name: title, taken, capture_time: captureTime }],
@@ -51,7 +54,7 @@ export default function PhotoLocation({
         className="text-button photo-map-trigger"
         onClick={() => setOpen(true)}
       >
-        {t('Карта')}
+        {t('trip.map')}
       </button>
       {open &&
         createPortal(
@@ -87,12 +90,14 @@ export default function PhotoLocation({
             }}
           >
             <div className="photo-location-heading">
-              <h2 id={heading}>{suppliedHeading || t('Место съёмки')}</h2>
+              <h2 id={heading}>
+                {suppliedHeading || t('common.photoLocation')}
+              </h2>
               <button
                 ref={close}
                 type="button"
                 className="icon-button"
-                aria-label={t('Закрыть карту')}
+                aria-label={t('messages.closeMap')}
                 onClick={() => setOpen(false)}
               >
                 <svg

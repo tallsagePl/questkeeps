@@ -1,111 +1,71 @@
 'use client';
+
 import { useLocale } from './appearance';
 import { SocialShell, useViewer } from './social-shell';
 import AboutShowcase from './about-showcase';
+
 export default function About() {
-  const { t } = useLocale(),
-    viewer = useViewer();
+  const { t } = useLocale();
+  const viewer = useViewer();
   return (
     <SocialShell user={viewer.user} current="about">
       <main id="main-content" tabIndex={-1} className="social-page about-page">
         <section className="about-intro">
           <h1>
-            {t('Путешествия заканчиваются. Истории остаются')}
+            {t('about.heading')}
             <span className="brand-dot">.</span>
           </h1>
           <p className="about-lead">
-            {t(
-              'Тот самый закат. Улица, на которую свернули случайно. Люди, с которыми было хорошо. Собери свою поездку в QuestKeeps — и возвращайся к ней, когда захочется.',
-            )}
+            {t('about.thatSunsetTheStreetYouFoundBy')}
           </p>
           <a className="primary" href="/">
-            {t(viewer.user ? 'К моим путешествиям' : 'Начать свою историю')}
+            {t(viewer.user ? 'about.goToMyTrips' : 'about.startYourStory')}
           </a>
         </section>
         <AboutShowcase />
         <div className="about-content">
           <section>
-            <h2>{t('Всё, что хочется помнить')}</h2>
+            <h2>{t('about.everythingWorthRemembering')}</h2>
             <div className="about-feature-lines">
               <article>
-                <h3>{t('Больше, чем папка с фотографиями')}</h3>
-                <p>
-                  {t(
-                    'Любимые кадры и короткие видео снова оказываются рядом — по дням, местам и маленьким открытиям. Оригиналы остаются на твоём Яндекс Диске, а здесь из них складывается история.',
-                  )}
-                </p>
+                <h3>{t('about.moreThanAFolderOfPhotos')}</h3>
+                <p>{t('about.yourFavouritePhotosAndLittleVideosBelong')}</p>
               </article>
               <article>
-                <h3>{t('У каждого кадра есть продолжение')}</h3>
-                <p>
-                  {t(
-                    'За фотографией может скрываться целый город: знакомая улица, тихий район, здание с удивительным прошлым. Открывай места рядом со своими кадрами и узнавай, что осталось за их границами.',
-                  )}
-                </p>
+                <h3>{t('about.thereIsMoreBeyondTheFrame')}</h3>
+                <p>{t('about.aPhotoCanHoldAWholeCity')}</p>
               </article>
               <article>
-                <h3>{t('Не всё важное попадает в объектив')}</h3>
-                <p>
-                  {t(
-                    'Вкус утреннего кофе, смешная фраза в дороге, разговор до рассвета. Дневник сохранит то, чего нет на фотографиях, а ответы друзей добавят к этим моментам свои детали.',
-                  )}
-                </p>
+                <h3>{t('about.someMemoriesNeverMakeItIntoA')}</h3>
+                <p>{t('about.morningCoffeeAJokeOnTheRoad')}</p>
               </article>
             </div>
           </section>
           <section>
-            <h2>{t('У каждого — свой ракурс')}</h2>
+            <h2>{t('about.everyoneSeesADifferentStory')}</h2>
             <div>
-              <p>
-                {t(
-                  'Ты снимал море, кто-то — вас на берегу. Соберите эти взгляды в одной поездке: так в воспоминания возвращается то, что ты сам мог не заметить.',
-                )}
-              </p>
-              <p>
-                {t(
-                  'Рядом остаются люди, с которыми уже есть общие истории — и ещё столько планов впереди. Друзья, знакомые имена, совместные поездки. Повод написать: «Помнишь тот день?»',
-                )}
-              </p>
+              <p>{t('about.youPhotographedTheSeaSomeoneElseCaught')}</p>
+              <p>{t('about.keepCloseToThePeopleYouAlready')}</p>
             </div>
           </section>
           <section className="about-privacy">
-            <h2>{t('Твой круг. Твои истории.')}</h2>
+            <h2>{t('about.yourPeopleYourStories')}</h2>
             <div>
-              <p>
-                {t(
-                  'Одни воспоминания хочется показать всем своим. Другие — оставить для двоих. Ты решаешь, кого пригласить в поездку и какими днями поделиться. Дружба сама по себе не открывает доступ к путешествиям.',
-                )}
-              </p>
-              <p>
-                {t(
-                  'В публичном профиле — имя, юзернейм и аватар. Личные настройки, контакты, друзья и заявки остаются в твоём профиле.',
-                )}
-              </p>
+              <p>{t('about.someMemoriesAreForAllYourPeople')}</p>
+              <p>{t('about.yourPublicProfileShowsYourNameUsername')}</p>
               <details className="about-privacy-detail">
-                <summary>{t('О гостевых ссылках и поиске мест')}</summary>
-                <p>
-                  {t(
-                    'Гостевая ссылка открывает опубликованную поездку любому, у кого она есть. Её можно отключить; уже скачанные кадры останутся у получателя.',
-                  )}
-                </p>
-                <p>
-                  {t(
-                    'Места помогают открывать данные OpenStreetMap и истории из Википедии. Для поиска используются приблизительные области; фотографии и токены Диска в сервисы поиска мест не отправляются.',
-                  )}
-                </p>
+                <summary>{t('about.aboutGuestLinksAndPlaceDiscovery')}</summary>
+                <p>{t('about.anyoneWithAGuestLinkCanView')}</p>
+                <p>{t('about.openstreetmapDataAndWikipediaStoriesHelpYou')}</p>
               </details>
             </div>
           </section>
           <section className="about-ending">
-            <h2>{t('Не только где. Но и с кем.')}</h2>
+            <h2>{t('about.thePlacesAndThePeople')}</h2>
             <div>
-              <p>
-                {t(
-                  'Большой маршрут или выходные неподалёку — хорошей истории не нужны особые масштабы. Пусть у неё будет место, где снова можно собраться вместе.',
-                )}
-              </p>
+              <p>{t('about.aLongJourneyOrAWeekendClose')}</p>
               <a className="secondary" href="/">
-                {t('Открыть путешествия')}
+                {t('about.openTrips')}
               </a>
             </div>
           </section>

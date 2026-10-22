@@ -1,3 +1,4 @@
+import { withMessageTranslations } from './i18n/messages';
 import {
   friendLinkStatus,
   createFriendLink,
@@ -61,7 +62,6 @@ import {
   cookie,
   membership,
   owner,
-  viewAccess,
   tripData,
   assertDay,
   mediaFor,
@@ -74,6 +74,7 @@ import { nearby, placeSummary, placeImage, placeText } from './places';
 import { placeTextContent } from './place-text';
 import { locationOptions } from './location-options';
 import { placeGeometry } from './place-geometry';
+
 const day = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -83,16 +84,20 @@ const day = z
       new Date(v).toISOString().slice(0, 10) === v,
     'Некорректная дата',
   );
+
 const dates = z
   .object({ start: day, end: day })
   .refine((v) => v.start <= v.end, 'Дата окончания раньше начала');
+
 const appURL = () => process.env.APP_URL || 'http://localhost:3000';
+
 function json(data: unknown, status = 200) {
-  return NextResponse.json(data, {
+  return NextResponse.json(withMessageTranslations(data), {
     status,
     headers: { 'Cache-Control': 'private, no-store' },
   });
 }
+
 async function body(req: Request): Promise<any> {
   const reader = req.body?.getReader();
   if (!reader) fail(400, 'Пустой запрос');
@@ -114,10 +119,12 @@ async function body(req: Request): Promise<any> {
     fail(400, 'Некорректный JSON');
   }
 }
+
 function bounds(input: { start: string; end: string }, trip: Row) {
   if (input.start < trip.start || input.end > trip.end)
     fail(400, 'Период участия должен быть внутри поездки');
 }
+
 function oauthFailure(reason: string, intent = 'login', returnPath = '/') {
   const url = new URL('/auth/error', appURL());
   url.searchParams.set('reason', oauthErrorReason(reason));
@@ -134,6 +141,7 @@ function oauthFailure(reason: string, intent = 'login', returnPath = '/') {
   response.headers.set('Cache-Control', 'no-store');
   return response;
 }
+
 async function oauth(req: NextRequest, p: string[]) {
   if (!process.env.YANDEX_CLIENT_ID)
     fail(503, 'Добавьте YANDEX_CLIENT_ID и YANDEX_CLIENT_SECRET в .env.local');
@@ -149,9 +157,9 @@ async function oauth(req: NextRequest, p: string[]) {
       )
         ? requestedReturn
         : '/';
-    const state = token(),
-      browser = token(),
-      verifier = token();
+    const state = token();
+    const browser = token();
+    const verifier = token();
     run('DELETE FROM oauth_states WHERE expires<?', Date.now());
     run(
       'INSERT INTO oauth_states (hash,browser_hash,user_id,intent,verifier,expires,return_path) VALUES (?,?,?,?,?,?,?)',
@@ -323,6 +331,7 @@ async function oauth(req: NextRequest, p: string[]) {
   }
   return undefined;
 }
+
 export async function handle(
   req: NextRequest,
   p: string[],
@@ -1127,8 +1136,8 @@ export async function handle(
             });
             if (meta.type !== 'dir') fail(400, 'Выберите папку с фотографиями');
           }
-          const tid = id(),
-            sourceId = input.source ? id() : null;
+          const tid = id();
+          const sourceId = input.source ? id() : null;
           db.transaction(() => {
             run(
               'INSERT INTO trips(id,owner_id,title,destination,start,end,description,created) VALUES (?,?,?,?,?,?,?,?)',
@@ -1184,9 +1193,9 @@ export async function handle(
           })
           .strict()
           .parse(await body(req));
-        const description = input.description.trim(),
-          leading =
-            input.description.length - input.description.trimStart().length;
+        const description = input.description.trim();
+        const leading =
+          input.description.length - input.description.trimStart().length;
         const previous = one('SELECT description FROM trips WHERE id=?', tid)!;
         const mentions = (
           input.mentions ||
@@ -1243,8 +1252,8 @@ export async function handle(
           Number(trip.role === 'owner'),
           u.id,
         );
-        let synced = 0,
-          failed = 0;
+        let synced = 0;
+        let failed = 0;
         for (const source of sources) {
           try {
             await syncSource(source.id);

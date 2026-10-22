@@ -1,14 +1,18 @@
 'use client';
+
 import { useEffect, useId, useRef, useState } from 'react';
 import { useLocale } from './appearance';
 import { dateSelection, includesDate } from '../lib/date-selection';
+
 const parse = (day: string) => new Date(day + 'T12:00:00');
+
 const iso = (day: Date) =>
   [
     day.getFullYear(),
     String(day.getMonth() + 1).padStart(2, '0'),
     String(day.getDate()).padStart(2, '0'),
   ].join('-');
+
 export default function TripDayCalendar({
   start,
   end,
@@ -26,10 +30,10 @@ export default function TripDayCalendar({
   const [anchor, setAnchor] = useState<string | null>(null);
   const [selectedFrom, selectedTo] = dateSelection(value);
   const [month, setMonth] = useState((selectedFrom || start).slice(0, 7));
-  const root = useRef<HTMLDivElement>(null),
-    trigger = useRef<HTMLButtonElement>(null);
-  const popupId = useId(),
-    headingId = useId();
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const popupId = useId();
+  const headingId = useId();
   const fullDate = (day: string) =>
     parse(day).toLocaleDateString(locale, {
       day: 'numeric',
@@ -56,8 +60,8 @@ export default function TripDayCalendar({
     document.addEventListener('pointerdown', outside);
     return () => document.removeEventListener('pointerdown', outside);
   }, [open, month]);
-  const first = parse(month + '-01'),
-    offset = (first.getDay() + 6) % 7;
+  const first = parse(month + '-01');
+  const offset = (first.getDay() + 6) % 7;
   const count = new Date(
     first.getFullYear(),
     first.getMonth() + 1,
@@ -80,18 +84,18 @@ export default function TripDayCalendar({
         }
       }}
     >
-      <span>{t('День поездки')}</span>
+      <span>{t('common.tripDay')}</span>
       <button
         ref={trigger}
         type="button"
         className="secondary calendar-trigger"
         aria-label={
-          t('День поездки') +
+          t('common.tripDay') +
           ': ' +
           (value
             ? fullDate(selectedFrom) +
               (selectedTo !== selectedFrom ? ' — ' + fullDate(selectedTo) : '')
-            : t('Все дни'))
+            : t('calendar.allDays'))
         }
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -128,7 +132,7 @@ export default function TripDayCalendar({
                   month: 'short',
                 })
               : '')
-          : t('Все дни')}
+          : t('calendar.allDays')}
       </button>
       {open && (
         <div
@@ -141,7 +145,7 @@ export default function TripDayCalendar({
             <button
               type="button"
               className="icon-button"
-              aria-label={t('Предыдущий месяц')}
+              aria-label={t('calendar.previousMonth')}
               disabled={month <= start.slice(0, 7)}
               onClick={() => shiftMonth(-1)}
             >
@@ -156,7 +160,7 @@ export default function TripDayCalendar({
             <button
               type="button"
               className="icon-button"
-              aria-label={t('Следующий месяц')}
+              aria-label={t('calendar.nextMonth')}
               disabled={month >= end.slice(0, 7)}
               onClick={() => shiftMonth(1)}
             >
@@ -169,8 +173,8 @@ export default function TripDayCalendar({
           <p className="fine trip-calendar-hint" aria-live="polite">
             {t(
               anchor
-                ? 'Выбери последний день диапазона'
-                : 'Выбери день или начало и конец диапазона',
+                ? 'calendar.chooseTheLastDayOfTheRange'
+                : 'calendar.chooseADayOrTheFirstAnd',
             )}
           </p>
           <div className="trip-calendar-weekdays" aria-hidden="true">
@@ -185,14 +189,14 @@ export default function TripDayCalendar({
           <div
             className="trip-calendar-days"
             role="group"
-            aria-label={t('Дни путешествия')}
+            aria-label={t('calendar.tripDates')}
           >
             {Array.from({ length: offset }, (_, i) => (
               <span key={'blank' + i} />
             ))}
             {Array.from({ length: count }, (_, i) => {
-              const day = month + '-' + String(i + 1).padStart(2, '0'),
-                allowed = day >= start && day <= end;
+              const day = month + '-' + String(i + 1).padStart(2, '0');
+              const allowed = day >= start && day <= end;
               return (
                 <button
                   key={day}
@@ -253,7 +257,7 @@ export default function TripDayCalendar({
               close();
             }}
           >
-            {t('Все дни')}
+            {t('calendar.allDays')}
           </button>
         </div>
       )}

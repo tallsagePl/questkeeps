@@ -1,28 +1,31 @@
 'use client';
+
 import { useLocale } from './appearance';
+
 const screens = [
   {
     id: 'trips',
-    title: 'Поездки, к которым хочется вернуться',
-    alt: 'Главная QuestKeeps с коллекцией демонстрационных путешествий',
+    titleKey: 'about.tripsWorthComingBackTo',
+    altKey: 'about.theQuestkeepsHomeScreenShowingACollection',
   },
   {
     id: 'map',
-    title: 'Город складывается в твою историю',
-    alt: 'Карта демонстрационной поездки в QuestKeeps',
+    titleKey: 'about.aCityBecomesPartOfYourStory',
+    altKey: 'about.aDemoTripMapInQuestkeeps',
   },
   {
     id: 'journal',
-    title: 'Всё, что осталось между кадрами',
-    alt: 'Дневник демонстрационной поездки в QuestKeeps',
+    titleKey: 'about.everythingBetweenThePhotos',
+    altKey: 'about.aDemoTripJournalInQuestkeeps',
   },
-];
+] as const;
+
 export default function AboutShowcase() {
   const { t, language, resolvedTheme } = useLocale();
   return (
     <section
       className="about-showcase"
-      aria-label={t('Загляни в свою следующую историю')}
+      aria-label={t('about.takeALookAtYourNextStory')}
     >
       <div className="about-screens">
         {screens.map((screen) => (
@@ -40,7 +43,7 @@ export default function AboutShowcase() {
             }
             target="_blank"
             rel="noopener"
-            aria-label={t('Рассмотреть скриншот') + ': ' + t(screen.title)}
+            aria-label={t('about.viewScreenshot') + ': ' + t(screen.titleKey)}
           >
             <img
               src={
@@ -52,14 +55,14 @@ export default function AboutShowcase() {
                 screen.id +
                 '.webp'
               }
-              alt={t(screen.alt)}
+              alt={t(screen.altKey)}
               width="1280"
               height="800"
               loading="lazy"
               decoding="async"
             />
             <span>
-              {t(screen.title)}
+              {t(screen.titleKey)}
               <svg
                 width="16"
                 height="16"
@@ -76,9 +79,7 @@ export default function AboutShowcase() {
         ))}
       </div>
       <p className="about-demo-caption">
-        {t(
-          'Одна поездка. Несколько способов вернуться. Скриншоты с демонстрационными данными.',
-        )}
+        {t('about.oneTripMoreThanOneWayBack')}
       </p>
     </section>
   );

@@ -1,12 +1,14 @@
 'use client';
+
 import { useEffect, useRef, type SyntheticEvent } from 'react';
 import { placePhotoSize } from '../lib/place-photo-size';
+
 export function usePlacePhotoSizing() {
-  const ref = useRef<HTMLDivElement>(null),
-    image = useRef<HTMLImageElement | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const image = useRef<HTMLImageElement | null>(null);
   const update = () => {
-    const box = ref.current,
-      img = image.current;
+    const box = ref.current;
+    const img = image.current;
     if (!box || !img || !img.naturalWidth) return;
     const size = placePhotoSize(
       box.clientWidth,

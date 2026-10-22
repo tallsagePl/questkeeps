@@ -1,6 +1,8 @@
 'use client';
+
 import { PreviewPriority } from './preview-priority';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+
 type Layout = {
   visibleFirst: number;
   visibleLast: number;
@@ -13,6 +15,7 @@ type Layout = {
   last: number;
   totalHeight: number;
 };
+
 export default function VirtualPlaces<T>({
   items,
   itemKey,
@@ -74,8 +77,8 @@ export default function VirtualPlaces<T>({
         260,
         ...samples.map((card) => card.getBoundingClientRect().height),
       );
-      const pitch = height + gap,
-        rows = items.length;
+      const pitch = height + gap;
+      const rows = items.length;
       if (!width || !pitch) return;
 
       // Recycle a bounded scroll surface instead of reserving space for history.
@@ -234,8 +237,8 @@ export default function VirtualPlaces<T>({
       if (initialItemKey) onTargetReached?.();
     }
   }, [layout]);
-  const first = layout?.first || 0,
-    last = layout?.last ?? Math.min(items.length, 3);
+  const first = layout?.first || 0;
+  const last = layout?.last ?? Math.min(items.length, 3);
   // Retain previously visited elements so their image nodes and loaded state survive.
   // Hidden cells take no layout space and are excluded from keyboard navigation.
   useLayoutEffect(() => {

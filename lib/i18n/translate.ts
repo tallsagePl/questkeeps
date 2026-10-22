@@ -1,62 +1,78 @@
+import russian from './ru.json';
 import english from './en.json';
+
 export type Language = 'ru' | 'en';
-const dictionary = english as Record<string, string>;
-const reverse = Object.fromEntries(
-  Object.entries(dictionary).map(([ru, en]) => [en, ru]),
-);
-export function translate(text: string, language: Language): string {
-  if (!text) return text;
-  const before = text.match(/^\s*/)?.[0] || '',
-    after = text.match(/\s*$/)?.[0] || '';
-  const value = text.trim();
-  const canonical = reverse[value] || value;
-  if (language === 'ru') return before + canonical + after;
-  if (dictionary[canonical]) return before + dictionary[canonical] + after;
-  const patterns: [RegExp, (m: RegExpMatchArray) => string][] = [
-    [
-      /^Даты найдены у (\d+) из (\d+) фото — проверьте период$/,
-      (m) =>
-        'Dates found in ' +
-        m[1] +
-        ' of ' +
-        m[2] +
-        ' photos — please check the dates',
-    ],
-    [/^Минимум (\d+) символов$/, (m) => 'At least ' + m[1] + ' characters'],
-    [/^Обновлено (.+)$/, (m) => 'Updated ' + m[1]],
-    [
-      /^Синхронизация завершена: (\d+) файлов$/,
-      (m) => 'Synchronization complete: ' + m[1] + ' files',
-    ],
-    [
-      /^Яндекс Диск временно недоступен \((\d+)\)$/,
-      (m) => 'Yandex Disk is temporarily unavailable (' + m[1] + ')',
-    ],
-    [
-      /^Дата должна быть не (позже|раньше) (.+)$/,
-      (m) =>
-        'Date must be no ' +
-        (m[1] === 'позже' ? 'later' : 'earlier') +
-        ' than ' +
-        m[2],
-    ],
-    [
-      /^(Минимальное|Максимальное) значение — (.+)$/,
-      (m) =>
-        (m[1] === 'Минимальное' ? 'Minimum' : 'Maximum') + ' value — ' + m[2],
-    ],
-  ];
-  for (const [pattern, replacement] of patterns) {
-    const match = canonical.match(pattern);
-    if (match) return before + replacement(match) + after;
-  }
-  return text;
+
+export type TranslationKey = keyof typeof russian;
+
+export type TranslationParams = Readonly<Record<string, string | number>>;
+
+export type LocalizedMessage = {
+  key: TranslationKey;
+  params?: TranslationParams;
+};
+
+export type Translator = (
+  key: TranslationKey,
+  params?: TranslationParams,
+) => string;
+
+const dictionaries: Record<Language, Record<TranslationKey, string>> = {
+  ru: russian,
+  en: english,
+};
+
+export function isTranslationKey(value: unknown): value is TranslationKey {
+  return typeof value === 'string' && Object.hasOwn(russian, value);
 }
+
+export function translate(
+  key: TranslationKey,
+  language: Language,
+  params: TranslationParams = {},
+): string {
+  const template = dictionaries[language][key];
+  if (template === undefined)
+    throw new Error('Unknown translation key: ' + key);
+
+  return template.replace(
+    /\{([a-zA-Z][a-zA-Z0-9]*)\}/g,
+    (_placeholder, name: string) => {
+      if (!Object.hasOwn(params, name)) {
+        throw new Error(
+          'Missing translation parameter ' + name + ' for ' + key,
+        );
+      }
+      return String(params[name]);
+    },
+  );
+}
+
+// Only application messages use this boundary. User-authored content is rendered
+// directly, never looked up in a translation dictionary.
+export function localizeMessage(value: unknown, language: Language): string {
+  if (isTranslationKey(value)) return translate(value, language);
+  if (
+    value &&
+    typeof value === 'object' &&
+    'key' in value &&
+    isTranslationKey(value.key)
+  ) {
+    const message = value as LocalizedMessage;
+    return translate(message.key, language, message.params);
+  }
+  return typeof value === 'string' ? value : '';
+}
+
 export function currentLanguage(): Language {
   return typeof document !== 'undefined' &&
     document.documentElement.lang === 'en'
     ? 'en'
     : 'ru';
 }
-export const translateCurrent = (text: string) =>
-  translate(text, currentLanguage());
+
+export const translateCurrent: Translator = (key, params) =>
+  translate(key, currentLanguage(), params);
+
+export const localizeCurrentMessage = (message: unknown) =>
+  localizeMessage(message, currentLanguage());

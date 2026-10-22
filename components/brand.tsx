@@ -1,4 +1,5 @@
 'use client';
+
 import BackButton from './back-button';
 
 export function LogoMark({ className = '' }: { className?: string }) {
@@ -21,6 +22,7 @@ export function LogoMark({ className = '' }: { className?: string }) {
     </svg>
   );
 }
+
 export default function Brand({ footer = false }: { footer?: boolean }) {
   return (
     <a

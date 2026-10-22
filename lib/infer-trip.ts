@@ -1,10 +1,13 @@
 import { routeLabel, type RouteCity } from './route-label';
-import { one, Row } from './db';
+import { one } from './db';
 import { fail } from './access';
 import { disk, normalizePath, inside, Resource } from './yandex';
 import { readPhotoExif, captureDay, captureOrder } from './photo-metadata';
-export { closestCity } from './city-lookup';
+import { translate } from './i18n/translate';
 import { closestCity } from './city-lookup';
+
+export { closestCity } from './city-lookup';
+
 export function ownFolder(userId: string, accountId: string, path: string) {
   if (
     !one(
@@ -18,6 +21,7 @@ export function ownFolder(userId: string, accountId: string, path: string) {
   if (folder === 'disk:/') fail(400, 'Выберите папку конкретной поездки');
   return folder;
 }
+
 export async function inferTrip(
   userId: string,
   input: {
@@ -30,9 +34,9 @@ export async function inferTrip(
   signal?: AbortSignal,
 ) {
   const folder = ownFolder(userId, input.accountId, input.path);
-  const queue = [folder],
-    seen = new Set<string>(),
-    seenPhotos = new Set<string>();
+  const queue = [folder];
+  const seen = new Set<string>();
+  const seenPhotos = new Set<string>();
   const photos: {
     kind: 'photo' | 'video';
     readFailed: boolean;
@@ -160,12 +164,10 @@ export async function inferTrip(
     else if (!days.length)
       warnings.dates = 'В фотографиях нет даты съёмки — укажите даты вручную';
     else if (days.length < photos.length)
-      warnings.dates =
-        'Даты найдены у ' +
-        days.length +
-        ' из ' +
-        photos.length +
-        ' фото — проверьте период';
+      warnings.dates = translate('inference.partialDates', 'ru', {
+        dated: days.length,
+        total: photos.length,
+      });
     if (!geolocated.length)
       warnings.destination = readFailures
         ? 'Не удалось прочитать метаданные части фотографий. Повторите анализ или укажите место вручную.'
@@ -192,6 +194,15 @@ export async function inferTrip(
     destination: input.destination ? destination : null,
     route: input.destination ? uniqueRoute : [],
     warnings,
+    warningsTranslations:
+      days.length > 0 && days.length < photos.length && !conflictingYears
+        ? {
+            dates: {
+              key: 'inference.partialDates',
+              params: { dated: days.length, total: photos.length },
+            },
+          }
+        : {},
     attribution: 'GeoNames / cities.json · CC BY 4.0',
   };
 }

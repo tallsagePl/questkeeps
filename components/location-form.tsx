@@ -1,9 +1,12 @@
 'use client';
+
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Map as LeafletMap, Marker } from 'leaflet';
 import { useLocale } from './appearance';
 import { FeedbackForm, FeedbackButton, Field } from './feedback';
+
 type Position = { lat: number; lon: number };
+
 function MapIcon() {
   return (
     <svg
@@ -21,6 +24,7 @@ function MapIcon() {
     </svg>
   );
 }
+
 function LocationMap({
   initial,
   value,
@@ -32,15 +36,15 @@ function LocationMap({
 }) {
   const { t } = useLocale();
   const host = useRef<HTMLDivElement>(null);
-  const map = useRef<LeafletMap | null>(null),
-    marker = useRef<Marker | null>(null);
+  const map = useRef<LeafletMap | null>(null);
+  const marker = useRef<Marker | null>(null);
   const select = useRef(onChange);
   select.current = onChange;
   const current = useRef(value);
   current.current = value;
-  const [failed, setFailed] = useState(false),
-    [ready, setReady] = useState(false),
-    [retry, setRetry] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [retry, setRetry] = useState(0);
   const putMarker = useRef<(point: Position | null) => void>(() => {});
   useEffect(() => {
     let disposed = false;
@@ -61,7 +65,10 @@ function LocationMap({
         );
         map.current = instance;
         L.control
-          .zoom({ zoomInTitle: t('Увеличить'), zoomOutTitle: t('Уменьшить') })
+          .zoom({
+            zoomInTitle: t('common.zoomIn'),
+            zoomOutTitle: t('common.zoomOut'),
+          })
           .addTo(instance);
         instance.attributionControl.setPrefix(false);
         const tile = L.tileLayer(
@@ -72,8 +79,8 @@ function LocationMap({
             maxZoom: 19,
           },
         );
-        let errors = 0,
-          fallback = false;
+        let errors = 0;
+        let fallback = false;
         tile.on('tileerror', () => {
           if (disposed) return;
           if (++errors >= 3 && !fallback && instance) {
@@ -124,7 +131,7 @@ function LocationMap({
             const pin = L.marker([point.lat, point.lon], {
               draggable: true,
               autoPan: true,
-              title: t('Выбранное место съёмки'),
+              title: t('messages.selectedCaptureLocation'),
               icon: L.divIcon({
                 className: 'location-picker-pin',
                 iconSize: [24, 24],
@@ -158,14 +165,12 @@ function LocationMap({
   useEffect(() => putMarker.current(value), [value?.lat, value?.lon, ready]);
   return (
     <div className="location-map-section">
-      <p className="fine">
-        {t('Нажми на карту или перемести метку, чтобы выбрать место съёмки.')}
-      </p>
+      <p className="fine">{t('messages.clickTheMapOrDragTheMarker')}</p>
       <div
         ref={host}
         className="location-picker-map"
         role="region"
-        aria-label={t('Выбор места съёмки на карте')}
+        aria-label={t('messages.chooseCaptureLocationOnMap')}
       />
       <div className="location-map-actions">
         <button
@@ -183,17 +188,17 @@ function LocationMap({
               });
           }}
         >
-          {t('Выбрать точку в центре карты')}
+          {t('messages.selectThePointAtTheMapCentre')}
         </button>
         {failed && (
           <div className="location-map-error" role="status">
-            <span>{t('Карта временно недоступна')}</span>
+            <span>{t('common.theMapIsTemporarilyUnavailable')}</span>
             <button
               type="button"
               className="text-button"
               onClick={() => setRetry((n) => n + 1)}
             >
-              {t('Повторить')}
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -201,6 +206,7 @@ function LocationMap({
     </div>
   );
 }
+
 export default function LocationForm({
   busy,
   initial,
@@ -212,9 +218,9 @@ export default function LocationForm({
 }) {
   const { t } = useLocale();
   const id = useId();
-  const [lat, setLat] = useState(''),
-    [lon, setLon] = useState(''),
-    [open, setOpen] = useState(false);
+  const [lat, setLat] = useState('');
+  const [lon, setLon] = useState('');
+  const [open, setOpen] = useState(false);
   const parsed = { lat: Number(lat), lon: Number(lon) };
   const selected =
     lat !== '' &&
@@ -233,13 +239,11 @@ export default function LocationForm({
         if (selected) onSave(selected);
       }}
     >
-      <p className="muted">
-        {t('В файле нет GPS. Можно указать место съёмки.')}
-      </p>
+      <p className="muted">{t('messages.thisFileHasNoGpsDataYou')}</p>
       <div className="location-input-methods">
         <div className="form-row">
           <Field
-            label={t('Широта')}
+            label={t('messages.latitude')}
             name="lat"
             type="number"
             step="any"
@@ -250,7 +254,7 @@ export default function LocationForm({
             onChange={(event) => setLat(event.target.value)}
           />
           <Field
-            label={t('Долгота')}
+            label={t('messages.longitude')}
             name="lon"
             type="number"
             step="any"
@@ -262,7 +266,7 @@ export default function LocationForm({
           />
         </div>
         <div className="location-map-choice">
-          {!open && <span>{t('или')}</span>}
+          {!open && <span>{t('messages.or')}</span>}
           <button
             type="button"
             className="text-button location-map-toggle"
@@ -271,11 +275,11 @@ export default function LocationForm({
             onClick={() => setOpen((value) => !value)}
           >
             <MapIcon />
-            {t(open ? 'Скрыть карту' : 'Выбрать на карте')}
+            {t(open ? 'messages.hideMap' : 'messages.chooseOnMap')}
           </button>
         </div>
         <FeedbackButton className="secondary location-save" disabled={busy}>
-          {t('Сохранить координаты')}
+          {t('messages.saveCoordinates')}
         </FeedbackButton>
       </div>
       {open && (

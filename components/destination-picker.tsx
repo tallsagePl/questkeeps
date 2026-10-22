@@ -1,9 +1,12 @@
 'use client';
+
 import { useEffect, useId, useRef, useState } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
 import type { RouteCity } from '../lib/route-label';
+
 type Option = { id: string; label: string; country?: string };
+
 function Tags({
   label,
   items,
@@ -13,6 +16,7 @@ function Tags({
   items: Option[];
   remove: (id: string) => void;
 }) {
+  const { t } = useLocale();
   return (
     <ul className="destination-tags" aria-label={label}>
       {items.map((item) => (
@@ -20,7 +24,7 @@ function Tags({
           <span title={item.label}>{item.label}</span>
           <button
             type="button"
-            aria-label={'Удалить: ' + item.label}
+            aria-label={t('destination.remove', { name: item.label })}
             onClick={() => remove(item.id)}
           >
             ×
@@ -30,6 +34,7 @@ function Tags({
     </ul>
   );
 }
+
 function SearchSelect({
   type,
   label,
@@ -46,13 +51,13 @@ function SearchSelect({
   disabled: boolean;
 }) {
   const { language, t } = useLocale();
-  const id = useId(),
-    root = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState(''),
-    [open, setOpen] = useState(false),
-    [items, setItems] = useState<Option[]>([]),
-    [active, setActive] = useState(0),
-    [error, setError] = useState('');
+  const id = useId();
+  const root = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<Option[]>([]);
+  const [active, setActive] = useState(0);
+  const [error, setError] = useState('');
   const countryKey = countries.join(',');
   useEffect(() => {
     const controller = new AbortController();
@@ -78,7 +83,7 @@ function SearchSelect({
         .then((data) => setItems(data.options))
         .catch(() => {
           if (!controller.signal.aborted)
-            setError(t('Не удалось загрузить список'));
+            setError('destination.couldNotLoadTheList');
         });
     }, 200);
     return () => {
@@ -123,7 +128,9 @@ function SearchSelect({
         disabled={disabled}
         maxLength={120}
         placeholder={t(
-          type === 'cities' ? 'Начни вводить город' : 'Найти страну',
+          type === 'cities'
+            ? 'destination.startTypingACity'
+            : 'destination.findACountry',
         )}
         onFocus={() => setOpen(true)}
         onChange={(e) => {
@@ -190,8 +197,8 @@ function SearchSelect({
               {error ||
                 t(
                   type === 'cities' && query.length < 2
-                    ? 'Введи не меньше двух букв'
-                    : 'Нет подходящих вариантов',
+                    ? 'destination.enterAtLeastTwoLetters'
+                    : 'destination.noMatchingOptions',
                 )}
             </p>
           )}
@@ -200,6 +207,7 @@ function SearchSelect({
     </div>
   );
 }
+
 export default function DestinationPicker({
   onChange,
   inferredRoute,
@@ -214,10 +222,10 @@ export default function DestinationPicker({
   hint: string;
 }) {
   const { t, language } = useLocale();
-  const [countries, setCountries] = useState<Option[]>([]),
-    [cities, setCities] = useState<Option[]>([]),
-    [routes, setRoutes] = useState<Option[]>([]),
-    [route, setRoute] = useState('');
+  const [countries, setCountries] = useState<Option[]>([]);
+  const [cities, setCities] = useState<Option[]>([]);
+  const [routes, setRoutes] = useState<Option[]>([]);
+  const [route, setRoute] = useState('');
   useEffect(() => {
     if (!inferredRoute.length) return;
     const names = new Intl.DisplayNames([language], { type: 'region' });
@@ -244,9 +252,9 @@ export default function DestinationPicker({
     setRoutes([]);
   }, [inferredRoute, language]);
   useEffect(() => {
-    const cityLabel = cities.map((item) => item.label).join(' → '),
-      countryLabel = countries.map((item) => item.label).join(', '),
-      routeLabel = routes.map((item) => item.label).join(' → ');
+    const cityLabel = cities.map((item) => item.label).join(' → ');
+    const countryLabel = countries.map((item) => item.label).join(', ');
+    const routeLabel = routes.map((item) => item.label).join(' → ');
     onChange(
       [cityLabel, countryLabel, routeLabel].filter(Boolean).join(' || '),
     );
@@ -261,10 +269,10 @@ export default function DestinationPicker({
   };
   return (
     <fieldset className="destination-picker">
-      <legend>{t('Куда едем')}</legend>
+      <legend>{t('destination.destination')}</legend>
       <SearchSelect
         type="countries"
-        label={t('Страна')}
+        label={t('destination.country')}
         selected={countries}
         countries={[]}
         onSelect={(item) => {
@@ -274,7 +282,7 @@ export default function DestinationPicker({
         disabled={disabled}
       />
       <Tags
-        label={t('Выбранные страны')}
+        label={t('destination.selectedCountries')}
         items={countries}
         remove={(id) => (
           onManualChange(),
@@ -283,7 +291,7 @@ export default function DestinationPicker({
       />
       <SearchSelect
         type="cities"
-        label={t('Город')}
+        label={t('destination.city')}
         selected={cities}
         countries={countries.map((item) => item.id)}
         onSelect={(item) => {
@@ -293,7 +301,7 @@ export default function DestinationPicker({
         disabled={disabled}
       />
       <Tags
-        label={t('Выбранные города')}
+        label={t('destination.selectedCities')}
         items={cities}
         remove={(id) => (
           onManualChange(),
@@ -301,15 +309,15 @@ export default function DestinationPicker({
         )}
       />
       <label>
-        {t('Маршрут')}
+        {t('destination.route')}
         <div className="destination-route">
           <input
-            aria-label={t('Маршрут')}
+            aria-label={t('destination.route')}
             value={route}
             maxLength={160}
             disabled={disabled}
             onChange={(e) => setRoute(e.target.value)}
-            placeholder={t('Например, побережье Ликии')}
+            placeholder={t('destination.forExampleTheLycianCoast')}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -323,12 +331,12 @@ export default function DestinationPicker({
             disabled={!route.trim() || disabled}
             onClick={addRoute}
           >
-            {t('Добавить')}
+            {t('destination.add')}
           </button>
         </div>
       </label>
       <Tags
-        label={t('Выбранные маршруты')}
+        label={t('destination.selectedRoutes')}
         items={routes}
         remove={(id) => (
           onManualChange(),
@@ -336,10 +344,7 @@ export default function DestinationPicker({
         )}
       />
       <p className="fine">
-        {hint ||
-          t(
-            'Выбирай места в порядке посещения. Маршрут добавляется кнопкой или Enter.',
-          )}
+        {hint || t('destination.choosePlacesInVisitOrderAddA')}
       </p>
     </fieldset>
   );

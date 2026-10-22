@@ -1,20 +1,22 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import { api } from './api';
 import { useLocale } from './appearance';
 import { SocialShell, useViewer } from './social-shell';
 import { PersonAvatar, FriendshipAction, type Person } from './friends';
+
 export default function PublicProfile({ profile }: { profile: Person }) {
-  const { t } = useLocale(),
-    viewer = useViewer(),
-    [copied, setCopied] = useState(false),
-    [copyError, setCopyError] = useState(''),
-    [trips, setTrips] = useState<
-      { id: string; title: string; start: string; end: string }[]
-    >([]),
-    [tripsError, setTripsError] = useState(''),
-    [tripsReady, setTripsReady] = useState(false),
-    [revision, setRevision] = useState(0);
+  const { t, m } = useLocale();
+  const viewer = useViewer();
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
+  const [trips, setTrips] = useState<
+    { id: string; title: string; start: string; end: string }[]
+  >([]);
+  const [tripsError, setTripsError] = useState('');
+  const [tripsReady, setTripsReady] = useState(false);
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
     setTrips([]);
     setTripsError('');
@@ -60,11 +62,11 @@ export default function PublicProfile({ profile }: { profile: Person }) {
             <FriendshipAction person={profile} viewerId={viewer.user.id} />
           ) : viewer.ready ? (
             <a className="primary" href="/">
-              {t('Войти, чтобы добавить в друзья')}
+              {t('publicProfile.signInToAddAFriend')}
             </a>
           ) : (
             <p role="status" className="fine">
-              {t('Загружаем…')}
+              {t('common.loading')}
             </p>
           )}
           <button
@@ -77,35 +79,33 @@ export default function PublicProfile({ profile }: { profile: Person }) {
                 setCopied(true);
                 setCopyError('');
               } catch {
-                setCopyError(
-                  'Не удалось скопировать ссылку. Скопируй адрес из строки браузера.',
-                );
+                setCopyError('publicProfile.couldNotCopyTheLinkCopyThe');
               }
             }}
           >
-            {t(copied ? 'Ссылка скопирована' : 'Скопировать ссылку')}
+            {t(copied ? 'common.linkCopied' : 'common.copyLink')}
           </button>
         </div>
-        {copyError && <p role="alert">{t(copyError)}</p>}
-        {viewer.error && <p role="alert">{t(viewer.error)}</p>}
+        {copyError && <p role="alert">{m(copyError)}</p>}
+        {viewer.error && <p role="alert">{m(viewer.error)}</p>}
         {viewer.user && viewer.user.id !== profile.id && (
           <section className="shared-profile-trips">
-            <h2>{t('Совместные путешествия')}</h2>
-            {!tripsReady && <p role="status">{t('Загружаем…')}</p>}
+            <h2>{t('publicProfile.sharedTrips')}</h2>
+            {!tripsReady && <p role="status">{t('common.loading')}</p>}
             {tripsError && (
               <p role="alert">
-                {t(tripsError)}{' '}
+                {m(tripsError)}{' '}
                 <button
                   className="text-button"
                   onClick={() => setRevision((n) => n + 1)}
                 >
-                  {t('Повторить')}
+                  {t('common.retry')}
                 </button>
               </p>
             )}
             {tripsReady && !tripsError && !trips.length && (
               <p className="muted">
-                {t('У вас пока нет совместных путешествий.')}
+                {t('publicProfile.youHaveNoSharedTripsYet')}
               </p>
             )}
             <ul>
@@ -120,12 +120,8 @@ export default function PublicProfile({ profile }: { profile: Person }) {
           </section>
         )}
         <div className="public-profile-privacy">
-          <h2>{t('Истории для своего круга')}</h2>
-          <p>
-            {t(
-              'Поездки открываются по приглашению или гостевой ссылке. В публичном профиле нет личных фотографий и контактных данных.',
-            )}
-          </p>
+          <h2>{t('publicProfile.storiesForYourCircle')}</h2>
+          <p>{t('publicProfile.tripsAreSharedByInvitationOrGuest')}</p>
         </div>
       </main>
     </SocialShell>

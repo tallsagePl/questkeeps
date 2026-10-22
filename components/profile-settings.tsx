@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
@@ -11,7 +12,9 @@ import {
 } from './feedback';
 import UserAvatar, { type ProfileUser } from './user-avatar';
 import { ConnectedAccount } from './account-picker';
+
 type Account = { id: string; label: string };
+
 export default function ProfileSettings({
   user,
   accounts,
@@ -25,7 +28,7 @@ export default function ProfileSettings({
   onUserChange: (user: ProfileUser) => void;
   onAccountsChange: (accounts: Account[]) => void;
 }) {
-  const { t } = useLocale();
+  const { t, m } = useLocale();
   const feedback = useFeedback();
   const file = useRef<HTMLInputElement>(null);
   const avatarEdit = useRef<HTMLButtonElement>(null);
@@ -71,7 +74,7 @@ export default function ProfileSettings({
   return (
     <section
       className="profile-settings stack"
-      aria-label={t('Настройки профиля')}
+      aria-label={t('profile.profileSettings')}
     >
       <div className="profile-identity">
         <div className="profile-avatar-editor">
@@ -80,7 +83,7 @@ export default function ProfileSettings({
             type="button"
             ref={avatarEdit}
             className="icon-button avatar-edit"
-            aria-label={t('Изменить аватарку')}
+            aria-label={t('profile.editProfilePhoto')}
             aria-expanded={editingAvatar}
             onClick={() => setEditingAvatar(!editingAvatar)}
           >
@@ -96,13 +99,13 @@ export default function ProfileSettings({
                 const name = new FormData(event.currentTarget).get('name');
                 void perform(async () => {
                   onUserChange((await api('me', 'PATCH', { name })).user);
-                  setMessage('Никнейм сохранён');
+                  setMessage('profile.nicknameSaved');
                   setEditingName(false);
                 });
               }}
             >
               <Field
-                label={t('Никнейм')}
+                label={t('profile.nickname')}
                 name="name"
                 defaultValue={user.name}
                 required
@@ -115,7 +118,7 @@ export default function ProfileSettings({
                   className="primary"
                   disabled={busy}
                 >
-                  {t(busy ? 'Сохраняем…' : 'Сохранить никнейм')}
+                  {t(busy ? 'common.saving' : 'profile.saveNickname')}
                 </FeedbackButton>
                 <FeedbackButton
                   type="button"
@@ -127,7 +130,7 @@ export default function ProfileSettings({
                     setEditingName(false);
                   }}
                 >
-                  {t('Отмена')}
+                  {t('common.cancel')}
                 </FeedbackButton>
               </div>
             </FeedbackForm>
@@ -139,8 +142,8 @@ export default function ProfileSettings({
                 type="button"
                 className="icon-button nickname-edit"
                 disabled={busy}
-                aria-label={t('Изменить никнейм')}
-                title={t('Изменить никнейм')}
+                aria-label={t('profile.editNickname')}
+                title={t('profile.editNickname')}
                 onClick={() => {
                   feedback.clear();
                   setMessage('');
@@ -166,7 +169,7 @@ export default function ProfileSettings({
           {user.email && <p className="muted">{user.email}</p>}
           {user.linkedEmails?.map((email) => (
             <p className="muted" key={email}>
-              {email} <small>({t('Яндекс')})</small>
+              {email} <small>({t('profile.yandex')})</small>
             </p>
           ))}
         </div>
@@ -179,7 +182,7 @@ export default function ProfileSettings({
               type="file"
               tabIndex={-1}
               accept="image/jpeg,image/png,image/webp"
-              aria-label={t('Файл аватарки')}
+              aria-label={t('profile.profilePictureFile')}
               className="avatar-file-input"
               disabled={busy}
               onChange={(event) => {
@@ -188,21 +191,23 @@ export default function ProfileSettings({
                 if (!image) return;
                 void perform(async () => {
                   if (image.size > 5 * 1024 * 1024)
-                    throw new ApiError('Фотография должна быть не больше 5 МБ');
+                    throw new ApiError('profile.avatarTooLarge');
                   const response = await fetch('/api/me/avatar', {
                     method: 'PUT',
                     headers: { 'Content-Type': image.type },
                     body: image,
                   });
                   const value = await response.json().catch(() => ({
-                    error: t('Не удалось загрузить аватарку'),
+                    error: t('profile.unableToUploadYourProfilePicture'),
                   }));
                   if (!response.ok)
                     throw new ApiError(
-                      value.error || 'Не удалось загрузить аватарку',
+                      value.errorTranslation?.key ||
+                        value.error ||
+                        'profile.avatarUploadFailed',
                     );
                   onUserChange(value.user);
-                  setMessage('Аватарка обновлена');
+                  setMessage('profile.profilePictureUpdated');
                   setEditingAvatar(false);
                   avatarEdit.current?.focus();
                 });
@@ -214,7 +219,11 @@ export default function ProfileSettings({
               disabled={busy}
               onClick={() => file.current?.click()}
             >
-              {t(user.avatarVersion ? 'Заменить фото' : 'Загрузить своё фото')}
+              {t(
+                user.avatarVersion
+                  ? 'profile.changePhoto'
+                  : 'profile.uploadYourPhoto',
+              )}
             </FeedbackButton>
             {user.avatarVersion && (
               <FeedbackButton
@@ -224,19 +233,15 @@ export default function ProfileSettings({
                 onClick={() =>
                   void perform(async () => {
                     onUserChange((await api('me/avatar', 'DELETE')).user);
-                    setMessage('Своя аватарка удалена');
+                    setMessage('profile.yourUploadedPictureHasBeenRemoved');
                   })
                 }
               >
-                {t('Удалить своё фото')}
+                {t('profile.removeYourPhoto')}
               </FeedbackButton>
             )}
           </div>
-          <p className="field-hint">
-            {t(
-              'JPG, PNG или WebP · до 5 МБ. Своё фото заменяет аватарку профиля; на Диске остаётся аватарка Яндекса.',
-            )}
-          </p>
+          <p className="field-hint">{t('profile.jpgPngOrWebpUpTo5')}</p>
         </div>
       )}
       <div ref={handleInput}>
@@ -249,18 +254,16 @@ export default function ProfileSettings({
                 const result = await api('me', 'PATCH', { username: handle });
                 onUserChange(result.user);
                 setHandle(result.user.username);
-                setMessage('Юзернейм сохранён');
+                setMessage('profile.usernameSaved');
                 setEditingHandle(false);
               });
             }}
           >
             <p className="field-hint">
-              {t(
-                'Уникальное имя для упоминаний: латинские буквы, цифры и подчёркивания.',
-              )}
+              {t('profile.aUniqueHandleForMentionsLatinLetters')}
             </p>
             <Field
-              label={t('Юзернейм')}
+              label={t('profile.username')}
               name="username"
               value={handle}
               onChange={(event) =>
@@ -278,7 +281,7 @@ export default function ProfileSettings({
               className="secondary"
               disabled={busy || handle === user.username}
             >
-              {t('Сохранить юзернейм')}
+              {t('profile.saveUsername')}
             </FeedbackButton>
             <FeedbackButton
               type="button"
@@ -290,12 +293,12 @@ export default function ProfileSettings({
                 feedback.clear();
               }}
             >
-              {t('Отмена')}
+              {t('common.cancel')}
             </FeedbackButton>
           </FeedbackForm>
         ) : (
           <div className="profile-handle-display">
-            <span>{t('Юзернейм')} — </span>
+            <span>{t('profile.username')} — </span>
             {user.username && (
               <a href={'/@' + user.username}>@{user.username}</a>
             )}
@@ -303,7 +306,7 @@ export default function ProfileSettings({
               ref={handleButton}
               type="button"
               className="icon-button"
-              aria-label={t('Изменить юзернейм')}
+              aria-label={t('profile.editUsername')}
               disabled={busy}
               onClick={() => {
                 setHandle(user.username || '');
@@ -318,16 +321,14 @@ export default function ProfileSettings({
         )}
       </div>
       <p className="profile-status" role="status" aria-live="polite">
-        {t(message)}
+        {m(message)}
       </p>
-      <h3>{t('Аккаунт Яндекса')}</h3>
+      <h3>{t('common.yandexAccount')}</h3>
       {accounts.map((account) => (
         <div className="profile-yandex stack" key={account.id}>
           <ConnectedAccount account={account} />
           <p className="field-hint">
-            {t(
-              'Отключение остановит синхронизацию. Фотографии с Диска станут доступны после повторного подключения.',
-            )}
+            {t('profile.disconnectingStopsSynchronizationDiskPhotosWillBe')}
           </p>
           <div className="profile-connection-actions">
             <FeedbackButton
@@ -339,14 +340,14 @@ export default function ProfileSettings({
                   const result = await api('accounts/' + account.id, 'DELETE');
                   onUserChange(result.user);
                   onAccountsChange(accounts.filter((a) => a.id !== account.id));
-                  setMessage('Аккаунт Яндекса отключён');
+                  setMessage('common.yandexAccountDisconnected');
                 })
               }
             >
-              {t('Отключить Яндекс')}
+              {t('profile.disconnectYandex')}
             </FeedbackButton>
             <a className="text-button" href="/api/auth/yandex?intent=link">
-              {t('Обновить разрешения')}
+              {t('profile.updatePermissions')}
             </a>
           </div>
         </div>
@@ -355,16 +356,17 @@ export default function ProfileSettings({
         !user.yandexAccountId &&
         (yandexEnabled ? (
           <a className="secondary centered" href="/api/auth/yandex?intent=link">
-            {t('Подключить аккаунт Яндекса')}
+            {t('profile.connectAYandexAccount')}
           </a>
         ) : (
           <p className="muted">
-            {t('Подключение Яндекс Диска ещё не настроено.')}
+            {t('profile.yandexDiskConnectionIsNotConfiguredYet')}
           </p>
         ))}
     </section>
   );
 }
+
 function Pencil() {
   return (
     <svg

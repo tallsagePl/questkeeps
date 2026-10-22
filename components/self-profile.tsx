@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
@@ -15,14 +16,15 @@ export default function SelfProfile() {
     </FeedbackProvider>
   );
 }
+
 function ProfileContents() {
-  const viewer = useViewer(),
-    { t } = useLocale(),
-    [accounts, setAccounts] = useState<{ id: string; label: string }[]>([]),
-    [enabled, setEnabled] = useState(false),
-    [loaded, setLoaded] = useState(false),
-    [error, setError] = useState(''),
-    [revision, setRevision] = useState(0);
+  const viewer = useViewer();
+  const { t, m } = useLocale();
+  const [accounts, setAccounts] = useState<{ id: string; label: string }[]>([]);
+  const [enabled, setEnabled] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
     setAccounts([]);
     setLoaded(false);
@@ -57,54 +59,54 @@ function ProfileContents() {
         <div className="social-page-intro">
           <div>
             <h1>
-              {t('Мой профиль')}
+              {t('profile.title')}
               <span className="brand-dot">.</span>
             </h1>
             <p className="muted">
-              {t('Люди, с которыми хочется разделить следующий маршрут.')}
+              {t('profile.peopleToShareYourNextJourneyWith')}
             </p>
           </div>
           {viewer.user?.username && (
             <a className="secondary" href={'/@' + viewer.user.username}>
-              {t('Как меня видят')}
+              {t('profile.howOthersSeeMe')}
             </a>
           )}
         </div>
         <PageFeedback />
-        {!viewer.ready && <p role="status">{t('Загружаем профиль…')}</p>}
+        {!viewer.ready && <p role="status">{t('profile.loadingProfile')}</p>}
         {viewer.error && (
           <p role="alert">
-            {t(viewer.error)}{' '}
+            {m(viewer.error)}{' '}
             <button className="text-button" onClick={() => location.reload()}>
-              {t('Повторить')}
+              {t('common.retry')}
             </button>
           </p>
         )}
         {viewer.ready && !viewer.user && !viewer.error && (
           <div className="profile-signin">
-            <h2>{t('Здесь будет твоя история')}</h2>
-            <p>{t('Войди, чтобы настроить профиль и найти друзей.')}</p>
+            <h2>{t('profile.yourStoryStartsHere')}</h2>
+            <p>{t('profile.signInToEditYourProfileAnd')}</p>
             <a className="primary" href="/">
-              {t('Войти')}
+              {t('auth.signIn')}
             </a>
           </div>
         )}
         {viewer.user && (
           <div className="profile-columns">
             <aside className="profile-settings-panel" id="profile-settings">
-              <h2>{t('Обо мне')}</h2>
+              <h2>{t('profile.aboutMe')}</h2>
               {error && (
                 <p role="alert">
-                  {t(error)}{' '}
+                  {m(error)}{' '}
                   <button
                     className="text-button"
                     onClick={() => setRevision((n) => n + 1)}
                   >
-                    {t('Повторить')}
+                    {t('common.retry')}
                   </button>
                 </p>
               )}
-              {!loaded && <p role="status">{t('Загружаем настройки…')}</p>}
+              {!loaded && <p role="status">{t('profile.loadingSettings')}</p>}
               {loaded && !error && (
                 <ProfileSettings
                   key={viewer.user.id}

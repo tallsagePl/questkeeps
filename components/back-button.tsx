@@ -1,7 +1,9 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useLocale } from './appearance';
 import { initializeNavigation, goBack } from '../lib/navigation';
+
 export default function BackButton() {
   const { t } = useLocale();
   const [ready, setReady] = useState(false);
@@ -13,8 +15,8 @@ export default function BackButton() {
     <button
       type="button"
       className="back text-button page-back"
-      aria-label={t('Назад')}
-      title={t('Назад')}
+      aria-label={t('common.back')}
+      title={t('common.back')}
       disabled={!ready}
       onClick={goBack}
     >
@@ -31,7 +33,7 @@ export default function BackButton() {
       >
         <path d="m10 6-6 6 6 6M4 12h16" />
       </svg>
-      <span className="back-label">{t('Назад')}</span>
+      <span className="back-label">{t('common.back')}</span>
     </button>
   );
 }

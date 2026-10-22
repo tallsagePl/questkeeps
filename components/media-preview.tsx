@@ -1,4 +1,5 @@
 'use client';
+
 import { useContext, useEffect, useRef, useState } from 'react';
 import { useLocale } from './appearance';
 import { previewBlob, discardPreview } from '../lib/preview-cache';
@@ -6,6 +7,7 @@ import { queuePreview } from '../lib/preview-queue';
 import { PreviewPriority } from './preview-priority';
 import { CACHE_TTL } from '../lib/memory-cache';
 import { retryPlaceWhenIdle } from '../lib/place-resource-queue';
+
 export default function MediaPreview({
   src,
   kind,
@@ -19,6 +21,7 @@ export default function MediaPreview({
     <RetryingPreview key={scope + src} src={src} kind={kind} scope={scope} />
   );
 }
+
 function RetryingPreview({
   src,
   kind,
@@ -125,7 +128,9 @@ function RetryingPreview({
             d={kind === 'video' ? 'm10 8 6 4-6 4V8Z' : 'm3 16 5-5 4 4 3-3 6 6'}
           />
         </svg>
-        {state === 'failed' ? t('Превью недоступно') : t('Загружаем превью…')}
+        {state === 'failed'
+          ? t('messages.previewUnavailable')
+          : t('messages.loadingPreview')}
       </span>
       {url && (
         <img

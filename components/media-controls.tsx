@@ -1,7 +1,9 @@
 'use client';
+
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
+
 export function BackToTop() {
   const { t } = useLocale();
   const [visible, setVisible] = useState(false);
@@ -19,8 +21,8 @@ export function BackToTop() {
     <button
       type="button"
       className="back-to-top"
-      aria-label={t('Наверх')}
-      title={t('Наверх')}
+      aria-label={t('messages.backToTop')}
+      title={t('messages.backToTop')}
       onClick={() => {
         window.dispatchEvent(new Event('questkeeps:gallery-start'));
         window.scrollTo({ top: 0, behavior: 'instant' });
@@ -44,6 +46,7 @@ export function BackToTop() {
     </button>
   );
 }
+
 export function FavoriteButton({
   id,
   favorite,
@@ -62,7 +65,7 @@ export function FavoriteButton({
         type="button"
         className="favorite-button"
         aria-label={t(
-          favorite ? 'Убрать из избранного' : 'Добавить в избранное',
+          favorite ? 'messages.removeFromFavorites' : 'messages.addToFavorites',
         )}
         aria-pressed={favorite}
         disabled={busy}
@@ -75,7 +78,7 @@ export function FavoriteButton({
             });
             onChange(result.favorite);
           } catch {
-            setError(t('Не удалось сохранить отметку. Попробуйте ещё раз.'));
+            setError('messages.couldNotSaveYourFavoritePleaseTry');
           } finally {
             setBusy(false);
           }
@@ -102,6 +105,7 @@ export function FavoriteButton({
     </>
   );
 }
+
 export function MediaTitle({
   id,
   title,
@@ -114,12 +118,12 @@ export function MediaTitle({
   onSave: (title: string) => void;
 }) {
   const { t } = useLocale();
-  const [editing, setEditing] = useState(false),
-    [value, setValue] = useState(title),
-    [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
-  const input = useRef<HTMLInputElement>(null),
-    pencil = useRef<HTMLButtonElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(title);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  const pencil = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (editing) {
       input.current?.focus();
@@ -133,7 +137,7 @@ export function MediaTitle({
   const save = async () => {
     if (busy) return;
     if (!value.trim()) {
-      setError(t('Введите название'));
+      setError('messages.enterATitle');
       return;
     }
     setBusy(true);
@@ -143,7 +147,7 @@ export function MediaTitle({
       onSave(value.trim());
       finish();
     } catch {
-      setError(t('Не удалось сохранить название. Попробуйте ещё раз.'));
+      setError('messages.couldNotSaveTheTitlePleaseTry');
     } finally {
       setBusy(false);
     }
@@ -154,7 +158,7 @@ export function MediaTitle({
         <>
           <input
             ref={input}
-            aria-label={t('Название кадра')}
+            aria-label={t('messages.frameTitle')}
             value={value}
             maxLength={160}
             aria-invalid={!!error}
@@ -183,7 +187,7 @@ export function MediaTitle({
               disabled={busy}
               onClick={() => void save()}
             >
-              {t('Сохранить')}
+              {t('common.save')}
             </button>
             <button
               type="button"
@@ -191,7 +195,7 @@ export function MediaTitle({
               disabled={busy}
               onClick={finish}
             >
-              {t('Отмена')}
+              {t('common.cancel')}
             </button>
           </span>
           {error && (
@@ -208,7 +212,7 @@ export function MediaTitle({
               ref={pencil}
               type="button"
               className="icon-button"
-              aria-label={t('Изменить название')}
+              aria-label={t('messages.editTitle')}
               onClick={() => {
                 setValue(title);
                 setError('');

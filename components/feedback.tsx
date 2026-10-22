@@ -1,8 +1,7 @@
 'use client';
 
 import { useLocale } from '@/components/appearance';
-import { translateCurrent } from '@/lib/i18n/translate';
-const t = translateCurrent;
+
 import {
   createContext,
   useContext,
@@ -19,12 +18,16 @@ import {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
 } from 'react';
-type Fields = Record<string, string>;
+import type { LocalizedMessage } from '@/lib/i18n/translate';
+
+type Fields = Record<string, string | LocalizedMessage>;
+
 type Failure = {
   scope: string;
   message: string;
   fields: Fields;
 };
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -34,6 +37,7 @@ export class ApiError extends Error {
     super(message);
   }
 }
+
 type Feedback = {
   active: React.RefObject<string>;
   failure: Failure | null;
@@ -47,7 +51,9 @@ type Feedback = {
   } | null;
   setFailure: React.Dispatch<React.SetStateAction<Failure | null>>;
 };
+
 const FeedbackContext = createContext<Feedback | null>(null);
+
 const FormContext = createContext<{
   fields: Fields;
   scope: string;
@@ -55,13 +61,14 @@ const FormContext = createContext<{
   fields: {},
   scope: '',
 });
+
 export function useFeedback() {
   const value = useContext(FeedbackContext);
   if (!value) throw new Error('Missing FeedbackProvider');
   return value;
 }
+
 export function FeedbackProvider({ children }: { children: ReactNode }) {
-  const { t } = useLocale();
   const active = useRef('page');
   const [failure, setFailure] = useState<Failure | null>(null);
   const [notice, setNoticeState] = useState<{
@@ -81,7 +88,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       message:
         error instanceof Error
           ? error.message
-          : t('Не удалось выполнить действие'),
+          : 'validation.theActionCouldNotBeCompleted',
       fields,
     });
     if (Object.keys(fields).length)
@@ -116,21 +123,23 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     </FeedbackContext.Provider>
   );
 }
+
 export function PageFeedback() {
-  const { t } = useLocale();
+  const { m } = useLocale();
   const { failure } = useFeedback();
   return failure?.scope === 'page' ? (
     <p role="alert" className="action-feedback">
-      {t(failure.message)}
+      {m(failure.message)}
     </p>
   ) : null;
 }
+
 export function FeedbackButton({
   onClick,
   children,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement>) {
-  const { t } = useLocale();
+  const { m } = useLocale();
   const id = useId();
   const feedback = useFeedback();
   return (
@@ -146,50 +155,62 @@ export function FeedbackButton({
       </button>
       {feedback.failure?.scope === id && (
         <p className="action-feedback" role="alert">
-          {t(feedback.failure.message)}
+          {m(feedback.failure.message)}
         </p>
       )}
       {feedback.notice?.scope === id && (
         <span className="action-status" role="status">
-          {t(feedback.notice.message)}
+          {m(feedback.notice.message)}
         </span>
       )}
     </>
   );
 }
+
 function fieldValidation(
   input: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
-) {
+): string | LocalizedMessage {
   if (input.disabled || !input.name) return '';
-  if (input.required && !input.value.trim()) return t('Заполните это поле');
+  if (input.required && !input.value.trim())
+    return 'validation.fillInThisField';
   if (input instanceof HTMLInputElement) {
     if (input.type === 'email' && input.validity.typeMismatch)
-      return t('Введите email в формате name@example.com');
+      return 'validation.enterAnEmailSuchAsNameExample';
     if (
       input.minLength > 0 &&
       input.value &&
       input.value.length < input.minLength
     )
-      return t('Минимум ') + input.minLength + t(' символов');
+      return {
+        key: 'validation.minLength',
+        params: { count: input.minLength },
+      } as const;
     if (input.validity.rangeUnderflow)
       return input.type === 'date'
-        ? t('Дата должна быть не раньше ') + input.min
-        : t('Минимальное значение — ') + input.min;
+        ? ({ key: 'validation.minDate', params: { date: input.min } } as const)
+        : ({
+            key: 'validation.minValue',
+            params: { value: input.min },
+          } as const);
     if (input.validity.rangeOverflow)
       return input.type === 'date'
-        ? t('Дата должна быть не позже ') + input.max
-        : t('Максимальное значение — ') + input.max;
-    if (input.validity.badInput) return t('Введите корректное значение');
+        ? ({ key: 'validation.maxDate', params: { date: input.max } } as const)
+        : ({
+            key: 'validation.maxValue',
+            params: { value: input.max },
+          } as const);
+    if (input.validity.badInput) return 'validation.enterAValidValue';
   }
-  return input.validity.valid ? '' : t('Проверьте значение поля');
+  return input.validity.valid ? '' : 'validation.checkThisValue';
 }
+
 export function FeedbackForm({
   children,
   onSubmit,
   onChange,
   ...props
 }: FormHTMLAttributes<HTMLFormElement>) {
-  const { t } = useLocale();
+  const { t, m } = useLocale();
   const id = useId();
   const feedback = useFeedback();
   const fields = feedback.failure?.scope === id ? feedback.failure.fields : {};
@@ -229,7 +250,7 @@ export function FeedbackForm({
             },
             content,
             <span id={errorId} className="field-error" role="alert">
-              {t(message)}
+              {m(message)}
             </span>,
           );
         }
@@ -295,11 +316,11 @@ export function FeedbackForm({
           ) as HTMLInputElement | null;
           const end = form.elements.namedItem('end') as HTMLInputElement | null;
           if (start?.value && end?.value && start.value > end.value)
-            errors.end = t('Дата окончания должна быть не раньше начала');
+            errors.end = t('validation.endDateMustNotBeEarlierThan');
           if (Object.keys(errors).length) {
             event.preventDefault();
             feedback.report(
-              new ApiError(t('Проверьте поля формы'), errors),
+              new ApiError(t('validation.checkFields'), errors),
               id,
             );
             return;
@@ -310,13 +331,14 @@ export function FeedbackForm({
         {decorate(children)}
         {feedback.failure?.scope === id && !Object.keys(fields).length && (
           <p className="form-error" role="alert">
-            {t(feedback.failure.message)}
+            {m(feedback.failure.message)}
           </p>
         )}
       </form>
     </FormContext.Provider>
   );
 }
+
 export function Field({
   label,
   hint,
@@ -325,7 +347,7 @@ export function Field({
   label: string;
   hint?: ReactNode;
 } & InputHTMLAttributes<HTMLInputElement>) {
-  const { t } = useLocale();
+  const { t, m } = useLocale();
   const id = useId();
   const [shown, setShown] = useState(false);
   const password = props.type === 'password';
@@ -351,7 +373,9 @@ export function Field({
           <button
             type="button"
             className="password-toggle"
-            aria-label={t(shown ? 'Скрыть пароль' : 'Показать пароль')}
+            aria-label={t(
+              shown ? 'validation.hidePassword' : 'validation.showPassword',
+            )}
             aria-pressed={shown}
             aria-controls={id}
             onClick={(event) => {
@@ -390,12 +414,12 @@ export function Field({
       )}
       {hint && !message && (
         <small id={hintId} className="field-hint">
-          {typeof hint === 'string' ? t(hint) : hint}
+          {typeof hint === 'string' ? m(hint) : hint}
         </small>
       )}
       {message && (
         <span id={errorId} className="field-error" role="alert">
-          {t(message)}
+          {m(message)}
         </span>
       )}
     </label>

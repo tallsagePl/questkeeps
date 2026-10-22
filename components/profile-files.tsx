@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useRef, useState, useId } from 'react';
 import { api } from './api';
 import { useLocale } from './appearance';
@@ -7,7 +8,9 @@ import MediaPreview from './media-preview';
 import PhotoViewer from './photo-viewer';
 import Modal from './modal';
 import { PreviewPriority } from './preview-priority';
+
 type Group = { id: string; title: string; count: number };
+
 type File = {
   id: string;
   name: string;
@@ -18,15 +21,16 @@ type File = {
   missing: number;
   revision: string;
 };
+
 const fileTitle = (file: File) =>
   file.title || file.name.replace(/\.[^.]+$/, '');
 
 export default function ProfileFiles({ userId }: { userId: string }) {
-  const { t } = useLocale(),
-    [groups, setGroups] = useState<Group[]>([]),
-    [error, setError] = useState(''),
-    [loaded, setLoaded] = useState(false),
-    [revision, setRevision] = useState(0);
+  const { t, m } = useLocale();
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [error, setError] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
     const c = new AbortController();
     setLoaded(false);
@@ -48,24 +52,22 @@ export default function ProfileFiles({ userId }: { userId: string }) {
   }, [userId, revision]);
   return (
     <section className="my-files-section" id="my-files">
-      <h2>{t('Мои опубликованные файлы')}</h2>
-      <p className="muted">
-        {t('Вы можете скрыть свои кадры даже после выхода из поездки.')}
-      </p>
-      {!loaded && <p role="status">{t('Загружаем…')}</p>}
+      <h2>{t('profileFiles.myPublishedFiles')}</h2>
+      <p className="muted">{t('profileFiles.youCanHideYourOwnPhotosEven')}</p>
+      {!loaded && <p role="status">{t('common.loading')}</p>}
       {error && (
         <p role="alert">
-          {t(error)}{' '}
+          {m(error)}{' '}
           <button
             className="text-button"
             onClick={() => setRevision((n) => n + 1)}
           >
-            {t('Повторить')}
+            {t('common.retry')}
           </button>
         </p>
       )}
       {loaded && !error && !groups.length && (
-        <p className="fine">{t('Пока нет фотографий.')}</p>
+        <p className="fine">{t('profileFiles.noPhotosYet')}</p>
       )}
       {groups.map((g) => (
         <FileGroup key={g.id} group={g} userId={userId} />
@@ -73,23 +75,24 @@ export default function ProfileFiles({ userId }: { userId: string }) {
     </section>
   );
 }
+
 function FileGroup({ group, userId }: { group: Group; userId: string }) {
-  const { t, language } = useLocale(),
-    [open, setOpen] = useState(false),
-    [visited, setVisited] = useState(false),
-    [files, setFiles] = useState<File[]>([]),
-    [next, setNext] = useState<string | null>(null),
-    [loaded, setLoaded] = useState(false),
-    [error, setError] = useState(''),
-    [busy, setBusy] = useState(false),
-    [offset, setOffset] = useState(0),
-    [selected, setSelected] = useState<File | null>(null),
-    [saving, setSaving] = useState(false);
-  const panel = useId(),
-    scroll = useRef<HTMLDivElement>(null),
-    controller = useRef<AbortController | null>(null),
-    pending = useRef(false),
-    initialized = useRef(false);
+  const { t, m, language } = useLocale();
+  const [open, setOpen] = useState(false);
+  const [visited, setVisited] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [selected, setSelected] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const panel = useId();
+  const scroll = useRef<HTMLDivElement>(null);
+  const controller = useRef<AbortController | null>(null);
+  const pending = useRef(false);
+  const initialized = useRef(false);
   useEffect(() => () => controller.current?.abort(), []);
   async function load(cursor?: string) {
     if (pending.current) return;
@@ -136,8 +139,8 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
       }
     }
   }
-  const start = Math.max(0, Math.floor(offset / 88) - 4),
-    end = Math.min(files.length, start + 15);
+  const start = Math.max(0, Math.floor(offset / 88) - 4);
+  const end = Math.min(files.length, start + 15);
   const scope = 'profile:' + userId;
   const url = (m: File, kind: string) =>
     '/api/my-media/' +
@@ -216,8 +219,10 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                           ).toLocaleDateString(
                             language === 'en' ? 'en-GB' : 'ru-RU',
                           )}
-                          {m.hidden ? ' · ' + t('Скрыто') : ''}
-                          {m.missing ? ' · ' + t('Файл недоступен') : ''}
+                          {m.hidden ? ' · ' + t('profileFiles.hidden') : ''}
+                          {m.missing
+                            ? ' · ' + t('profileFiles.fileUnavailable')
+                            : ''}
                         </small>
                       </span>
                       <span className="profile-file-thumb">
@@ -236,10 +241,10 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                 ))}
               </ul>
             </div>
-            {error && <p role="alert">{t(error)}</p>}
+            {error && <p role="alert">{m(error)}</p>}
             {busy && (
               <p role="status" className="fine">
-                {t('Загружаем…')}
+                {t('common.loading')}
               </p>
             )}
             {!busy && error && (
@@ -247,11 +252,11 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                 className="text-button file-load-more"
                 onClick={() => void load(next || undefined)}
               >
-                {t('Повторить')}
+                {t('common.retry')}
               </button>
             )}
             {loaded && !files.length && (
-              <p className="fine">{t('Пока нет фотографий.')}</p>
+              <p className="fine">{t('profileFiles.noPhotosYet')}</p>
             )}
           </div>
         )}
@@ -265,7 +270,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
         >
           <PreviewPriority.Provider value={0}>
             {selected.missing ? (
-              <p>{t('Файл недоступен')}</p>
+              <p>{t('profileFiles.fileUnavailable')}</p>
             ) : selected.kind === 'video' ? (
               <video
                 className="viewer"
@@ -285,7 +290,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
           </PreviewPriority.Provider>
           <div className="profile-file-modal-actions">
             <a className="secondary" href={url(selected, 'download')}>
-              {t('Скачать оригинал ↓')}
+              {t('common.downloadOriginal')}
             </a>
             <button
               className="text-button"
@@ -316,14 +321,14 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
             >
               {t(
                 saving
-                  ? 'Сохраняем…'
+                  ? 'common.saving'
                   : selected.hidden
-                    ? 'Показать'
-                    : 'Скрыть мой кадр',
+                    ? 'profileFiles.show'
+                    : 'common.hideMyPhoto',
               )}
             </button>
           </div>
-          {error && <p role="alert">{t(error)}</p>}
+          {error && <p role="alert">{m(error)}</p>}
         </Modal>
       )}
     </div>

@@ -1,8 +1,10 @@
 'use client';
+
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useLocale } from './appearance';
 import MediaPreview from './media-preview';
 import { PreviewPriority } from './preview-priority';
+
 export default function MapThumbnail({
   point,
   src,
@@ -28,8 +30,8 @@ export default function MapThumbnail({
 }) {
   const { t, language } = useLocale();
   const ref = useRef<HTMLButtonElement>(null);
-  const [near, setNear] = useState(false),
-    [seen, setSeen] = useState(false);
+  const [near, setNear] = useState(false);
+  const [seen, setSeen] = useState(false);
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -49,7 +51,7 @@ export default function MapThumbnail({
       className="map-photo-thumb"
       title={title}
       aria-label={
-        t(point.kind === 'video' ? 'Открыть видео' : 'Открыть фото') +
+        t(point.kind === 'video' ? 'common.openVideo' : 'common.openPhoto') +
         ': ' +
         title
       }

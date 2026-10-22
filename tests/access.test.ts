@@ -2,20 +2,34 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
+
 process.env.DATABASE_PATH = './data/test-' + randomUUID() + '.sqlite';
+
 process.env.APP_URL = 'http://localhost:3000';
+
 const { db, run, one, all, id, hash, encrypt, decrypt } =
   await import('../lib/db');
+
 const { handle } = await import('../lib/api');
+
 const { session } = await import('../lib/access');
+
 const { syncSource } = await import('../lib/sync');
+
 const origin = 'http://localhost:3000';
-const uid = id(),
-  mid = id(),
-  outsider = id();
+
+const uid = id();
+
+const mid = id();
+
+const outsider = id();
+
 const tid = id();
-const sid = id(),
-  aid = id();
+
+const sid = id();
+
+const aid = id();
+
 for (const [user, name] of [
   [uid, 'Владелец'],
   [mid, 'Участник'],
@@ -29,6 +43,7 @@ for (const [user, name] of [
     null,
     Date.now(),
   );
+
 run(
   'INSERT INTO trips(id,owner_id,title,destination,start,end,created) VALUES (?,?,?,?,?,?,?)',
   tid,
@@ -39,6 +54,7 @@ run(
   '2026-10-18',
   Date.now(),
 );
+
 run(
   'INSERT INTO members VALUES (?,?,?,?,1)',
   tid,
@@ -46,6 +62,7 @@ run(
   '2026-10-12',
   '2026-10-14',
 );
+
 run(
   'INSERT INTO accounts(id,user_id,yandex_id,label,token,disk_enabled) VALUES (?,?,?,?,?,1)',
   aid,
@@ -54,6 +71,7 @@ run(
   'test',
   encrypt('oauth-secret'),
 );
+
 run(
   'INSERT INTO sources(id,trip_id,user_id,account_id,path,approved) VALUES (?,?,?,?,?,1)',
   sid,
@@ -62,11 +80,13 @@ run(
   aid,
   'disk:/trip',
 );
+
 const photos = [
   ['before', '2026-10-11'],
   ['during', '2026-10-13'],
   ['after', '2026-10-16'],
 ];
+
 for (const [name, taken] of photos)
   run(
     'INSERT INTO media(id,source_id,trip_id,user_id,resource_id,path,name,mime,kind,taken,date_basis) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
@@ -82,9 +102,13 @@ for (const [name, taken] of photos)
     taken,
     'exif',
   );
-const ownerCookie = 'ta_session=' + session(uid),
-  memberCookie = 'ta_session=' + session(mid),
-  outsiderCookie = 'ta_session=' + session(outsider);
+
+const ownerCookie = 'ta_session=' + session(uid);
+
+const memberCookie = 'ta_session=' + session(mid);
+
+const outsiderCookie = 'ta_session=' + session(outsider);
+
 async function request(
   route: string,
   method = 'GET',
@@ -103,7 +127,9 @@ async function request(
     background,
   );
 }
+
 after(() => db.close());
+
 await test('права, авторизация и синхронизация', async (t) => {
   await t.test(
     'отмена загрузки превью передаётся запросу на Яндекс Диск',
@@ -631,7 +657,7 @@ await test('права, авторизация и синхронизация', a
       const original = globalThis.fetch;
       let calls = 0;
       try {
-        globalThis.fetch = (async (input, init) => {
+        globalThis.fetch = (async (input, _init) => {
           calls++;
           assert.ok(String(input).startsWith('https://login.yandex.ru/'));
           return Response.json({});
@@ -1855,23 +1881,24 @@ await test('права, авторизация и синхронизация', a
   await t.test(
     'переводы покрывают динамические ошибки, а пользовательские данные не меняются',
     async () => {
-      const { translate } = await import('../lib/i18n/translate');
+      const { translate, localizeMessage } =
+        await import('../lib/i18n/translate');
       assert.equal(
-        translate('Неверный email или пароль', 'en'),
+        translate('messages.incorrectEmailOrPassword', 'en'),
         'Incorrect email or password',
       );
       assert.equal(
-        translate('Даты найдены у 2 из 3 фото — проверьте период', 'en'),
+        translate('inference.partialDates', 'en', { dated: 2, total: 3 }),
         'Dates found in 2 of 3 photos — please check the dates',
       );
       assert.equal(
-        translate('Минимум 10 символов', 'en'),
+        translate('validation.minLength', 'en', { count: 10 }),
         'At least 10 characters',
       );
-      assert.equal(translate('Начало', 'en'), 'Start');
-      assert.equal(translate('Start', 'ru'), 'Начало');
+      assert.equal(translate('dates.start', 'en'), 'Start');
+      assert.equal(localizeMessage('Start', 'ru'), 'Start');
       assert.equal(
-        translate(' Мой личный маршрут ', 'en'),
+        localizeMessage(' Мой личный маршрут ', 'en'),
         ' Мой личный маршрут ',
       );
     },

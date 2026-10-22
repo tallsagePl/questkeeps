@@ -1,6 +1,8 @@
 'use client';
+
 import { PreviewPriority } from './preview-priority';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+
 type Layout = {
   visibleFirst: number;
   visibleLast: number;
@@ -13,6 +15,7 @@ type Layout = {
   last: number;
   totalHeight: number;
 };
+
 export default function VirtualGallery<T>({
   items,
   itemKey,
@@ -42,8 +45,8 @@ export default function VirtualGallery<T>({
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const style = getComputedStyle(element),
-        rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
       const columns =
         style.gridTemplateColumns.split(' ').filter(Boolean).length || 1;
       const gap = parseFloat(style.gap) || 0;
@@ -53,9 +56,9 @@ export default function VirtualGallery<T>({
         ? parseFloat(getComputedStyle(sample).aspectRatio.split('/')[0]) /
           (parseFloat(getComputedStyle(sample).aspectRatio.split('/')[1]) || 1)
         : 1.3;
-      const height = width / ratio,
-        pitch = height + gap,
-        rows = Math.ceil(items.length / columns);
+      const height = width / ratio;
+      const pitch = height + gap;
+      const rows = Math.ceil(items.length / columns);
       if (!width || !pitch) return;
 
       // Recycle a bounded scroll surface instead of reserving space for history.
@@ -193,8 +196,8 @@ export default function VirtualGallery<T>({
       if (initialItemKey) onTargetReached?.();
     }
   }, [layout]);
-  const first = layout?.first || 0,
-    last = layout?.last ?? Math.min(items.length, 3);
+  const first = layout?.first || 0;
+  const last = layout?.last ?? Math.min(items.length, 3);
   // Retain previously visited elements so their image nodes and loaded state survive.
   // Hidden cells take no layout space and are excluded from keyboard navigation.
   useLayoutEffect(() => {

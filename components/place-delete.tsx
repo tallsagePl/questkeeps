@@ -1,7 +1,9 @@
 'use client';
+
 import { useEffect, useId, useRef, useState } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
+
 export default function PlaceDelete({
   mediaId,
   placeId,
@@ -16,11 +18,11 @@ export default function PlaceDelete({
   onDelete: () => void;
 }) {
   const { t } = useLocale();
-  const [confirming, setConfirming] = useState(false),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
-  const trash = useRef<HTMLButtonElement>(null),
-    cancel = useRef<HTMLButtonElement>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const trash = useRef<HTMLButtonElement>(null);
+  const cancel = useRef<HTMLButtonElement>(null);
   const heading = useId();
   useEffect(() => {
     if (confirming) cancel.current?.focus();
@@ -40,8 +42,8 @@ export default function PlaceDelete({
         ref={trash}
         type="button"
         className="icon-button place-trash"
-        aria-label={t('Удалить место') + ': ' + title}
-        title={t('Удалить место')}
+        aria-label={t('messages.removePlace') + ': ' + title}
+        title={t('messages.removePlace')}
         disabled={busy}
         onClick={() => {
           if (confirming) dismiss();
@@ -73,7 +75,7 @@ export default function PlaceDelete({
             }
           }}
         >
-          <p id={heading}>{t('Вы уверены, что хотите удалить это место?')}</p>
+          <p id={heading}>{t('messages.areYouSureYouWantToRemove')}</p>
           <div className="place-confirm-actions">
             <button
               ref={cancel}
@@ -82,7 +84,7 @@ export default function PlaceDelete({
               disabled={busy}
               onClick={dismiss}
             >
-              {t('Отмена')}
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -98,13 +100,13 @@ export default function PlaceDelete({
                   );
                   onDelete();
                 } catch {
-                  setError(t('Не удалось удалить место. Попробуйте ещё раз.'));
+                  setError('messages.couldNotRemoveThePlacePleaseTry');
                 } finally {
                   setBusy(false);
                 }
               }}
             >
-              {t('Удалить')}
+              {t('common.remove')}
             </button>
           </div>
           {error && (

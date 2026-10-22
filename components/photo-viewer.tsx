@@ -1,6 +1,8 @@
 'use client';
+
 import { useState } from 'react';
 import MediaPreview from './media-preview';
+
 export default function PhotoViewer({
   preview,
   original,

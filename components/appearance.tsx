@@ -1,4 +1,5 @@
 'use client';
+
 import {
   createContext,
   useContext,
@@ -7,21 +8,31 @@ import {
   useCallback,
   ReactNode,
 } from 'react';
-import { translate, Language } from '@/lib/i18n/translate';
+import {
+  translate,
+  localizeMessage,
+  Language,
+  type Translator,
+} from '@/lib/i18n/translate';
+
 type Theme = 'system' | 'light' | 'dark';
+
 type Preferences = {
   language: Language;
-  t: (text: string) => string;
+  t: Translator;
+  m: (message: unknown) => string;
   setLanguage: (language: Language) => void;
   theme: Theme;
   resolvedTheme: 'light' | 'dark';
   setTheme: (theme: Theme) => void;
 };
+
 const Context = createContext<Preferences | null>(null);
+
 export function AppearanceProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('ru'),
-    [theme, setThemeState] = useState<Theme>('system'),
-    [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+  const [language, setLanguageState] = useState<Language>('ru');
+  const [theme, setThemeState] = useState<Theme>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
   const setLanguage = useCallback((value: Language) => {
     setLanguageState(value);
     document.documentElement.lang = value;
@@ -46,8 +57,8 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     try {
-      const lang = localStorage.getItem('ta-language'),
-        mode = localStorage.getItem('ta-theme');
+      const lang = localStorage.getItem('ta-language');
+      const mode = localStorage.getItem('ta-theme');
       setLanguage(lang === 'en' ? 'en' : 'ru');
       setTheme(mode === 'dark' || mode === 'light' ? mode : 'system');
     } catch {
@@ -68,46 +79,48 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     return () => media.removeEventListener('change', changed);
   }, [theme]);
   useEffect(() => {
-    document.title =
-      language === 'ru'
-        ? 'QuestKeeps — места, которые остаются'
-        : 'QuestKeeps — places that stay with you';
+    document.title = translate('app.title', language);
   }, [language]);
-  const t = useCallback(
-    (text: string) => translate(text, language),
+  const t = useCallback<Translator>(
+    (key, params) => translate(key, language, params),
+    [language],
+  );
+  const m = useCallback(
+    (message: unknown) => localizeMessage(message, language),
     [language],
   );
   return (
     <Context.Provider
-      value={{ language, t, setLanguage, theme, resolvedTheme, setTheme }}
+      value={{ language, t, m, setLanguage, theme, resolvedTheme, setTheme }}
     >
       {children}
     </Context.Provider>
   );
 }
+
 export function useLocale() {
   const context = useContext(Context);
   if (!context) throw new Error('Missing AppearanceProvider');
   return context;
 }
+
 export function AppearanceControls() {
-  const { language, setLanguage, t, resolvedTheme, setTheme } =
-    useLocale();
+  const { language, setLanguage, t, resolvedTheme, setTheme } = useLocale();
   return (
     <div
       className="appearance-controls"
       role="group"
-      aria-label={t('Язык и оформление')}
+      aria-label={t('appearance.languageAndAppearance')}
     >
       <button
         type="button"
         className="appearance-button"
         aria-label={t(
           language === 'ru'
-            ? 'Переключить на английский'
-            : 'Переключить на русский',
+            ? 'appearance.switchToEnglish'
+            : 'appearance.switchToRussian',
         )}
-        title={t('Язык интерфейса')}
+        title={t('appearance.interfaceLanguage')}
         onClick={() => setLanguage(language === 'ru' ? 'en' : 'ru')}
       >
         <svg
@@ -128,8 +141,8 @@ export function AppearanceControls() {
         className="appearance-button theme-button"
         aria-label={t(
           resolvedTheme === 'light'
-            ? 'Включить тёмную тему'
-            : 'Включить светлую тему',
+            ? 'appearance.switchToDarkTheme'
+            : 'appearance.switchToLightTheme',
         )}
         onClick={() => setTheme(resolvedTheme === 'light' ? 'dark' : 'light')}
       >

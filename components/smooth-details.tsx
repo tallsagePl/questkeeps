@@ -1,4 +1,5 @@
 'use client';
+
 import {
   Children,
   useEffect,
@@ -32,8 +33,8 @@ export default function SmoothDetails({
       className={'smooth-details ' + className}
       onClick={(event) => {
         props.onClick?.(event);
-        const element = ref.current!,
-          panel = content.current!;
+        const element = ref.current!;
+        const panel = content.current!;
         const trigger = (event.target as HTMLElement).closest('summary');
         if (event.defaultPrevented || trigger?.parentElement !== element)
           return;

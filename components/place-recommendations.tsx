@@ -1,4 +1,5 @@
 'use client';
+
 import { MemoryCache, CACHE_TTL } from '../lib/memory-cache';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { includesDate } from '../lib/date-selection';
@@ -14,6 +15,7 @@ import {
   readSavedSearches,
   type SavedSearches,
 } from '../lib/place-recommendation-store';
+
 type Photo = {
   id: string;
   name: string;
@@ -27,10 +29,15 @@ type Photo = {
   hidden?: number;
   user_id: string;
 };
+
 type Place = { id: string; media_id: string; url: string; [key: string]: any };
+
 type Suggestion = { pageid: number; title: string; dist: number };
+
 type Card = { photo: Photo; place: Suggestion };
+
 const MAX_SUGGESTIONS = 20;
+
 function uniqueCards(cards: Card[], places: Place[], dismissed: number[]) {
   const known = new Set(places.map((place) => place.url));
   return [...cards]
@@ -43,10 +50,12 @@ function uniqueCards(cards: Card[], places: Place[], dismissed: number[]) {
       return true;
     });
 }
+
 const cache = new MemoryCache<
   string,
   { expires: number; suggestions: Suggestion[] }
 >();
+
 export default function PlaceRecommendations({
   media,
   tripId,
@@ -72,12 +81,12 @@ export default function PlaceRecommendations({
   onSelect: (id: string) => void;
   onAdded: (place: Place, title?: string) => void;
 }) {
-  const { t } = useLocale();
+  const { t, m } = useLocale();
   const feedback = useFeedback();
   const strip = useRef<HTMLDivElement>(null);
   const [carouselWidth, setCarouselWidth] = useState(0);
-  const [canPrevious, setCanPrevious] = useState(false),
-    [canNext, setCanNext] = useState(false);
+  const [canPrevious, setCanPrevious] = useState(false);
+  const [canNext, setCanNext] = useState(false);
   const scrollCards = (direction: number, animate = true) => {
     const root = strip.current;
     if (!root) return;
@@ -140,11 +149,11 @@ export default function PlaceRecommendations({
     return () =>
       window.removeEventListener('questkeeps:place-search-updated', update);
   }, [tripId]);
-  const [attempt, setAttempt] = useState(0),
-    [cards, setCards] = useState<Card[]>([]),
-    [loading, setLoading] = useState(false),
-    [failed, setFailed] = useState(false),
-    [adding, setAdding] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
   useEffect(() => {
     const root = strip.current;
     if (!root) return;
@@ -239,8 +248,8 @@ export default function PlaceRecommendations({
     const targets = photos.filter(
       (photo) => !completed.current.has(photoKey(photo)),
     );
-    let next = 0,
-      paused = false;
+    let next = 0;
+    let paused = false;
     const end = targets.length;
     setLoading(true);
     setChecked(completed.current.size);
@@ -314,7 +323,7 @@ export default function PlaceRecommendations({
             setSearchError(
               error instanceof Error
                 ? error.message
-                : t('Не все места удалось загрузить'),
+                : t('placeSearch.somePlacesCouldNotBeLoaded'),
             );
             if (
               error instanceof ApiError &&
@@ -365,24 +374,22 @@ export default function PlaceRecommendations({
   return (
     <section
       className="place-recommendations"
-      aria-label={t('Места, которые ещё не добавлены')}
+      aria-label={t('placeSearch.placesNotYetAdded')}
     >
       <div className="places-section-heading">
-        <h2 tabIndex={-1}>{t('Места, которые ещё не добавлены')}</h2>
+        <h2 tabIndex={-1}>{t('placeSearch.placesNotYetAdded')}</h2>
         {headerContent}
       </div>
       <p className="muted">
-        {t(
-          'Возможные места рядом с вашими фотографиями. Подтвердите подходящее — оно появится здесь и в фотографии.',
-        )}
+        {t('placeSearch.possiblePlacesNearYourPhotosConfirmA')}
       </p>
       {visible.length > 0 && (
         <div className="place-carousel">
           <button
             type="button"
             className="icon-button place-carousel-arrow previous"
-            aria-label={t('Предыдущие места')}
-            title={t('Предыдущие места')}
+            aria-label={t('placeSearch.previousPlaces')}
+            title={t('placeSearch.previousPlaces')}
             disabled={!canPrevious}
             onClick={(event) => scrollCards(-1, event.detail !== 0)}
           >
@@ -401,8 +408,8 @@ export default function PlaceRecommendations({
           <button
             type="button"
             className="icon-button place-carousel-arrow next"
-            aria-label={t('Следующие места')}
-            title={t('Следующие места')}
+            aria-label={t('placeSearch.nextPlaces')}
+            title={t('placeSearch.nextPlaces')}
             disabled={!canNext}
             onClick={(event) => scrollCards(1, event.detail !== 0)}
           >
@@ -423,7 +430,7 @@ export default function PlaceRecommendations({
             ref={strip}
             tabIndex={0}
             role="group"
-            aria-label={t('Предлагаемые места')}
+            aria-label={t('placeSearch.suggestedPlaces')}
             style={
               carouselWidth
                 ? ({
@@ -471,12 +478,12 @@ export default function PlaceRecommendations({
                     <div className="place-recommendation-info">
                       <h3>{place.title}</h3>
                       <span className="fine">
-                        {Math.round(place.dist)} {t('м от кадра')}
+                        {Math.round(place.dist)} {t('common.mFromThePhoto')}
                       </span>
                       <FeedbackButton
                         type="button"
                         className="icon-button place-add"
-                        aria-label={t('Добавить место') + ': ' + place.title}
+                        aria-label={t('common.addPlace') + ': ' + place.title}
                         disabled={adding !== null}
                         onClick={async () => {
                           const feedbackScope = feedback.active.current;
@@ -521,7 +528,7 @@ export default function PlaceRecommendations({
                       <p>
                         {place.description ||
                           place.summary ||
-                          t('Загружаем описание…')}
+                          t('common.loadingDescription')}
                       </p>
                       {place.sourceUrl && (
                         <a
@@ -529,7 +536,7 @@ export default function PlaceRecommendations({
                           target="_blank"
                           rel="noreferrer"
                         >
-                          {t('Источник: Википедия')} ↗
+                          {t('common.sourceWikipedia')} ↗
                         </a>
                       )}
                       {place.articleFailed && (
@@ -538,7 +545,7 @@ export default function PlaceRecommendations({
                           className="text-button"
                           onClick={place.articleRetry}
                         >
-                          {t('Повторить')}
+                          {t('common.retry')}
                         </button>
                       )}
                     </div>
@@ -551,22 +558,22 @@ export default function PlaceRecommendations({
       )}
       {loading && (
         <p className="fine" role="status">
-          {t('Ищем места рядом…')} {checked}
+          {t('placeSearch.findingNearbyPlaces')} {checked}
         </p>
       )}
       {!loading && !visible.length && !failed && (
-        <p className="fine">{t('Новых предложений пока нет')}</p>
+        <p className="fine">{t('placeSearch.noNewSuggestionsYet')}</p>
       )}
       {retryAt > 0 && (
         <p role="status" className="fine">
-          {t(
-            'Поиск ненадолго приостановлен. Кнопка станет доступна автоматически.',
-          )}
+          {t('placeSearch.searchIsBrieflyPausedTheButtonWill')}
         </p>
       )}
       {failed && (
         <p role="status" className="fine">
-          {searchError ? t(searchError) : t('Не все места удалось загрузить')}
+          {searchError
+            ? m(searchError)
+            : t('placeSearch.somePlacesCouldNotBeLoaded')}
         </p>
       )}
       {visible.length < MAX_SUGGESTIONS && (remaining || failed) && (
@@ -578,7 +585,7 @@ export default function PlaceRecommendations({
             setAttempt((v) => v + 1);
           }}
         >
-          {t('Найти ещё места')}
+          {t('placeSearch.findMorePlaces')}
         </button>
       )}
     </section>

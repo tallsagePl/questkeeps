@@ -1,9 +1,12 @@
 'use client';
+
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import { useLocale } from './appearance';
 import { moveMentions, type Mention, type MentionUser } from '../lib/mentions';
+
 type Pick = { start: number; end: number; typed?: boolean };
+
 export default function TripDescription({
   tripId,
   value,
@@ -20,19 +23,19 @@ export default function TripDescription({
   onSave: (value: string, mentions: Mention[]) => void;
 }) {
   const { t } = useLocale();
-  const [editing, setEditing] = useState(false),
-    [text, setText] = useState(value),
-    [links, setLinks] = useState(mentions);
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState(''),
-    [selection, setSelection] = useState<Pick | null>(null);
-  const [query, setQuery] = useState(''),
-    [results, setResults] = useState<MentionUser[]>([]),
-    [searching, setSearching] = useState(false),
-    [searchError, setSearchError] = useState('');
-  const pencil = useRef<HTMLButtonElement>(null),
-    paragraph = useRef<HTMLParagraphElement>(null),
-    textarea = useRef<HTMLTextAreaElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(value);
+  const [links, setLinks] = useState(mentions);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [selection, setSelection] = useState<Pick | null>(null);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<MentionUser[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const pencil = useRef<HTMLButtonElement>(null);
+  const paragraph = useRef<HTMLParagraphElement>(null);
+  const textarea = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     setResults([]);
     setSearchError('');
@@ -54,7 +57,7 @@ export default function TripDescription({
         })
         .catch(() => {
           if (!controller.signal.aborted)
-            setSearchError(t('Не удалось найти пользователя'));
+            setSearchError(t('tripDescription.couldNotFindThePerson'));
         })
         .finally(() => {
           if (!controller.signal.aborted) setSearching(false);
@@ -87,17 +90,17 @@ export default function TripDescription({
       setLinks(result.descriptionMentions || []);
       close();
     } catch {
-      setError(t('Не удалось сохранить описание'));
+      setError('tripDescription.couldNotSaveTheDescription');
     } finally {
       setBusy(false);
     }
   }
   function choose(person: MentionUser) {
     if (!selection) return;
-    const source = editing ? text : value,
-      current = editing ? links : mentions;
-    let next = source,
-      end = selection.end;
+    const source = editing ? text : value;
+    const current = editing ? links : mentions;
+    let next = source;
+    let end = selection.end;
     if (selection.typed) {
       const replacement = '@' + person.username;
       next =
@@ -132,8 +135,8 @@ export default function TripDescription({
   }
   function selectText() {
     if (!editable || busy) return;
-    const selected = window.getSelection(),
-      p = paragraph.current;
+    const selected = window.getSelection();
+    const p = paragraph.current;
     if (
       !selected ||
       !p ||
@@ -145,12 +148,12 @@ export default function TripDescription({
       setSelection(null);
       return;
     }
-    const range = selected.getRangeAt(0),
-      before = range.cloneRange();
+    const range = selected.getRangeAt(0);
+    const before = range.cloneRange();
     before.selectNodeContents(p);
     before.setEnd(range.startContainer, range.startOffset);
-    const start = before.toString().length,
-      end = start + range.toString().length;
+    const start = before.toString().length;
+    const end = start + range.toString().length;
     if (
       end > value.length ||
       !value.slice(start, end).trim() ||
@@ -188,10 +191,10 @@ export default function TripDescription({
     <div
       className="description-person-picker"
       role="group"
-      aria-label={t('Отметить человека')}
+      aria-label={t('tripDescription.mentionAPerson')}
     >
       <span className="fine">
-        {t('Отметить в тексте:')} «
+        {t('tripDescription.mentionInText')} «
         {(editing ? text : value).slice(selection.start, selection.end)}»
       </span>
       <div className="description-person-controls">
@@ -202,17 +205,17 @@ export default function TripDescription({
             disabled={busy}
             onClick={() => choose(user)}
           >
-            {t('Это я')}
+            {t('tripDescription.thatSMe')}
           </button>
         )}
         <label>
           <span className="description-person-label">
-            {t('Найти человека')}
+            {t('tripDescription.findAPerson')}
           </span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('Имя или @юзернейм')}
+            placeholder={t('common.nameOrUsername')}
             maxLength={80}
             autoComplete="off"
           />
@@ -222,14 +225,16 @@ export default function TripDescription({
           className="text-button"
           onClick={() => setSelection(null)}
         >
-          {t('Отмена')}
+          {t('common.cancel')}
         </button>
       </div>
       <div className="description-person-results" aria-live="polite">
-        {searching && <span className="fine">{t('Ищем…')}</span>}
+        {searching && (
+          <span className="fine">{t('tripDescription.searching')}</span>
+        )}
         {searchError && <span role="alert">{searchError}</span>}
         {!searching && query.trim() && !searchError && !results.length && (
-          <span className="fine">{t('Пользователь не найден')}</span>
+          <span className="fine">{t('tripDescription.userNotFound')}</span>
         )}
         {results.map((person) => (
           <button
@@ -263,10 +268,10 @@ export default function TripDescription({
           }}
         >
           <label>
-            {t('Описание поездки')}
+            {t('tripDescription.tripDescription')}
             <textarea
               ref={textarea}
-              aria-label={t('Описание поездки')}
+              aria-label={t('tripDescription.tripDescription')}
               autoFocus
               maxLength={3000}
               rows={4}
@@ -283,8 +288,8 @@ export default function TripDescription({
                 }
               }}
               onChange={(e) => {
-                const next = e.target.value,
-                  caret = e.target.selectionStart;
+                const next = e.target.value;
+                const caret = e.target.selectionStart;
                 setLinks(moveMentions(text, next, links));
                 setText(next);
                 const token = /(?:^|[\s(])@([a-zA-Z0-9_]*)$/.exec(
@@ -305,9 +310,7 @@ export default function TripDescription({
             />
           </label>
           <p className="field-hint">
-            {t(
-              'Выдели имя, чтобы отметить себя или другого человека. Или введи @юзернейм.',
-            )}
+            {t('tripDescription.selectANameToLinkYourselfOr')}
           </p>
           {picker}
           {links.length > 0 && (
@@ -322,7 +325,8 @@ export default function TripDescription({
                     key={m.start}
                     onClick={() => setLinks(links.filter((link) => link !== m))}
                   >
-                    {t('Снять отметку:')} {text.slice(m.start, m.end)}
+                    {t('tripDescription.removeMention')}{' '}
+                    {text.slice(m.start, m.end)}
                   </button>
                 ))}
             </div>
@@ -330,7 +334,7 @@ export default function TripDescription({
           <span className="fine">{text.length} / 3000</span>
           <div className="place-confirm-actions">
             <button className="primary" disabled={busy}>
-              {t('Сохранить')}
+              {t('common.save')}
             </button>
             <button
               type="button"
@@ -338,7 +342,7 @@ export default function TripDescription({
               disabled={busy}
               onClick={close}
             >
-              {t('Отмена')}
+              {t('common.cancel')}
             </button>
           </div>
         </form>
@@ -350,7 +354,7 @@ export default function TripDescription({
             onKeyUp={selectText}
             onTouchEnd={selectText}
           >
-            {(value || t('Добавь описание своей поездки'))
+            {(value || t('tripDescription.addADescriptionOfYourTrip'))
               .split('\n')
               .map((line, index, lines) => {
                 const offset = lines
@@ -368,7 +372,7 @@ export default function TripDescription({
                           ref={pencil}
                           type="button"
                           className="icon-button trip-description-pencil"
-                          aria-label={t('Изменить описание поездки')}
+                          aria-label={t('tripDescription.editTripDescription')}
                           onClick={() => {
                             setText(value);
                             setLinks(mentions);

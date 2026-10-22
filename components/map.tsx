@@ -1,4 +1,5 @@
 'use client';
+
 import {
   cachedPlaceDescription,
   cachedMapGeometry,
@@ -6,10 +7,8 @@ import {
   invalidateMapResource,
 } from '../lib/place-client-cache';
 import { suggestedMapAreas, type AreaCandidate } from './suggested-map-areas';
-
 import { useLocale } from '@/components/appearance';
-import { translateCurrent } from '@/lib/i18n/translate';
-const t = translateCurrent;
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import MapThumbnail from './map-thumbnail';
 import type { Map as LeafletMap, CircleMarker } from 'leaflet';
@@ -32,6 +31,7 @@ type Point = {
     names?: Partial<Record<'ru' | 'en', string>>;
   } | null;
 };
+
 export default function TravelMap({
   points,
   onSelect,
@@ -130,7 +130,10 @@ export default function TravelMap({
         zoomControl: false,
       }).setView([42.3, 43.3], 6);
       L.control
-        .zoom({ zoomInTitle: t('Увеличить'), zoomOutTitle: t('Уменьшить') })
+        .zoom({
+          zoomInTitle: t('common.zoomIn'),
+          zoomOutTitle: t('common.zoomOut'),
+        })
         .addTo(map);
       map.createPane('visitedPlaces').style.zIndex = '350';
       map.createPane('suggestedPlaces').style.zIndex = '340';
@@ -158,7 +161,11 @@ export default function TravelMap({
         {
           url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
           attribution:
-            '<span class="map-credit-links">© <a href="https://www.esri.com/" target="_blank" rel="noopener noreferrer">Esri</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a></span> <details class="map-credits"><summary aria-label="Источники карты">Источники</summary><div>Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, © OpenStreetMap contributors, and the GIS User Community.</div></details>',
+            '<span class="map-credit-links">© <a href="https://www.esri.com/" target="_blank" rel="noopener noreferrer">Esri</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a></span> <details class="map-credits"><summary aria-label="' +
+            t('map.sourcesLabel') +
+            '">' +
+            t('map.sources') +
+            '</summary><div>Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, © OpenStreetMap contributors, and the GIS User Community.</div></details>',
         },
         {
           url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -318,7 +325,9 @@ export default function TravelMap({
               label.textContent = feature.properties?.title || '';
               if (language === 'en')
                 label.textContent = t(
-                  feature.properties?.kind === 'district' ? 'Район' : 'Улица',
+                  feature.properties?.kind === 'district'
+                    ? 'common.district'
+                    : 'common.street',
                 );
               path.bindTooltip(label);
               void cachedPlaceDescription(
@@ -449,8 +458,8 @@ export default function TravelMap({
   useEffect(() => {
     const map = mapHandle.current;
     if (!map || !suggestions.length || !onAddArea) return;
-    let dispose: (() => void) | undefined,
-      cancelled = false;
+    let dispose: (() => void) | undefined;
+    let cancelled = false;
     void import('leaflet').then((L) => {
       if (cancelled) return;
       const ids = new Set(shownIds.split('|'));
@@ -511,15 +520,15 @@ export default function TravelMap({
     const map = mapHandle.current;
     const targets = region?.points || points;
     if (!map || !targets.length) return;
-    let south = Math.min(...targets.map((p) => p.lat)),
-      north = Math.max(...targets.map((p) => p.lat)),
-      west = Math.min(...targets.map((p) => p.lon)),
-      east = Math.max(...targets.map((p) => p.lon));
+    let south = Math.min(...targets.map((p) => p.lat));
+    let north = Math.max(...targets.map((p) => p.lat));
+    let west = Math.min(...targets.map((p) => p.lon));
+    let east = Math.max(...targets.map((p) => p.lon));
     if (region) {
-      const lat = (south + north) / 2,
-        lon = (west + east) / 2;
-      const halfLat = Math.sqrt(50) / (2 * 111.32),
-        halfLon = halfLat / Math.max(0.05, Math.cos((lat * Math.PI) / 180));
+      const lat = (south + north) / 2;
+      const lon = (west + east) / 2;
+      const halfLat = Math.sqrt(50) / (2 * 111.32);
+      const halfLon = halfLat / Math.max(0.05, Math.cos((lat * Math.PI) / 180));
       south = Math.min(south, lat - halfLat);
       north = Math.max(north, lat + halfLat);
       west = Math.min(west, lon - halfLon);
@@ -539,14 +548,14 @@ export default function TravelMap({
         <div
           className="map-regions"
           role="group"
-          aria-label={t('Области поездки')}
+          aria-label={t('map.tripAreas')}
         >
           <button
             type="button"
             aria-pressed={selectedRegion === 'all'}
             onClick={() => setSelectedRegion('all')}
           >
-            {t('Все места')}
+            {t('common.allPlaces')}
           </button>
           {regions.map((group) => (
             <button
@@ -567,25 +576,23 @@ export default function TravelMap({
         data-region={selectedRegion}
         data-highlighted={highlightedId || undefined}
         role="region"
-        aria-label={t(
-          compact ? 'Место съёмки' : 'Карта фотографий путешествия',
-        )}
+        aria-label={t(compact ? 'common.photoLocation' : 'map.mapOfTripPhotos')}
       />
       {(geometryKinds.street || geometryKinds.district) && (
         <div
           className="map-geometry-legend"
-          aria-label={t('Посещённые места на карте')}
+          aria-label={t('map.visitedPlacesOnTheMap')}
         >
           {geometryKinds.street && (
             <span>
               <i className="map-street-key" aria-hidden="true" />
-              {t('Посещённые улицы')}
+              {t('map.visitedStreets')}
             </span>
           )}
           {geometryKinds.district && (
             <span>
               <i className="map-district-key" aria-hidden="true" />
-              {t('Посещённые районы и площади')}
+              {t('map.visitedDistrictsAndSquares')}
             </span>
           )}
         </div>
@@ -594,7 +601,7 @@ export default function TravelMap({
         <div className="map-geometry-legend">
           <span>
             <i className="map-suggestion-key" aria-hidden="true" />
-            {t('Серым — места, которые можно добавить')}
+            {t('map.greyPlacesCanBeAdded')}
           </span>
         </div>
       )}
@@ -605,12 +612,12 @@ export default function TravelMap({
             <strong>
               {t(
                 suggestionsLoading
-                  ? 'Ищем районы и улицы рядом с фотографиями…'
-                  : 'Загружаем контуры посещённых мест…',
+                  ? 'map.findingDistrictsAndStreetsNearYourPhotos'
+                  : 'map.loadingOutlinesOfVisitedPlaces',
               )}
             </strong>
             {suggestionsLoading && geometryLoading && (
-              <p>{t('Загружаем контуры посещённых мест…')}</p>
+              <p>{t('map.loadingOutlinesOfVisitedPlaces')}</p>
             )}
           </div>
         </div>
@@ -618,7 +625,7 @@ export default function TravelMap({
       {suggestionsFailed && (
         <div className="map-geometry-status">
           <p className="fine" role="status">
-            {t('Часть районов и улиц пока недоступна.')}
+            {t('map.someDistrictsAndStreetsAreNotAvailable')}
           </p>
           <button
             type="button"
@@ -629,7 +636,7 @@ export default function TravelMap({
               setSuggestionRetry((n) => n + 1);
             }}
           >
-            {t('Повторить поиск мест')}
+            {t('map.findPlacesAgain')}
           </button>
         </div>
       )}
@@ -638,12 +645,10 @@ export default function TravelMap({
           <p className="fine" role="status">
             {geometryTitles.length ? (
               <>
-                {t('Контуры пока не найдены:')} {geometryTitles.join(', ')}.
+                {t('map.outlinesNotFoundYet')} {geometryTitles.join(', ')}.
               </>
             ) : (
-              t(
-                'Для части мест точные границы пока недоступны. Точки фотографий остаются на карте.',
-              )
+              t('map.exactBoundariesAreUnavailableForSomePlaces')
             )}
           </p>
           <button
@@ -658,19 +663,19 @@ export default function TravelMap({
               setGeometryRetry((value) => value + 1);
             }}
           >
-            {t('Проверить границы ещё раз')}
+            {t('map.checkOutlinesAgain')}
           </button>
         </div>
       )}
       {unavailable && (
         <div className="map-unavailable" role="status">
-          <span>{t('Карта временно недоступна')}</span>
+          <span>{t('common.theMapIsTemporarilyUnavailable')}</span>
           <button
             type="button"
             className="text-button"
             onClick={() => setRetry((value) => value + 1)}
           >
-            {t('Повторить')}
+            {t('common.retry')}
           </button>
         </div>
       )}
@@ -679,7 +684,7 @@ export default function TravelMap({
           ref={strip}
           className="map-photo-strip"
           role="group"
-          aria-label={t('Точки на карте')}
+          aria-label={t('map.mapLocations')}
         >
           {shownPoints.map((point) => (
             <MapThumbnail

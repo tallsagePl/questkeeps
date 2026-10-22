@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect } from 'react';
 import { useLocale } from './appearance';
 import { previewBlob } from '../lib/preview-cache';
@@ -18,7 +19,9 @@ import {
 import { searchPhotoPlaces } from '../lib/place-search-client';
 import { isAreaPlace } from '../lib/place-kind';
 import { queuePlaceDescription } from '../lib/place-description-queue';
+
 type Row = Record<string, any>;
+
 export function tripMapScope(data: Row, scope: string) {
   // Include current access and resource revisions so stale membership cannot supply a new view.
   const text = JSON.stringify([
@@ -40,6 +43,7 @@ export function tripMapScope(data: Row, scope: string) {
     hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
   return scope + ':trip-map:' + data.trip.id + ':' + (hash >>> 0).toString(36);
 }
+
 export default function TripPreloader({
   data,
   scope,

@@ -1,28 +1,35 @@
 'use client';
+
 import { useEffect, useState, useRef } from 'react';
 import { useLocale } from './appearance';
+
 const photos = [
   {
     id: 'great-wall',
-    alt: 'Великая Китайская стена среди гор',
+    altKey: 'welcome.theGreatWallOfChinaWindingThrough',
     position: '50% 55%',
   },
-  { id: 'pyramids', alt: 'Пирамиды Гизы на закате', position: '50% 48%' },
+  {
+    id: 'pyramids',
+    altKey: 'welcome.thePyramidsOfGizaAtSunset',
+    position: '50% 48%',
+  },
   {
     id: 'santorini',
-    alt: 'Белые дома Санторини над Эгейским морем',
+    altKey: 'welcome.whiteHousesInSantoriniAboveTheAegean',
     position: '50% 55%',
   },
   {
     id: 'machu-picchu',
-    alt: 'Мачу-Пикчу среди зелёных гор Перу',
+    altKey: 'welcome.machuPicchuInTheGreenMountainsOf',
     position: '50% 48%',
   },
-];
+] as const;
+
 export default function WelcomeSlideshow() {
   const { t } = useLocale();
-  const container = useRef<HTMLElement>(null),
-    failed = useRef(new Set<number>());
+  const container = useRef<HTMLElement>(null);
+  const failed = useRef(new Set<number>());
   useEffect(() => {
     const images = Array.from(container.current?.querySelectorAll('img') || []);
     const available = images.flatMap((image, index) =>
@@ -36,16 +43,16 @@ export default function WelcomeSlideshow() {
       if (failed.current.has(0)) setActive(available[0]);
     }
   }, []);
-  const [active, setActive] = useState(0),
-    [loaded, setLoaded] = useState<number[]>([]),
-    [paused, setPaused] = useState(false),
-    [reduced, setReduced] = useState(false),
-    [hovered, setHovered] = useState(false),
-    [visible, setVisible] = useState(true);
+  const [active, setActive] = useState(0);
+  const [loaded, setLoaded] = useState<number[]>([]);
+  const [paused, setPaused] = useState(false);
+  const [reduced, setReduced] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [visible, setVisible] = useState(true);
   useEffect(() => {
-    const media = matchMedia('(prefers-reduced-motion: reduce)'),
-      update = () => setReduced(media.matches),
-      visibility = () => setVisible(!document.hidden);
+    const media = matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduced(media.matches);
+    const visibility = () => setVisible(!document.hidden);
     update();
     visibility();
     media.addEventListener('change', update);
@@ -74,8 +81,8 @@ export default function WelcomeSlideshow() {
     <section
       ref={container}
       className="landscape welcome-slideshow"
-      aria-label={t('Места, куда хочется отправиться')}
-      aria-roledescription={t('Слайд-шоу')}
+      aria-label={t('welcome.placesYouWouldLoveToVisit')}
+      aria-roledescription={t('welcome.slideshow')}
       aria-live="off"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -90,7 +97,7 @@ export default function WelcomeSlideshow() {
           key={photo.id}
           className={'welcome-slide' + (active === index ? ' is-active' : '')}
           src={'/welcome/' + photo.id + '.webp'}
-          alt={t(photo.alt)}
+          alt={t(photo.altKey)}
           aria-hidden={active !== index}
           width="1280"
           height="580"
@@ -118,21 +125,17 @@ export default function WelcomeSlideshow() {
         />
       ))}
       <div className="landscape-label">
-        {t('СОХРАНЯЙТЕ МЕСТА. ВОЗВРАЩАЙТЕСЬ К ЧУВСТВАМ.')}
+        {t('welcome.saveThePlacesReliveTheFeeling')}
       </div>
       {!reduced && (
         <button
           type="button"
           className="slideshow-toggle"
           aria-label={t(
-            paused
-              ? 'Продолжить смену фотографий'
-              : 'Приостановить смену фотографий',
+            paused ? 'welcome.resumeSlideshow' : 'welcome.pauseSlideshow',
           )}
           title={t(
-            paused
-              ? 'Продолжить смену фотографий'
-              : 'Приостановить смену фотографий',
+            paused ? 'welcome.resumeSlideshow' : 'welcome.pauseSlideshow',
           )}
           onClick={() => setPaused((value) => !value)}
         >

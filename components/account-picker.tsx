@@ -1,8 +1,11 @@
 'use client';
+
 import { useLocale } from './appearance';
 import { useState } from 'react';
 import { driveIconPaths } from '@/lib/drive-icon';
+
 type Account = { id: string; label: string };
+
 function AccountAvatar({ accountId }: { accountId: string }) {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'failed'>(
     'loading',
@@ -41,6 +44,7 @@ function AccountAvatar({ accountId }: { accountId: string }) {
     </span>
   );
 }
+
 export function ConnectedAccount({ account }: { account: Account }) {
   const { t } = useLocale();
   return (
@@ -48,15 +52,16 @@ export function ConnectedAccount({ account }: { account: Account }) {
       <AccountAvatar key={account.id} accountId={account.id} />
       <div className="account-identity">
         <strong title={account.label}>{account.label}</strong>
-        <span>{t('Яндекс Диск')}</span>
+        <span>{t('common.yandexDisk')}</span>
       </div>
       <span className="connection-state">
         <span aria-hidden="true">✓</span>
-        {t('Подключён')}
+        {t('disk.connectedAccount')}
       </span>
     </div>
   );
 }
+
 export default function AccountPicker({
   accounts,
   value,
@@ -70,7 +75,7 @@ export default function AccountPicker({
   if (accounts.length === 1) return <ConnectedAccount account={accounts[0]} />;
   return (
     <fieldset className="account-picker">
-      <legend>{t('Аккаунт Яндекса')}</legend>
+      <legend>{t('common.yandexAccount')}</legend>
       {accounts.map((account) => (
         <label
           key={account.id}
@@ -88,11 +93,11 @@ export default function AccountPicker({
           <AccountAvatar key={account.id} accountId={account.id} />
           <span className="account-identity">
             <strong>{account.label}</strong>
-            <span>{t('Яндекс Диск')}</span>
+            <span>{t('common.yandexDisk')}</span>
           </span>
           <span className="connection-state">
             <span aria-hidden="true">✓</span>
-            {t('Подключён')}
+            {t('disk.connectedAccount')}
           </span>
         </label>
       ))}

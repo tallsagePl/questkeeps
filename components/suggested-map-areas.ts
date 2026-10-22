@@ -1,5 +1,7 @@
 import { cachedAreaWiki, cachedPlaceImage } from '../lib/place-client-cache';
 import type * as Leaflet from 'leaflet';
+import type { Translator } from '../lib/i18n/translate';
+
 export type AreaCandidate = {
   id: string;
   title: string;
@@ -8,12 +10,13 @@ export type AreaCandidate = {
   geometry: any;
   url: string;
 };
+
 export function suggestedMapAreas(
   L: typeof Leaflet,
   map: Leaflet.Map,
   candidates: AreaCandidate[],
   add: (id: string) => Promise<void>,
-  t: (s: string) => string,
+  t: Translator,
   wikiPath?: string,
   cacheScope = '',
   language: 'ru' | 'en' = 'ru',
@@ -22,8 +25,8 @@ export function suggestedMapAreas(
   for (const candidate of [...candidates].sort(
     (a, b) => Number(a.kind === 'street') - Number(b.kind === 'street'),
   )) {
-    let hovered = false,
-      focused = false;
+    let hovered = false;
+    let focused = false;
     let group: Leaflet.GeoJSON;
     const paint = () =>
       group.setStyle({
@@ -35,7 +38,7 @@ export function suggestedMapAreas(
       });
     const displayName =
       language === 'en'
-        ? t(candidate.kind === 'street' ? 'Улица' : 'Район')
+        ? t(candidate.kind === 'street' ? 'common.street' : 'common.district')
         : candidate.title;
     const show = () => {
       const box = document.createElement('div');
@@ -45,21 +48,19 @@ export function suggestedMapAreas(
       box.append(title);
       const preview = document.createElement('div');
       preview.className = 'map-area-wiki';
-      preview.textContent = t('Ищем статью в Википедии…');
+      preview.textContent = t('map.lookingForAWikipediaArticle');
       box.append(preview);
       const count = document.createElement('p');
       count.textContent =
-        t('Фотографий для привязки:') + ' ' + candidate.photoIds.length;
+        t('map.photosToLink') + ' ' + candidate.photoIds.length;
       box.append(count);
       const scope = document.createElement('p');
-      scope.textContent = t(
-        'Учитываются все даты поездки, даже если в календаре выбран один день.',
-      );
+      scope.textContent = t('map.allTripDatesAreIncludedEvenIf');
       box.append(scope);
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'primary';
-      button.textContent = t('Добавить место к фотографиям');
+      button.textContent = t('map.addThisPlaceToThePhotos');
       box.append(button);
       const error = document.createElement('p');
       error.setAttribute('role', 'alert');
@@ -73,7 +74,7 @@ export function suggestedMapAreas(
           map.closePopup();
         } catch (e) {
           error.textContent =
-            e instanceof Error ? e.message : t('Не удалось добавить место');
+            e instanceof Error ? e.message : t('map.couldNotAddThisPlace');
           button.disabled = false;
         }
       });
@@ -84,8 +85,8 @@ export function suggestedMapAreas(
           className: 'map-area-popup',
         })
         .openPopup();
-      let active = true,
-        imageUrl: string | undefined;
+      let active = true;
+      let imageUrl: string | undefined;
       group.once('popupclose', () => {
         active = false;
         if (imageUrl) URL.revokeObjectURL(imageUrl);
@@ -108,12 +109,12 @@ export function suggestedMapAreas(
                   .getElement()
                   ?.setAttribute(
                     'aria-label',
-                    t('Добавить место') + ': ' + info.title,
+                    t('common.addPlace') + ': ' + info.title,
                   );
               });
             }
             if (!info.url) {
-              preview.textContent = t('Статья в Википедии не найдена');
+              preview.textContent = t('map.wikipediaArticleNotFound');
               group.getPopup()?.update();
               return;
             }
@@ -121,7 +122,7 @@ export function suggestedMapAreas(
             link.href = info.url;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
-            link.textContent = t('Википедия') + ' ↗';
+            link.textContent = t('map.wikipedia') + ' ↗';
             link.title = info.title;
             const copy = document.createElement('div');
             copy.append(link);
@@ -148,7 +149,7 @@ export function suggestedMapAreas(
           })
           .catch(() => {
             if (active) {
-              preview.textContent = t('Википедия временно недоступна');
+              preview.textContent = t('map.wikipediaIsTemporarilyUnavailable');
               group.getPopup()?.update();
             }
           });
@@ -179,7 +180,7 @@ export function suggestedMapAreas(
           el.setAttribute('role', 'button');
           el.setAttribute(
             'aria-label',
-            t('Добавить место') + ': ' + displayName,
+            t('common.addPlace') + ': ' + displayName,
           );
           el.setAttribute('data-area-id', candidate.id);
           el.addEventListener('focus', () => {

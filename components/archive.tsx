@@ -1,22 +1,17 @@
 'use client';
+
 import { FriendLinkArrival } from './friend-link';
-import {
-  registrationPasswordPattern,
-  registrationPasswordHint,
-} from '../lib/password-policy';
+import { registrationPasswordPattern } from '../lib/password-policy';
 import WelcomeSlideshow from './welcome-slideshow';
 import { isAreaPlace } from '../lib/place-kind';
 import {
   announceSessionChange,
   observeSessionChanges,
 } from '../lib/browser-session';
-
 import { Collapse } from './smooth-details';
 import NoteThread from './note-thread';
-
 import { useLocale } from '@/components/appearance';
 import { translateCurrent } from '@/lib/i18n/translate';
-const t = translateCurrent;
 import {
   useState,
   useEffect,
@@ -72,11 +67,16 @@ import {
   PageFeedback,
   Field,
 } from './feedback';
+
+const t = translateCurrent;
+
 type Row = Record<string, any>;
+
 const TravelMap = dynamic(() => import('./map'), {
   ssr: false,
-  loading: () => <div className="empty">{t('Загружаем карту…')}</div>,
+  loading: () => <div className="empty">{t('trip.loadingTheMap')}</div>,
 });
+
 const date = (value: string) =>
   new Date(value.slice(0, 10) + 'T12:00:00').toLocaleDateString(
     typeof document !== 'undefined' && document.documentElement.lang === 'en'
@@ -87,12 +87,15 @@ const date = (value: string) =>
       month: 'short',
     },
   );
+
 const period = (trip: Row) =>
   date(trip.start) + ' — ' + date(trip.end) + ', ' + trip.start.slice(0, 4);
+
 function values(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
   return Object.fromEntries(new FormData(event.currentTarget));
 }
+
 function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
     compass: (
@@ -170,6 +173,7 @@ function Icon({ name, size = 20 }: { name: string; size?: number }) {
     </svg>
   );
 }
+
 export default function Archive(props: { share?: string; invite?: string }) {
   return (
     <FeedbackProvider>
@@ -177,6 +181,7 @@ export default function Archive(props: { share?: string; invite?: string }) {
     </FeedbackProvider>
   );
 }
+
 function ArchiveContent({
   share,
   invite,
@@ -184,42 +189,44 @@ function ArchiveContent({
   share?: string;
   invite?: string;
 }) {
-  const { t } = useLocale();
-  const [user, setUser] = useState<Row | null>(null),
-    [ready, setReady] = useState(false),
-    [bootFailed, setBootFailed] = useState(false),
-    [verificationEmail, setVerificationEmail] = useState(''),
-    [trips, setTrips] = useState<Row[]>([]),
-    [selected, setSelected] = useState<string | null>(null),
-    [data, setData] = useState<Row | null>(null),
-    [tab, setTab] = useState('gallery'),
-    [filter, setFilter] = useState('all'),
-    [galleryTarget, setGalleryTarget] = useState<string | null>(null),
-    [day, setDay] = useState(''),
-    [modal, setModal] = useState(''),
-    [busy, setBusy] = useState(false),
-    [yandex, setYandex] = useState(false),
-    [register, setRegister] = useState(false),
-    [members, setMembers] = useState<Row[]>([]),
-    [tripOwner, setTripOwner] = useState<Row | null>(null),
-    [sources, setSources] = useState<Row[]>([]),
-    [accounts, setAccounts] = useState<Row[]>([]),
-    [account, setAccount] = useState(''),
-    [folder, setFolder] = useState('disk:/'),
-    [folders, setFolders] = useState<Row[]>([]),
-    [folderStatus, setFolderStatus] = useState(''),
-    [folderOffset, setFolderOffset] = useState<number | null>(null),
-    [generated, setGenerated] = useState(''),
-    [activeMedia, setActiveMedia] = useState<Row | null>(null),
-    [mediaPlaceUrl, setMediaPlaceUrl] = useState<string | null>(null),
-    [mediaFocusPlaceUrl, setMediaFocusPlaceUrl] = useState<string | null>(null),
-    [suggestions, setSuggestions] = useState<Row[]>([]),
-    [placesOpen, setPlacesOpen] = useState(false),
-    [invitation, setInvitation] = useState<Row | null>(null);
+  const { t, m } = useLocale();
+  const [user, setUser] = useState<Row | null>(null);
+  const [ready, setReady] = useState(false);
+  const [bootFailed, setBootFailed] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [trips, setTrips] = useState<Row[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [data, setData] = useState<Row | null>(null);
+  const [tab, setTab] = useState('gallery');
+  const [filter, setFilter] = useState('all');
+  const [galleryTarget, setGalleryTarget] = useState<string | null>(null);
+  const [day, setDay] = useState('');
+  const [modal, setModal] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [yandex, setYandex] = useState(false);
+  const [register, setRegister] = useState(false);
+  const [members, setMembers] = useState<Row[]>([]);
+  const [tripOwner, setTripOwner] = useState<Row | null>(null);
+  const [sources, setSources] = useState<Row[]>([]);
+  const [accounts, setAccounts] = useState<Row[]>([]);
+  const [account, setAccount] = useState('');
+  const [folder, setFolder] = useState('disk:/');
+  const [folders, setFolders] = useState<Row[]>([]);
+  const [folderStatus, setFolderStatus] = useState('');
+  const [folderOffset, setFolderOffset] = useState<number | null>(null);
+  const [generated, setGenerated] = useState('');
+  const [activeMedia, setActiveMedia] = useState<Row | null>(null);
+  const [mediaPlaceUrl, setMediaPlaceUrl] = useState<string | null>(null);
+  const [mediaFocusPlaceUrl, setMediaFocusPlaceUrl] = useState<string | null>(
+    null,
+  );
+  const [suggestions, setSuggestions] = useState<Row[]>([]);
+  const [placesOpen, setPlacesOpen] = useState(false);
+  const [invitation, setInvitation] = useState<Row | null>(null);
   const trip = data?.trip;
-  const isOwner = trip?.role === 'owner',
-    guest = !!share;
-  const { active, failure, clear, report, setError, setNotice } = useFeedback();
+  const isOwner = trip?.role === 'owner';
+  const guest = !!share;
+  const { active, clear, report, setError, setNotice } = useFeedback();
   const feedbackRef = useRef({
     clear,
     report,
@@ -281,8 +288,8 @@ function ArchiveContent({
     setTrips(r.trips);
   }, []);
   const loadTrip = useCallback(async (tid: string) => {
-    const generation = identityGeneration.current,
-      navigation = navigationGeneration.current;
+    const generation = identityGeneration.current;
+    const navigation = navigationGeneration.current;
     let r;
     try {
       r = await api('trips/' + tid);
@@ -433,8 +440,8 @@ function ArchiveContent({
     const input = values(event);
     void action(async () => {
       if (register && input.password !== input.passwordConfirmation)
-        throw new ApiError(t('Пароли не совпадают'), {
-          passwordConfirmation: t('Пароли не совпадают'),
+        throw new ApiError(t('trip.passwordsDoNotMatch'), {
+          passwordConfirmation: t('trip.passwordsDoNotMatch'),
         });
       const r = await api(
         'auth/' + (register ? 'register' : 'login'),
@@ -443,7 +450,7 @@ function ArchiveContent({
       );
       if (r.verificationRequired) {
         setVerificationEmail(r.verificationEmail);
-        setNotice(t(r.message));
+        setNotice(m(r.message));
         return;
       }
       announceSessionChange();
@@ -480,12 +487,12 @@ function ArchiveContent({
     if (search)
       setFolderStatus(
         r.nextOffset !== null && !r.folders.length
-          ? 'Пока подпапок не найдено. Можно продолжить поиск.'
+          ? 'common.noSubfoldersFoundYetYouCanKeep'
           : merged.length === 0
-            ? 'Подпапок не найдено. Можно выбрать текущую папку.'
+            ? 'common.noSubfoldersFoundYouCanSelectThe'
             : merged.length === folders.length
-              ? 'Новых подпапок не найдено.'
-              : 'Подпапки найдены. Выберите нужную из списка.',
+              ? 'common.noNewSubfoldersFound'
+              : 'common.subfoldersFoundSelectOneFromTheList',
       );
   };
   const visible = useMemo(
@@ -516,8 +523,8 @@ function ArchiveContent({
       groupPlacePhotos((data?.media || []) as any[], data?.places || [], day),
     [data?.media, data?.places, day],
   );
-  const placePrevious = useRef<HTMLButtonElement>(null),
-    placeNext = useRef<HTMLButtonElement>(null);
+  const placePrevious = useRef<HTMLButtonElement>(null);
+  const placeNext = useRef<HTMLButtonElement>(null);
   const viewerPlacePhotos = mediaPlaceUrl
     ? placePhotoGroups.get(mediaPlaceUrl) || []
     : [];
@@ -634,9 +641,9 @@ function ArchiveContent({
   const copy = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      setNotice(t('Ссылка скопирована'));
+      setNotice('common.linkCopied');
     } catch {
-      setNotice(t('Выделите и скопируйте ссылку в поле'));
+      setNotice('trip.selectAndCopyTheLinkFromThe');
     }
   };
   const authForm = (
@@ -647,7 +654,7 @@ function ArchiveContent({
     >
       {verificationEmail && (
         <div className="verification-pending" role="status">
-          <p>{t('Подтверди email по ссылке из письма.')}</p>
+          <p>{t('trip.verifyYourEmailUsingTheLinkIn')}</p>
           <FeedbackButton
             type="button"
             className="text-button"
@@ -657,17 +664,17 @@ function ArchiveContent({
                 const result = await api('auth/resend-verification', 'POST', {
                   email: verificationEmail,
                 });
-                setNotice(t(result.message));
+                setNotice(m(result.message));
               })
             }
           >
-            {t('Отправить письмо ещё раз')}
+            {t('trip.resendVerificationEmail')}
           </FeedbackButton>
         </div>
       )}
       {register && (
         <Field
-          label={t('Как вас зовут')}
+          label={t('trip.yourName')}
           name="name"
           required
           maxLength={80}
@@ -675,9 +682,7 @@ function ArchiveContent({
         />
       )}
       <Field
-        label={t(
-          register ? 'Электронная почта' : 'Электронная почта или никнейм',
-        )}
+        label={t(register ? 'auth.email' : 'auth.identifier')}
         name="email"
         type={register ? 'email' : 'text'}
         autoComplete={register ? 'email' : 'username'}
@@ -687,19 +692,23 @@ function ArchiveContent({
         required
       />
       <Field
-        label={t('Пароль')}
+        label={t('auth.password')}
         name="password"
         type="password"
         minLength={register ? 6 : undefined}
         maxLength={register ? 72 : 128}
         pattern={register ? registrationPasswordPattern : undefined}
-        hint={register ? t(registrationPasswordHint) : undefined}
+        hint={
+          register
+            ? t('trip.672CharactersUppercaseAndLowercaseLatin')
+            : undefined
+        }
         autoComplete={register ? 'new-password' : 'current-password'}
         required
       />
       {register && (
         <Field
-          label={t('Повторите пароль')}
+          label={t('trip.repeatPassword')}
           name="passwordConfirmation"
           type="password"
           autoComplete="new-password"
@@ -708,7 +717,11 @@ function ArchiveContent({
         />
       )}
       <FeedbackButton className="primary" disabled={busy}>
-        {busy ? t('Подождите…') : register ? t('Создать аккаунт') : t('Войти')}
+        {busy
+          ? t('common.pleaseWait')
+          : register
+            ? t('trip.createAccount')
+            : t('auth.signIn')}
         <Icon name="arrow" />
       </FeedbackButton>
       <FeedbackButton
@@ -717,8 +730,8 @@ function ArchiveContent({
         onClick={() => setRegister(!register)}
       >
         {register
-          ? t('Уже есть аккаунт? Войти')
-          : t('Первый раз здесь? Зарегистрироваться')}
+          ? t('trip.alreadyHaveAnAccountSignIn')
+          : t('trip.newHereCreateAnAccount')}
       </FeedbackButton>
       {yandex && (
         <a
@@ -728,7 +741,7 @@ function ArchiveContent({
             encodeURIComponent(invite ? '/join/' + invite : '/')
           }
         >
-          {t('Войти с Яндекс ID')}
+          {t('trip.signInWithYandexId')}
         </a>
       )}
     </FeedbackForm>
@@ -736,12 +749,12 @@ function ArchiveContent({
   return (
     <>
       <a className="skip-link" href="#main-content">
-        {t('Перейти к содержимому')}
+        {t('common.skipToContent')}
       </a>
       <BackToTop />
       <header className="topbar" tabIndex={-1}>
         <HeaderBrand back={!!(selected || share || invite)} />
-        <span className="top-caption">{t('КОЛЛЕКЦИЯ ВАШИХ ПУТЕШЕСТВИЙ')}</span>
+        <span className="top-caption">{t('trip.yourTravelCollection')}</span>
         <div className="top-actions">
           {!guest && user && (
             <a
@@ -752,17 +765,17 @@ function ArchiveContent({
                 if (!selected && !invite) event.preventDefault();
               }}
             >
-              {t('Путешествия')}
+              {t('navigation.trips')}
             </a>
           )}
           <a className="text-button about-nav-link" href="/about">
-            {t('О проекте')}
+            {t('navigation.about')}
           </a>
           {!guest && user && (
             <a
               className="text-button user-button"
               href="/profile"
-              aria-label={t('Мой профиль')}
+              aria-label={t('profile.title')}
             >
               <UserAvatar user={user as { id: string; name: string }} />
               <span>{user.name}</span>
@@ -772,26 +785,26 @@ function ArchiveContent({
           {guest ? (
             <span className="pill">
               <Icon name="link" size={14} />
-              {t('Гостевой просмотр')}
+              {t('trip.guestView')}
             </span>
           ) : user ? (
             <>
               <FeedbackButton
                 className="icon-button header-logout"
-                title={t('Выйти')}
-                aria-label={t('Выйти')}
+                title={t('auth.signOut')}
+                aria-label={t('auth.signOut')}
                 onClick={() =>
                   void action(async () => {
                     await signOut();
                   })
                 }
               >
-                <span>{t('Выйти')}</span>
+                <span>{t('auth.signOut')}</span>
                 <Icon name="logout" />
               </FeedbackButton>
             </>
           ) : (
-            <span className="muted">{t('Личный архив')}</span>
+            <span className="muted">{t('trip.personalArchive')}</span>
           )}
         </div>
       </header>
@@ -800,37 +813,33 @@ function ArchiveContent({
         <main id="main-content" tabIndex={-1} className="loading">
           <PageFeedback />
           <span className="spinner" />
-          {t('Открываем архив…')}
+          {t('trip.openingTheArchive')}
         </main>
       ) : bootFailed ? (
         <main id="main-content" tabIndex={-1} className="loading">
-          <h1>{t('Не удалось открыть архив')}</h1>
-          <p>{t('Не удалось связаться с сервером. Твой вход не сброшен.')}</p>
+          <h1>{t('trip.couldNotOpenTheArchive')}</h1>
+          <p>{t('trip.couldNotReachTheServerYourSign')}</p>
           <PageFeedback />
           <button
             className="secondary"
             onClick={() => window.location.reload()}
           >
-            {t('Повторить')}
+            {t('common.retry')}
           </button>
         </main>
       ) : invite ? (
         <main id="main-content" tabIndex={-1} className="invite-page">
           <PageFeedback />
-          <span className="eyebrow">{t('ХОРОШЕЕ ПУТЕШЕСТВИЕ — ОБЩЕЕ')}</span>
-          <h1>{invitation?.title || t('Приглашение в поездку')}</h1>
+          <span className="eyebrow">{t('trip.goodJourneysAreShared')}</span>
+          <h1>{invitation?.title || t('trip.tripInvitation')}</h1>
           {invitation && (
             <>
               <p>
                 {invitation.destination} · {period(invitation)}
               </p>
               <div className="panel">
-                <h2>{t('Вас ждут в путешествии')}</h2>
-                <p>
-                  {t(
-                    'Фотографии и записи будут доступны вам за указанные даты.',
-                  )}
-                </p>
+                <h2>{t('trip.youAreInvitedOnATrip')}</h2>
+                <p>{t('trip.photosAndEntriesWillBeAvailableTo')}</p>
                 {user ? (
                   <FeedbackButton
                     className="primary"
@@ -842,7 +851,7 @@ function ArchiveContent({
                       })
                     }
                   >
-                    {t('Присоединиться')}
+                    {t('trip.joinTrip')}
                     <Icon name="arrow" />
                   </FeedbackButton>
                 ) : (
@@ -856,37 +865,33 @@ function ArchiveContent({
         <main id="main-content" tabIndex={-1} className="welcome">
           <PageFeedback />
           <section className="welcome-story">
-            <span className="eyebrow">{t('ВАШИ ПОЕЗДКИ. ВАШИ ИСТОРИИ.')}</span>
+            <span className="eyebrow">{t('trip.yourTripsYourStories')}</span>
             <h1>
-              {t('У каждого места')}
+              {t('trip.everyPlace')}
               <br />
-              {t('есть своя')} <em>{t('история.')}</em>
+              {t('trip.hasItsOwn')} <em>{t('trip.story')}</em>
             </h1>
-            <p>
-              {t(
-                'Соберите фотографии, маршруты и маленькие открытия в одном архиве. И разделите воспоминания с теми, кто был рядом.',
-              )}
-            </p>
+            <p>{t('trip.bringPhotosRoutesAndLittleDiscoveriesInto')}</p>
             <WelcomeSlideshow />
             <div className="welcome-details">
               <span>
                 <Icon name="cloud" />
-                {t('Оригиналы на вашем Диске')}
+                {t('trip.originalsStayOnYourDrive')}
               </span>
               <span>
                 <Icon name="users" />
-                {t('Путешествуйте вместе')}
+                {t('trip.travelTogether')}
               </span>
             </div>
           </section>
           <section className="auth panel">
             <LogoMark className="auth-logo" />
-            <span className="eyebrow">{t('НАЧНИТЕ СВОЮ КОЛЛЕКЦИЮ')}</span>
-            <h2>{register ? t('Добро пожаловать') : t('Рады вас видеть')}</h2>
+            <span className="eyebrow">{t('trip.startYourCollection')}</span>
+            <h2>{register ? t('trip.welcome') : t('trip.goodToSeeYou')}</h2>
             <p className="muted">
               {register
-                ? t('Впереди ещё столько мест.')
-                : t('Войдите, чтобы вернуться к своим историям.')}
+                ? t('trip.soManyPlacesStillToDiscover')
+                : t('trip.signInToReturnToYourStories')}
             </p>
             {authForm}
           </section>
@@ -894,37 +899,33 @@ function ArchiveContent({
       ) : guest && !trip ? (
         <main id="main-content" tabIndex={-1} className="invite-page">
           <PageFeedback />
-          <h1>{t('Ссылка недоступна')}</h1>
-          <p>
-            {t(
-              'Возможно, владелец отозвал гостевой доступ или заменил ссылку.',
-            )}
-          </p>
-          <a href="/">{t('На главную →')}</a>
+          <h1>{t('trip.thisLinkIsUnavailable')}</h1>
+          <p>{t('trip.theOwnerMayHaveRevokedGuestAccess')}</p>
+          <a href="/">{t('trip.goHome')}</a>
         </main>
       ) : !trip ? (
         <main id="main-content" tabIndex={-1} className="dashboard">
           <PageFeedback />
           <div className="page-intro">
             <div>
-              <span className="eyebrow">{t('ЛИЧНАЯ КОЛЛЕКЦИЯ')}</span>
+              <span className="eyebrow">{t('trip.personalCollection')}</span>
               <h1>
-                {t('Ваши путешествия')}
+                {t('trip.yourTravels')}
                 <span className="brand-dot">.</span>
               </h1>
-              <p>{t('Большие маршруты и маленькие открытия — всё здесь.')}</p>
+              <p>{t('trip.longJourneysAndLittleDiscoveriesAllIn')}</p>
             </div>
             <FeedbackButton
               className="primary"
               onClick={() => setModal('create')}
             >
               <Icon name="plus" />
-              {t('Новая поездка')}
+              {t('trip.newTrip')}
             </FeedbackButton>
           </div>
           {user && <Friends key={user.id} viewerId={user.id} compact />}
           <div className="section-line">
-            <span>{t('ВСЕ ПУТЕШЕСТВИЯ')}</span>
+            <span>{t('trip.allTrips')}</span>
             <span>{String(trips.length).padStart(2, '0')}</span>
           </div>
           {trips.length ? (
@@ -951,7 +952,7 @@ function ArchiveContent({
                         {trip.destination}
                       </span>
                       <span>
-                        {trip.media_count} {t('кадров')}{' '}
+                        {trip.media_count} {t('trip.moments')}{' '}
                         <Icon name="arrow" size={18} />
                       </span>
                     </div>
@@ -967,19 +968,19 @@ function ArchiveContent({
                 <span className="orbit orbit-two" />
               </div>
               <span className="eyebrow">
-                {t('ПЕРВАЯ СТРАНИЦА ВАШЕГО АРХИВА')}
+                {t('trip.theFirstPageOfYourArchive')}
               </span>
-              <h2>{t('А куда мы отправимся?')}</h2>
+              <h2>{t('trip.whereShallWeGo')}</h2>
               <p>
-                {t('Создайте поездку, выберите папку на Яндекс Диске')}
+                {t('trip.createATripChooseAYandexDisk')}
                 <br />
-                {t('и пригласите тех, с кем хочется разделить историю.')}
+                {t('trip.andInviteThePeopleYouWantTo')}
               </p>
               <FeedbackButton
                 className="secondary"
                 onClick={() => setModal('create')}
               >
-                {t('Создать первую поездку')}
+                {t('trip.createYourFirstTrip')}
                 <Icon name="arrow" />
               </FeedbackButton>
             </section>
@@ -987,14 +988,12 @@ function ArchiveContent({
           <aside className="archive-note">
             <Icon name="cloud" />
             <div>
-              <strong>{t('Воспоминания здесь. Оригиналы — у вас.')}</strong>
-              <p>
-                {t(
-                  'Подключайте папки Яндекс Диска. Архив собирает фотографии и видео, сохраняя оригиналы в вашем облаке.',
-                )}
-              </p>
+              <strong>{t('trip.memoriesHereOriginalsWithYou')}</strong>
+              <p>{t('trip.connectYandexDiskFoldersTheArchiveBrings')}</p>
             </div>
-            <span className="note-label">{t('БЕРЕЖНО К ВАШЕМУ АРХИВУ')}</span>
+            <span className="note-label">
+              {t('trip.yourMemoriesTakenCareOf')}
+            </span>
           </aside>
         </main>
       ) : (
@@ -1036,7 +1035,7 @@ function ArchiveContent({
               />
               {trip.role === 'member' && (
                 <span className="pill">
-                  {t('Ваш период:')} {date(trip.from)} — {date(trip.to)}
+                  {t('trip.yourDates')} {date(trip.from)} — {date(trip.to)}
                 </span>
               )}
             </div>
@@ -1044,19 +1043,19 @@ function ArchiveContent({
               <strong>
                 {data?.media.filter((m: Row) => !m.hidden).length || 0}
               </strong>
-              <span>{t('ФОТО И ВИДЕО')}</span>
+              <span>{t('trip.photosVideos')}</span>
               <Icon name="compass" size={42} />
             </div>
           </div>
           <div className="tabbar">
-            <nav aria-label={t('Разделы поездки')}>
+            <nav aria-label={t('trip.tripSections')}>
               {[
-                ['gallery', 'photo', t('Галерея')],
-                ['places', 'compass', t('Открытые места')],
-                ['map', 'pin', t('Карта')],
-                ['notes', 'book', t('Дневник')],
+                ['gallery', 'photo', t('trip.gallery')],
+                ['places', 'compass', t('common.discoveredPlaces')],
+                ['map', 'pin', t('trip.map')],
+                ['notes', 'book', t('trip.journal')],
                 ...(!guest
-                  ? [['settings', 'settings', t('Участники и Диски')]]
+                  ? [['settings', 'settings', t('trip.membersDrives')]]
                   : []),
               ].map(([key, icon, title]) => (
                 <FeedbackButton
@@ -1087,15 +1086,15 @@ function ArchiveContent({
                       setNotice(
                         t(
                           result.failed
-                            ? 'Не все фотографии удалось загрузить. Попробуй позже.'
-                            : 'Архив обновлён',
+                            ? 'trip.somePhotosCouldNotBeLoadedPlease'
+                            : 'trip.archiveRefreshed',
                         ),
                       );
                     })
                   }
                 >
                   <Icon name="refresh" size={16} />
-                  {t('Загрузить новые фотографии')}
+                  {t('trip.loadNewPhotos')}
                 </FeedbackButton>
               </div>
             )}
@@ -1115,10 +1114,10 @@ function ArchiveContent({
               <div className="gallery-toolbar">
                 <div className="segmented">
                   {[
-                    ['all', t('Все кадры')],
-                    ['photo', t('Фото')],
-                    ['video', t('Видео')],
-                    ...(!guest ? [['favorites', t('Избранное')]] : []),
+                    ['all', t('trip.allMoments')],
+                    ['photo', t('trip.photos')],
+                    ['video', t('trip.videos')],
+                    ...(!guest ? [['favorites', t('trip.favorites')]] : []),
                   ].map(([key, label]) => (
                     <FeedbackButton
                       key={key}
@@ -1194,13 +1193,9 @@ function ArchiveContent({
                   />
                   <p className="muted map-caption">
                     {points.length}{' '}
-                    {t(
-                      'кадров с координатами · Нажмите на точку, чтобы открыть фотографию.',
-                    )}
+                    {t('trip.photosWithCoordinatesSelectAPointTo')}
                     {!points.length &&
-                      t(
-                        ' Координаты берутся из EXIF JPEG. Автор также может указать их вручную в карточке кадра.',
-                      )}
+                      t('trip.coordinatesComeFromExifMetadataTheAuthor')}
                   </p>
                 </>
               ) : visible.length ? (
@@ -1226,8 +1221,8 @@ function ArchiveContent({
                         aria-label={
                           t(
                             m.kind === 'video'
-                              ? 'Открыть видео'
-                              : 'Открыть фото',
+                              ? 'common.openVideo'
+                              : 'common.openPhoto',
                           ) +
                           ': ' +
                           (m.title || m.name.replace(/\.[^.]+$/, '')) +
@@ -1240,7 +1235,7 @@ function ArchiveContent({
                       >
                         {m.hidden ? (
                           <div className="photo-fallback">
-                            {t('Скрытая фотография')}
+                            {t('trip.hiddenPhoto')}
                           </div>
                         ) : (
                           <MediaPreview
@@ -1257,7 +1252,9 @@ function ArchiveContent({
                           />
                         )}
                         {m.kind === 'video' && (
-                          <span className="video-badge">▶ {t('Видео')}</span>
+                          <span className="video-badge">
+                            ▶ {t('trip.videos')}
+                          </span>
                         )}
                         <span className="photo-overlay">
                           <strong className="photo-filename">
@@ -1274,8 +1271,8 @@ function ArchiveContent({
                         <button
                           type="button"
                           className="gallery-jump-button"
-                          title={t('Перейти к месту в галерее')}
-                          aria-label={t('Перейти к месту в галерее')}
+                          title={t('trip.goToThisFrameInTheGallery')}
+                          aria-label={t('trip.goToThisFrameInTheGallery')}
                           onClick={() => {
                             setGalleryTarget(m.id);
                             setFilter('all');
@@ -1326,54 +1323,50 @@ function ArchiveContent({
                   <Icon name="photo" size={46} />
                   <h2>
                     {filter === 'favorites'
-                      ? t('Избранных кадров пока нет')
+                      ? t('trip.noFavoritesYet')
                       : data?.media.length
-                        ? t('В этом фильтре пока нет кадров')
+                        ? t('trip.noPhotosMatchTheseFiltersYet')
                         : !guest && data?.importStatus?.sourceCount
                           ? t(
                               importing
-                                ? 'Собираем фотографии поездки'
+                                ? 'trip.gatheringYourTripPhotos'
                                 : data.importStatus.disconnected
-                                  ? 'Аккаунт Яндекса отключён'
+                                  ? 'common.yandexAccountDisconnected'
                                   : data.importStatus.failed
-                                    ? 'Не удалось синхронизировать папку'
+                                    ? 'trip.couldNotSynchronizeTheFolder'
                                     : data.importStatus.pendingApproval
-                                      ? 'Ожидаем одобрения владельца'
-                                      : 'Папка подключена',
+                                      ? 'trip.waitingForOwnerApproval'
+                                      : 'trip.folderConnected',
                             )
-                          : t('История начинается с первого кадра')}
+                          : t('trip.everyStoryStartsWithAFirstPhoto')}
                   </h2>
                   <p>
                     {filter === 'favorites'
-                      ? t(
-                          'Отмечайте кадры звёздочкой, чтобы собрать их здесь. Проверьте также выбранный день.',
-                        )
+                      ? t('trip.starFramesToCollectThemHereAlso')
                       : data?.media.length
-                        ? t('Измените фильтр или выберите другой день.')
+                        ? t('trip.changeTheFilterOrChooseAnotherDay')
                         : guest
-                          ? t('В поездке пока нет опубликованных фотографий.')
+                          ? t('trip.thisTripHasNoPublishedPhotosYet')
                           : data?.importStatus?.sourceCount
                             ? t(
                                 importing
-                                  ? 'Папка уже подключена. Фотографии и видео появятся здесь автоматически после синхронизации.'
+                                  ? 'trip.yourFolderIsConnectedPhotosAndVideos'
                                   : data.importStatus.disconnected
-                                    ? 'Подключите Яндекс снова в профиле, чтобы получить доступ к фотографиям.'
+                                    ? 'trip.reconnectYandexInYourProfileToAccess'
                                     : data.importStatus.failed
-                                      ? 'Папка подключена, но при загрузке произошла ошибка. Проверьте её статус в разделе «Участники и Диски».'
+                                      ? 'trip.theFolderIsConnectedButSynchronizationFailed'
                                       : data.importStatus.pendingApproval
-                                        ? 'Папка добавлена. Фотографии появятся после одобрения владельцем поездки.'
-                                        : 'В папке пока не найдены фотографии за даты поездки. Проверьте период и статус синхронизации.',
+                                        ? 'trip.theFolderHasBeenAddedPhotosWill'
+                                        : 'trip.noPhotosWereFoundInTheFolder',
                               )
-                            : t(
-                                'Подключите папку на Яндекс Диске. Фотографии и видео за даты поездки появятся после синхронизации.',
-                              )}
+                            : t('trip.connectAYandexDiskFolderPhotosAnd')}
                   </p>
                   {!guest &&
                     !data?.media.length &&
                     (importing ? (
                       <p className="analysis-status" role="status">
                         <span className="spinner" />
-                        {t('Синхронизация выполняется…')}
+                        {t('trip.synchronizing')}
                       </p>
                     ) : (
                       <FeedbackButton
@@ -1383,8 +1376,8 @@ function ArchiveContent({
                         <Icon name="cloud" />
                         {t(
                           data?.importStatus?.sourceCount
-                            ? 'Проверить синхронизацию'
-                            : 'Подключить папку',
+                            ? 'trip.checkSynchronization'
+                            : 'trip.connectFolder',
                         )}
                       </FeedbackButton>
                     ))}
@@ -1449,7 +1442,7 @@ function ArchiveContent({
                         encodeURIComponent(photo.revision || '1')
                     : undefined;
                 }}
-                onPhotoSelect={(id, placeUrl) => {
+                onPhotoSelect={(_id, placeUrl) => {
                   const photo = placePhotoGroups.get(placeUrl)?.[0];
                   if (photo) openMedia(photo, placeUrl);
                 }}
@@ -1504,11 +1497,9 @@ function ArchiveContent({
                 ) : (
                   <div className="empty">
                     <Icon name="book" size={42} />
-                    <h2>{t('То, что не попало в кадр')}</h2>
+                    <h2>{t('trip.whatTheCameraMissed')}</h2>
                     <p>
-                      {t(
-                        'Сохраните впечатления, случайные встречи и любимые адреса.',
-                      )}
+                      {t('trip.saveYourImpressionsChanceEncountersAndFavorite')}
                     </p>
                   </div>
                 )}
@@ -1521,13 +1512,13 @@ function ArchiveContent({
                     void action(async () => {
                       await api('trips/' + trip.id + '/notes', 'POST', input);
                       await refresh();
-                      setNotice(t('Запись сохранена'));
+                      setNotice('trip.entrySaved');
                     });
                   }}
                 >
-                  <h2>{t('Новая история')}</h2>
+                  <h2>{t('trip.newStory')}</h2>
                   <Field
-                    label={t('День поездки')}
+                    label={t('common.tripDay')}
                     name="day"
                     type="date"
                     min={trip.from}
@@ -1536,17 +1527,17 @@ function ArchiveContent({
                     required
                   />
                   <label className="field">
-                    <span>{t('Что запомнилось?')}</span>
+                    <span>{t('trip.whatWillYouRemember')}</span>
                     <textarea
                       name="text"
                       rows={7}
                       required
                       maxLength={5000}
-                      placeholder={t('Этот день был особенным, потому что…')}
+                      placeholder={t('trip.thisDayWasSpecialBecause')}
                     />
                   </label>
                   <FeedbackButton disabled={busy} className="primary">
-                    {t('Сохранить запись')}
+                    {t('trip.saveEntry')}
                   </FeedbackButton>
                 </FeedbackForm>
               )}
@@ -1559,16 +1550,14 @@ function ArchiveContent({
                   <div className="panel-title">
                     <div>
                       <span className="eyebrow">
-                        {t('ИСТОЧНИКИ ВОСПОМИНАНИЙ')}
+                        {t('trip.sourcesOfMemories')}
                       </span>
-                      <h2>{t('Яндекс Диск')}</h2>
+                      <h2>{t('common.yandexDisk')}</h2>
                     </div>
                     <Icon name="cloud" size={28} />
                   </div>
                   <p className="muted">
-                    {t(
-                      'Индексируются только выбранные папки и даты поездки. Для папки участника нужно одобрение владельца.',
-                    )}
+                    {t('trip.onlySelectedFoldersAndTripDatesAre')}
                   </p>
                   <div className="source-list">
                     {sources.length ? (
@@ -1585,21 +1574,22 @@ function ArchiveContent({
                               }
                             >
                               {s.approved
-                                ? t('Подключено')
-                                : t('Ожидает одобрения')}
+                                ? t('trip.connected')
+                                : t('trip.awaitingApproval')}
                             </span>
                             <small>
                               {s.last_sync
-                                ? t('Обновлено ') +
-                                  new Date(s.last_sync).toLocaleString(
-                                    document.documentElement.lang === 'en'
-                                      ? 'en-GB'
-                                      : 'ru-RU',
-                                  )
-                                : t('Ещё не синхронизировано')}
+                                ? t('sync.updatedAt', {
+                                    date: new Date(s.last_sync).toLocaleString(
+                                      document.documentElement.lang === 'en'
+                                        ? 'en-GB'
+                                        : 'ru-RU',
+                                    ),
+                                  })
+                                : t('trip.notSyncedYet')}
                             </small>
                             {s.error && (
-                              <p className="inline-error">{t(s.error)}</p>
+                              <p className="inline-error">{m(s.error)}</p>
                             )}
                           </div>
                           <div className="source-actions">
@@ -1620,14 +1610,14 @@ function ArchiveContent({
                                   })
                                 }
                               >
-                                {t('Одобрить')}
+                                {t('trip.approve')}
                               </FeedbackButton>
                             )}
                             {!!s.approved && (
                               <FeedbackButton
                                 className="icon-button"
-                                title={t('Синхронизировать папку')}
-                                aria-label={t('Синхронизировать папку')}
+                                title={t('trip.syncFolder')}
+                                aria-label={t('trip.syncFolder')}
                                 disabled={busy}
                                 onClick={() =>
                                   void action(async () => {
@@ -1644,10 +1634,12 @@ function ArchiveContent({
                                     await refresh();
                                     setNotice(
                                       r.busy
-                                        ? t('Синхронизация уже идёт')
-                                        : t('Синхронизация завершена: ') +
-                                            r.count +
-                                            t(' файлов'),
+                                        ? t(
+                                            'trip.synchronizationIsAlreadyRunning',
+                                          )
+                                        : t('sync.complete', {
+                                            count: r.count,
+                                          }),
                                     );
                                   })
                                 }
@@ -1660,7 +1652,7 @@ function ArchiveContent({
                       ))
                     ) : (
                       <p className="empty-small">
-                        {t('Пока не подключено ни одной папки.')}
+                        {t('trip.noFoldersConnectedYet')}
                       </p>
                     )}
                   </div>
@@ -1674,30 +1666,26 @@ function ArchiveContent({
                     }}
                   >
                     <Icon name="plus" />
-                    {t('Подключить папку')}
+                    {t('trip.connectFolder')}
                   </FeedbackButton>
                   <p className="fine">
-                    {t(
-                      'Автоматическое обновление — каждые 15 минут при запущенном процессе синхронизации.',
-                    )}
+                    {t('trip.automaticUpdatesRunEvery15MinutesWhile')}
                   </p>
                 </section>
                 {isOwner && (
                   <section className="panel share-panel">
                     <div>
                       <span className="eyebrow">
-                        {t('РАЗДЕЛИТЬ ВОСПОМИНАНИЯ')}
+                        {t('trip.shareYourMemories')}
                       </span>
-                      <h2>{t('Гостевой просмотр')}</h2>
+                      <h2>{t('trip.guestView')}</h2>
                       <p className="muted">
-                        {t(
-                          'Обладатель секретной ссылки увидит опубликованные фотографии, карту и дневник всей поездки без регистрации.',
-                        )}
+                        {t('trip.anyoneWithTheSecretLinkCanView')}
                       </p>
                       <span className="status">
                         {trip.sharing
-                          ? t('Ссылка активна')
-                          : t('Доступ по ссылке выключен')}
+                          ? t('trip.linkIsActive')
+                          : t('trip.linkAccessIsOff')}
                       </span>
                     </div>
                     <div className="stack">
@@ -1721,8 +1709,8 @@ function ArchiveContent({
                       >
                         <Icon name="link" />
                         {trip.sharing
-                          ? t('Заменить ссылку')
-                          : t('Создать ссылку')}
+                          ? t('common.replaceLink')
+                          : t('trip.createLink')}
                       </FeedbackButton>
                       {trip.sharing && (
                         <FeedbackButton
@@ -1734,11 +1722,11 @@ function ArchiveContent({
                                 enabled: false,
                               });
                               await refresh();
-                              setNotice(t('Гостевая ссылка отозвана'));
+                              setNotice('trip.guestLinkRevoked');
                             })
                           }
                         >
-                          {t('Отозвать доступ')}
+                          {t('trip.revokeAccess')}
                         </FeedbackButton>
                       )}
                     </div>
@@ -1748,19 +1736,21 @@ function ArchiveContent({
               <section className="panel">
                 <div className="panel-title">
                   <div>
-                    <span className="eyebrow">{t('ЛЮДИ В ЭТОЙ ИСТОРИИ')}</span>
-                    <h2>{t('Участники')}</h2>
+                    <span className="eyebrow">
+                      {t('trip.thePeopleInThisStory')}
+                    </span>
+                    <h2>{t('trip.members')}</h2>
                   </div>
                   <Icon name="users" size={28} />
                 </div>
                 <div className="member">
                   <span className="avatar">
-                    {tripOwner?.name?.[0] || t('В')}
+                    {tripOwner?.name?.[0] || t('trip.o')}
                   </span>
                   <div>
-                    <strong>{tripOwner?.name || t('Владелец')}</strong>
+                    <strong>{tripOwner?.name || t('trip.owner')}</strong>
                     <p>
-                      {t('Владелец ·')} {period(trip)}
+                      {t('trip.ownerPrefix')} {period(trip)}
                     </p>
                   </div>
                 </div>
@@ -1771,7 +1761,7 @@ function ArchiveContent({
                       <strong>{m.name}</strong>
                       <p>
                         {date(m.start)} — {date(m.end)} ·{' '}
-                        {m.active ? t('Участник') : t('Покинул поездку')}
+                        {m.active ? t('trip.member') : t('trip.leftTheTrip')}
                       </p>
                     </div>
                     {isOwner && !!m.active && (
@@ -1782,7 +1772,7 @@ function ArchiveContent({
                           setModal('member:' + m.id);
                         }}
                       >
-                        {t('Изменить')}
+                        {t('trip.edit')}
                       </FeedbackButton>
                     )}
                   </div>
@@ -1796,14 +1786,14 @@ function ArchiveContent({
                     }}
                   >
                     <Icon name="plus" />
-                    {t('Пригласить участника')}
+                    {t('trip.inviteAMember')}
                   </FeedbackButton>
                 ) : (
                   <FeedbackButton
                     className="text-button danger"
                     onClick={() => setModal('leave')}
                   >
-                    {t('Выйти из поездки')}
+                    {t('trip.leaveTrip')}
                   </FeedbackButton>
                 )}
               </section>
@@ -1813,12 +1803,12 @@ function ArchiveContent({
       )}
       <footer>
         <Brand footer />
-        <p>{t('Не просто где вы были. А что вы чувствовали.')}</p>
-        <a href="/about">{t('О проекте')}</a>
+        <p>{t('common.moreThanWhereYouWentHowIt')}</p>
+        <a href="/about">{t('navigation.about')}</a>
       </footer>
       {modal === 'create' && (
         <Modal
-          title={t('Новое путешествие')}
+          title={t('trip.newJourney')}
           onClose={() => setModal('')}
           doubleBackdropClick
         >
@@ -1837,22 +1827,18 @@ function ArchiveContent({
         </Modal>
       )}
       {modal === 'source' && (
-        <Modal title={t('Подключить папку')} onClose={() => setModal('')}>
+        <Modal title={t('trip.connectFolder')} onClose={() => setModal('')}>
           <div className="stack">
-            <p className="muted">
-              {t(
-                'Выберите свой аккаунт и папку этой поездки. Её содержимое публикуется автоматически после одобрения.',
-              )}
-            </p>
+            <p className="muted">{t('trip.chooseYourAccountAndAFolderFor')}</p>
             <label className="field">
-              <span>{t('Аккаунт Яндекса')}</span>
+              <span>{t('common.yandexAccount')}</span>
               <select
                 value={account}
                 onChange={(e) =>
                   void action(() => browse(e.target.value, 'disk:/'))
                 }
               >
-                <option value="">{t('Выберите аккаунт')}</option>
+                <option value="">{t('trip.chooseAnAccount')}</option>
                 {accounts.map((a) => (
                   <option value={a.id} key={a.id}>
                     {a.label}
@@ -1868,13 +1854,11 @@ function ArchiveContent({
                 }
                 className="text-button"
               >
-                {t('+ Подключить другой аккаунт')}
+                {t('trip.connectAnotherAccount')}
               </a>
             ) : !accounts.length ? (
               <p className="fine">
-                {t(
-                  'Подключение Яндекс Диска ещё не настроено. Обратитесь к владельцу приложения; пока поездку можно создать вручную.',
-                )}
+                {t('common.yandexDiskIsNotConfiguredYetContact')}
               </p>
             ) : null}
             {account && (
@@ -1914,8 +1898,8 @@ function ArchiveContent({
                     <p className="folder-empty">
                       {t(
                         folderOffset !== null
-                          ? 'На этой странице подпапок нет. Продолжите поиск.'
-                          : 'Вложенных папок нет.',
+                          ? 'common.noSubfoldersOnThisPageKeepSearching'
+                          : 'trip.noSubfolders',
                       )}
                     </p>
                   )}
@@ -1934,7 +1918,7 @@ function ArchiveContent({
                   aria-live="polite"
                   aria-atomic="true"
                 >
-                  {t(folderStatus)}
+                  {m(folderStatus)}
                 </div>
                 <FeedbackButton
                   className="primary"
@@ -1949,13 +1933,15 @@ function ArchiveContent({
                       setModal('');
                       setNotice(
                         isOwner
-                          ? t('Папка подключена. Нажмите синхронизацию.')
-                          : t('Папка отправлена владельцу на одобрение'),
+                          ? t(
+                              'trip.folderConnectedStartSynchronizationToImportPhotos',
+                            )
+                          : t('trip.folderSentToTheOwnerForApproval'),
                       );
                     })
                   }
                 >
-                  {t('Выбрать эту папку')}
+                  {t('common.selectThisFolder')}
                   <Icon name="arrow" />
                 </FeedbackButton>
               </>
@@ -1967,20 +1953,16 @@ function ArchiveContent({
         <Modal
           title={
             modal === 'invite'
-              ? t('Пригласить в путешествие')
-              : t('Период участия')
+              ? t('trip.inviteToThisTrip')
+              : t('trip.participationDates')
           }
           onClose={() => setModal('')}
         >
           {generated ? (
             <div className="stack">
-              <p>
-                {t(
-                  'Приглашение действует 7 дней и принимается одним участником.',
-                )}
-              </p>
+              <p>{t('trip.theInvitationIsValidFor7Days')}</p>
               <input
-                aria-label={t('Ссылка приглашения')}
+                aria-label={t('trip.invitationLink')}
                 value={generated}
                 readOnly
                 onFocus={(e) => e.target.select()}
@@ -1989,7 +1971,7 @@ function ArchiveContent({
                 className="primary"
                 onClick={() => void copy(generated)}
               >
-                {t('Скопировать ссылку')}
+                {t('common.copyLink')}
               </FeedbackButton>
             </div>
           ) : (
@@ -2016,11 +1998,9 @@ function ArchiveContent({
                 });
               }}
             >
-              <p className="muted">
-                {t('Участнику доступны фото и записи только за этот период.')}
-              </p>
+              <p className="muted">{t('trip.theMemberCanOnlySeePhotosAnd')}</p>
               <Field
-                label={t('С какой даты')}
+                label={t('trip.from')}
                 name="start"
                 type="date"
                 defaultValue={
@@ -2032,7 +2012,7 @@ function ArchiveContent({
                 required
               />
               <Field
-                label={t('По какую дату')}
+                label={t('trip.through')}
                 name="end"
                 type="date"
                 defaultValue={
@@ -2044,7 +2024,9 @@ function ArchiveContent({
                 required
               />
               <FeedbackButton className="primary" disabled={busy}>
-                {modal === 'invite' ? t('Создать приглашение') : t('Сохранить')}
+                {modal === 'invite'
+                  ? t('trip.createInvitation')
+                  : t('common.save')}
               </FeedbackButton>
               {modal.startsWith('member:') && (
                 <FeedbackButton
@@ -2062,7 +2044,7 @@ function ArchiveContent({
                     })
                   }
                 >
-                  {t('Завершить участие')}
+                  {t('trip.endParticipation')}
                 </FeedbackButton>
               )}
             </FeedbackForm>
@@ -2070,15 +2052,11 @@ function ArchiveContent({
         </Modal>
       )}
       {modal === 'share' && (
-        <Modal title={t('Ссылка на вашу историю')} onClose={() => setModal('')}>
+        <Modal title={t('trip.aLinkToYourStory')} onClose={() => setModal('')}>
           <div className="stack">
-            <p>
-              {t(
-                'Сохраните ссылку: повторно её можно только заменить. Предыдущая ссылка перестаёт работать при замене.',
-              )}
-            </p>
+            <p>{t('trip.saveThisLinkLaterYouCanOnly')}</p>
             <input
-              aria-label={t('Гостевая ссылка')}
+              aria-label={t('trip.guestLink')}
               value={generated}
               readOnly
               onFocus={(e) => e.target.select()}
@@ -2087,19 +2065,15 @@ function ArchiveContent({
               className="primary"
               onClick={() => void copy(generated)}
             >
-              {t('Скопировать ссылку')}
+              {t('common.copyLink')}
             </FeedbackButton>
           </div>
         </Modal>
       )}
       {modal === 'leave' && (
-        <Modal title={t('Выйти из поездки?')} onClose={() => setModal('')}>
+        <Modal title={t('trip.leaveThisTrip')} onClose={() => setModal('')}>
           <div className="stack">
-            <p>
-              {t(
-                'Опубликованные кадры останутся в истории поездки. Вы сможете скрыть свои файлы в профиле. Синхронизация ваших папок приостановится.',
-              )}
-            </p>
+            <p>{t('trip.publishedPhotosWillRemainInTheTrip')}</p>
             <FeedbackButton
               className="primary"
               disabled={busy}
@@ -2114,7 +2088,7 @@ function ArchiveContent({
                 })
               }
             >
-              {t('Выйти из поездки')}
+              {t('trip.leaveTrip')}
             </FeedbackButton>
           </div>
         </Modal>
@@ -2193,7 +2167,7 @@ function ArchiveContent({
                 ref={placePrevious}
                 type="button"
                 className="icon-button place-photo-previous"
-                aria-label={t('Предыдущее фото этого места')}
+                aria-label={t('trip.previousPhotoOfThisPlace')}
                 onClick={() => navigatePlacePhoto(-1)}
               >
                 <Icon name="chevron-left" />
@@ -2202,7 +2176,7 @@ function ArchiveContent({
             <div className="media-viewer">
               {activeMedia.hidden ? (
                 <div className="empty">
-                  <p>{t('Файл скрыт из поездки')}</p>
+                  <p>{t('trip.thisFileIsHiddenFromTheTrip')}</p>
                 </div>
               ) : activeMedia.kind === 'video' ? (
                 ['video/mp4', 'video/webm', 'video/ogg'].includes(
@@ -2217,9 +2191,7 @@ function ArchiveContent({
                 ) : (
                   <div className="empty">
                     <Icon name="photo" size={48} />
-                    <p>
-                      {t('Этот формат можно скачать и открыть на устройстве.')}
-                    </p>
+                    <p>{t('trip.youCanDownloadThisFormatAndOpen')}</p>
                   </div>
                 )
               ) : (
@@ -2254,7 +2226,7 @@ function ArchiveContent({
                   ref={placeNext}
                   type="button"
                   className="icon-button place-photo-next"
-                  aria-label={t('Следующее фото этого места')}
+                  aria-label={t('trip.nextPhotoOfThisPlace')}
                   onClick={() => navigatePlacePhoto(1)}
                 >
                   <Icon name="chevron-right" />
@@ -2266,7 +2238,8 @@ function ArchiveContent({
                 role="status"
                 aria-live="polite"
               >
-                {t('Фото')} {viewerPlaceIndex + 1} / {viewerPlacePhotos.length}
+                {t('trip.photos')} {viewerPlaceIndex + 1} /{' '}
+                {viewerPlacePhotos.length}
               </span>
             )}
           </div>
@@ -2307,7 +2280,7 @@ function ArchiveContent({
                 className="secondary"
                 href={mediaPath(activeMedia, 'download')}
               >
-                {t('Скачать оригинал ↓')}
+                {t('common.downloadOriginal')}
               </a>
             )}
             {activeMedia.user_id === user?.id && !guest && (
@@ -2328,8 +2301,8 @@ function ArchiveContent({
                 }
               >
                 {activeMedia.hidden
-                  ? t('Показать в поездке')
-                  : t('Скрыть мой кадр')}
+                  ? t('trip.showInTrip')
+                  : t('common.hideMyPhoto')}
               </FeedbackButton>
             )}
           </div>
@@ -2339,9 +2312,9 @@ function ArchiveContent({
             ).length && (
               <section
                 className="confirmed-photo-places"
-                aria-label={t('Места на фотографии')}
+                aria-label={t('trip.placesInThisPhoto')}
               >
-                <h3>{t('Места на фотографии')}</h3>
+                <h3>{t('trip.placesInThisPhoto')}</h3>
                 {data.places
                   .filter((place: Row) => place.media_id === activeMedia.id)
                   .map((place: Row) => (
@@ -2436,7 +2409,7 @@ function ArchiveContent({
                                       place.lon,
                                     ),
                                 )}{' '}
-                                {t('м от кадра')}
+                                {t('common.mFromThePhoto')}
                               </span>
                             )}
                           <button
@@ -2449,7 +2422,7 @@ function ArchiveContent({
                               openTab('places');
                             }}
                           >
-                            {t('Перейти к карточке места')} →
+                            {t('trip.goToThePlaceCard')} →
                           </button>
                           <ConfirmedPlaceDetails
                             highlighted={mediaFocusPlaceUrl === place.url}
@@ -2495,27 +2468,27 @@ function ArchiveContent({
                               'media/' + activeMedia.id + '/places',
                             );
                             setSuggestions(result.suggestions);
-                            setNotice(t('Места рядом загружены'));
+                            setNotice('trip.nearbyPlacesLoaded');
                           });
                       }}
                     >
                       <Icon name="pin" />
                       {t(
                         placesOpen
-                          ? 'Скрыть места'
+                          ? 'trip.hidePlaces'
                           : data?.places.some(
                                 (place: Row) =>
                                   place.media_id === activeMedia.id,
                               )
-                            ? 'Добавить ещё место'
-                            : 'Что рядом?',
+                            ? 'trip.addAnotherPlace'
+                            : 'trip.whatSNearby',
                       )}
                     </FeedbackButton>
                     <button
                       type="button"
                       className="icon-button place-tools-chevron"
                       aria-label={t(
-                        placesOpen ? 'Скрыть места' : 'Показать места',
+                        placesOpen ? 'trip.hidePlaces' : 'trip.showPlaces',
                       )}
                       aria-expanded={placesOpen}
                       aria-controls="photo-place-suggestions"
@@ -2575,7 +2548,8 @@ function ArchiveContent({
                               <span>
                                 {s.title}
                                 <small>
-                                  {Math.round(s.dist)} {t('м от кадра')}
+                                  {Math.round(s.dist)}{' '}
+                                  {t('common.mFromThePhoto')}
                                 </small>
                               </span>
                               {(isOwner ||
@@ -2602,12 +2576,14 @@ function ArchiveContent({
                                         ),
                                       );
                                       setNotice(
-                                        t('Место и краткое описание добавлены'),
+                                        t(
+                                          'trip.placeAndItsShortDescriptionAdded',
+                                        ),
                                       );
                                     })
                                   }
                                 >
-                                  {t('Подтвердить')}
+                                  {t('trip.confirm')}
                                 </FeedbackButton>
                               )}
                             </div>

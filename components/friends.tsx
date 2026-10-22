@@ -1,4 +1,5 @@
 'use client';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
@@ -10,9 +11,13 @@ export type Person = {
   username: string;
   hasAvatar: boolean;
 };
+
 type Status = 'self' | 'none' | 'incoming' | 'outgoing' | 'friends';
+
 type Lists = { friends: Person[]; incoming: Person[]; outgoing: Person[] };
+
 const empty: Lists = { friends: [], incoming: [], outgoing: [] };
+
 export function PersonAvatar({ person }: { person: Person }) {
   const [failed, setFailed] = useState(false);
   return (
@@ -30,6 +35,7 @@ export function PersonAvatar({ person }: { person: Person }) {
     </span>
   );
 }
+
 export function FriendshipAction({
   person,
   viewerId,
@@ -41,10 +47,10 @@ export function FriendshipAction({
   initial?: Status;
   onChange?: () => void;
 }) {
-  const { t } = useLocale(),
-    [status, setStatus] = useState<Status | undefined>(initial),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
+  const { t, m } = useLocale();
+  const [status, setStatus] = useState<Status | undefined>(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => {
     setStatus(initial);
     if (initial) return;
@@ -79,7 +85,7 @@ export function FriendshipAction({
   if (person.id === viewerId)
     return (
       <a className="secondary" href="/profile">
-        {t('Редактировать профиль')}
+        {t('friends.editProfile')}
       </a>
     );
   return (
@@ -90,7 +96,7 @@ export function FriendshipAction({
           disabled={busy}
           onClick={() => void change('POST')}
         >
-          {t('Добавить в друзья')}
+          {t('friends.addFriend')}
         </button>
       )}
       {status === 'incoming' && (
@@ -100,49 +106,49 @@ export function FriendshipAction({
             disabled={busy}
             onClick={() => void change('PATCH')}
           >
-            {t('Принять заявку')}
+            {t('friends.acceptRequest')}
           </button>
           <button
             className="text-button"
             disabled={busy}
             onClick={() => void change('DELETE')}
           >
-            {t('Отклонить')}
+            {t('friends.decline')}
           </button>
         </>
       )}
       {status === 'outgoing' && (
         <>
-          <span className="fine">{t('Заявка отправлена')}</span>
+          <span className="fine">{t('friends.requestSent')}</span>
           <button
             className="text-button"
             disabled={busy}
             onClick={() => void change('DELETE')}
           >
-            {t('Отменить заявку')}
+            {t('friends.cancelRequest')}
           </button>
         </>
       )}
       {status === 'friends' && (
         <>
-          <span className="fine">{t('Вы друзья')}</span>
+          <span className="fine">{t('friends.youAreFriends')}</span>
           <button
             className="text-button"
             disabled={busy}
             onClick={() => void change('DELETE')}
           >
-            {t('Удалить из друзей')}
+            {t('friends.removeFriend')}
           </button>
         </>
       )}
       {!status && !error && (
         <span className="fine" role="status">
-          {t('Загружаем…')}
+          {t('common.loading')}
         </span>
       )}
       {error && (
         <p role="alert" className="friend-error">
-          {t(error)}{' '}
+          {m(error)}{' '}
           <button
             className="text-button"
             onClick={() => {
@@ -152,13 +158,14 @@ export function FriendshipAction({
                 .catch((e) => setError(e.message));
             }}
           >
-            {t('Повторить')}
+            {t('common.retry')}
           </button>
         </p>
       )}
     </div>
   );
 }
+
 export default function Friends({
   viewerId,
   compact = false,
@@ -166,14 +173,14 @@ export default function Friends({
   viewerId: string;
   compact?: boolean;
 }) {
-  const { t } = useLocale(),
-    [lists, setLists] = useState<Lists>(empty),
-    [ready, setReady] = useState(false),
-    [error, setError] = useState('');
-  const [query, setQuery] = useState(''),
-    [people, setPeople] = useState<Person[]>([]),
-    [searching, setSearching] = useState(false),
-    [searchError, setSearchError] = useState('');
+  const { t, m } = useLocale();
+  const [lists, setLists] = useState<Lists>(empty);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [people, setPeople] = useState<Person[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const load = useCallback(
     async (signal?: AbortSignal) => {
       try {
@@ -265,31 +272,31 @@ export default function Friends({
         (compact && lists.friends.length ? ' friends-compact-populated' : '')
       }
       id={compact ? undefined : 'friends'}
-      aria-label={t('Друзья')}
+      aria-label={t('friends.friends')}
     >
       <div className="friends-heading">
         <h2>
-          {t('Друзья')}
+          {t('friends.friends')}
           {ready && (
             <span className="friend-count">{lists.friends.length}</span>
           )}
         </h2>
         {compact && (
           <a className="text-button" href="/profile#friends">
-            {t('Все друзья')}
+            {t('common.allFriends')}
           </a>
         )}
       </div>
       {!ready && (
         <p className="fine" role="status">
-          {t('Загружаем друзей…')}
+          {t('friends.loadingFriends')}
         </p>
       )}
       {error && (
         <p role="alert">
-          {t(error)}{' '}
+          {m(error)}{' '}
           <button className="text-button" onClick={() => void load()}>
-            {t('Повторить')}
+            {t('common.retry')}
           </button>
         </p>
       )}
@@ -303,30 +310,26 @@ export default function Friends({
             </ul>
           ) : (
             <div className="friends-empty">
-              <p>
-                {t('Истории становятся ближе, когда есть с кем их разделить.')}
-              </p>
+              <p>{t('friends.storiesFeelCloserWhenYouHaveSomeone')}</p>
               {compact && (
-                <a href="/profile#find-people">{t('Найти друзей')}</a>
+                <a href="/profile#find-people">{t('friends.findFriends')}</a>
               )}
             </div>
           )}
           {compact && !!lists.incoming.length && (
             <a className="friend-pending" href="/profile#friends">
-              {t('Входящие заявки')}: {lists.incoming.length}
+              {t('friends.friendRequests')}: {lists.incoming.length}
             </a>
           )}
           {!compact && (
             <>
               <p className="fine friend-privacy">
-                {t(
-                  'Список друзей и заявки видны только тебе. Дружба не открывает доступ к поездкам.',
-                )}
+                {t('friends.onlyYouCanSeeYourFriendsAnd')}
               </p>
               {!!lists.incoming.length && (
                 <div className="friend-requests">
                   <h3>
-                    {t('Входящие заявки')}{' '}
+                    {t('friends.friendRequests')}{' '}
                     <span className="friend-count">
                       {lists.incoming.length}
                     </span>
@@ -338,7 +341,7 @@ export default function Friends({
               )}
               {!!lists.outgoing.length && (
                 <div className="friend-requests">
-                  <h3>{t('Отправленные заявки')}</h3>
+                  <h3>{t('friends.sentRequests')}</h3>
                   <ul className="friends-list">
                     {lists.outgoing.map((p) => row(p, 'outgoing'))}
                   </ul>
@@ -351,30 +354,30 @@ export default function Friends({
       {!compact && (
         <div className="friend-discovery">
           <div className="find-people" id="find-people">
-            <h3>{t('Найти друзей')}</h3>
+            <h3>{t('friends.findFriends')}</h3>
             <label className="field">
-              <span>{t('Имя или @юзернейм')}</span>
+              <span>{t('common.nameOrUsername')}</span>
               <input
                 type="search"
                 autoComplete="off"
                 value={query}
                 maxLength={80}
-                placeholder={t('Кого позовём в следующую историю?')}
+                placeholder={t('friends.whoWillJoinTheNextStory')}
                 onChange={(e) => setQuery(e.target.value)}
               />
             </label>
             {searching && (
               <p role="status" className="fine">
-                {t('Ищем людей…')}
+                {t('friends.findingPeople')}
               </p>
             )}
-            {searchError && <p role="alert">{t(searchError)}</p>}
+            {searchError && <p role="alert">{m(searchError)}</p>}
             {!searching &&
               !searchError &&
               query.trim().length >= 2 &&
               !people.length && (
                 <p className="fine">
-                  {t('Никого не нашли. Попробуй другой юзернейм.')}
+                  {t('friends.noMatchesTryAnotherUsername')}
                 </p>
               )}
             {people.length > 0 && (

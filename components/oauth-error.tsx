@@ -1,7 +1,9 @@
 'use client';
-import Brand, { HeaderBrand } from './brand';
+
+import { HeaderBrand } from './brand';
 import { useLocale, AppearanceControls } from './appearance';
 import { oauthErrors, type OAuthErrorReason } from '@/lib/oauth-errors';
+
 export default function OAuthError({
   reason,
   intent,
@@ -11,10 +13,10 @@ export default function OAuthError({
   intent: 'link' | 'login';
   returnPath: string;
 }) {
-  const { language } = useLocale();
-  const en = language === 'en';
+  const { t } = useLocale();
   const retry =
     '/api/auth/yandex?' + new URLSearchParams({ intent, returnTo: returnPath });
+
   return (
     <>
       <header className="topbar">
@@ -26,34 +28,26 @@ export default function OAuthError({
         style={{ maxWidth: 680, margin: '60px auto', padding: '0 24px' }}
       >
         <section className="panel stack" aria-labelledby="oauth-error-title">
-          <span className="eyebrow">
-            {en ? 'YANDEX CONNECTION' : 'ПОДКЛЮЧЕНИЕ ЯНДЕКСА'}
-          </span>
-          <h1 id="oauth-error-title">
-            {en
-              ? 'Connection not completed'
-              : 'Не удалось завершить подключение'}
-          </h1>
+          <span className="eyebrow">{t('oauth.connectionLabel')}</span>
+          <h1 id="oauth-error-title">{t('oauth.connectionIncomplete')}</h1>
           <p role="alert" className="inline-error">
-            {oauthErrors[reason][language]}
+            {t(oauthErrors[reason])}
           </p>
           <p className="fine">
-            {en ? 'Reason' : 'Причина'}: {reason}
+            {t('oauth.reason')}: {reason}
           </p>
           <a
             href={reason === 'account_link_required' ? '/' : retry}
             className="primary"
           >
-            {reason === 'account_link_required'
-              ? en
-                ? 'Sign in'
-                : 'Войти'
-              : en
-                ? 'Try connecting again'
-                : 'Повторить подключение'}
+            {t(
+              reason === 'account_link_required'
+                ? 'auth.signIn'
+                : 'oauth.retryConnection',
+            )}
           </a>
           <a href={returnPath} className="text-button">
-            {en ? 'Back to QuestKeeps' : 'Вернуться в QuestKeeps'}
+            {t('oauth.backToApp')}
           </a>
         </section>
       </main>

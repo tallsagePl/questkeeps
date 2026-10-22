@@ -1,7 +1,9 @@
 'use client';
+
 import { useRef, useEffect, useId, type ReactNode } from 'react';
 import { useLocale } from './appearance';
 import { FeedbackButton } from './feedback';
+
 export default function Modal({
   title,
   children,
@@ -99,7 +101,7 @@ export default function Modal({
         <h2 id={titleId}>{title}</h2>
         <FeedbackButton
           className="icon-button"
-          aria-label={t('Закрыть')}
+          aria-label={t('messages.close')}
           onClick={onClose}
         >
           <svg

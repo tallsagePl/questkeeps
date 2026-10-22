@@ -1,10 +1,8 @@
 'use client';
-import SmoothDetails, { Collapse } from './smooth-details';
 
+import SmoothDetails, { Collapse } from './smooth-details';
 import { routeLabel, type RouteCity } from '@/lib/route-label';
 import { useLocale } from '@/components/appearance';
-import { translateCurrent } from '@/lib/i18n/translate';
-const t = translateCurrent;
 import { useState, useEffect, useRef, useId } from 'react';
 import { api } from './api';
 import DestinationPicker from './destination-picker';
@@ -15,14 +13,17 @@ import {
 } from './folder-search';
 import AccountPicker, { ConnectedAccount } from './account-picker';
 import { FeedbackForm, FeedbackButton, Field } from './feedback';
+
 type Account = {
   id: string;
   label: string;
 };
+
 type Source = {
   accountId: string;
   path: string;
 };
+
 type Inference = {
   photoCount: number;
   videoCount?: number;
@@ -35,6 +36,7 @@ type Inference = {
   destination: string | null;
   warnings: Record<string, string>;
 };
+
 export default function CreateTrip({
   busy,
   yandexEnabled,
@@ -44,32 +46,32 @@ export default function CreateTrip({
   yandexEnabled: boolean;
   onCreate: (input: Record<string, unknown>) => Promise<void>;
 }) {
-  const { t, language } = useLocale();
-  const [accounts, setAccounts] = useState<Account[]>([]),
-    [loadingAccounts, setLoadingAccounts] = useState(true),
-    [picker, setPicker] = useState(false),
-    [accountId, setAccountId] = useState(''),
-    [folder, setFolder] = useState('disk:/'),
-    [folders, setFolders] = useState<
-      {
-        name: string;
-        path: string;
-      }[]
-    >([]),
-    [nextOffset, setNextOffset] = useState<number | null>(null),
-    [browsing, setBrowsing] = useState(false),
-    [source, setSource] = useState<Source | null>(null),
-    [sourceError, setSourceError] = useState(''),
-    [folderStatus, setFolderStatus] = useState(''),
-    [autoDates, setAutoDates] = useState(false),
-    [autoDestination, setAutoDestination] = useState(false),
-    [start, setStart] = useState(''),
-    [end, setEnd] = useState(''),
-    [destination, setDestination] = useState(''),
-    [analyzing, setAnalyzing] = useState(false),
-    [dateHint, setDateHint] = useState(''),
-    [destinationHint, setDestinationHint] = useState(''),
-    [count, setCount] = useState<number | null>(null);
+  const { t, m, language } = useLocale();
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [picker, setPicker] = useState(false);
+  const [accountId, setAccountId] = useState('');
+  const [folder, setFolder] = useState('disk:/');
+  const [folders, setFolders] = useState<
+    {
+      name: string;
+      path: string;
+    }[]
+  >([]);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
+  const [browsing, setBrowsing] = useState(false);
+  const [source, setSource] = useState<Source | null>(null);
+  const [sourceError, setSourceError] = useState('');
+  const [folderStatus, setFolderStatus] = useState('');
+  const [autoDates, setAutoDates] = useState(false);
+  const [autoDestination, setAutoDestination] = useState(false);
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const [destination, setDestination] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
+  const [dateHint, setDateHint] = useState('');
+  const [destinationHint, setDestinationHint] = useState('');
+  const [count, setCount] = useState<number | null>(null);
   const cache = useRef<{
     key: string;
     dates: boolean;
@@ -127,18 +129,20 @@ export default function CreateTrip({
       if (search)
         setFolderStatus(
           result.nextOffset !== null && !result.folders.length
-            ? 'Пока подпапок не найдено. Можно продолжить поиск.'
+            ? 'common.noSubfoldersFoundYetYouCanKeep'
             : merged.length === 0
-              ? 'Подпапок не найдено. Можно выбрать текущую папку.'
+              ? 'common.noSubfoldersFoundYouCanSelectThe'
               : merged.length === folders.length
-                ? 'Новых подпапок не найдено.'
-                : 'Подпапки найдены. Выберите нужную из списка.',
+                ? 'common.noNewSubfoldersFound'
+                : 'common.subfoldersFoundSelectOneFromTheList',
         );
       setNextOffset(result.nextOffset);
     } catch (e) {
       if (version === browseGeneration.current)
         setSourceError(
-          e instanceof Error ? e.message : t('Не удалось открыть папку'),
+          e instanceof Error
+            ? e.message
+            : t('createTrip.couldNotOpenTheFolder'),
         );
     } finally {
       if (version === browseGeneration.current) setBrowsing(false);
@@ -160,12 +164,13 @@ export default function CreateTrip({
         setDateHint(
           (value.warnings.dates
             ? (value.dateYears && value.dateYears.length > 1
-                ? t('Годы в файлах:') + ' ' + value.dateYears.join(', ') + '. '
-                : '') + t(value.warnings.dates)
+                ? t('createTrip.yearsInFiles') +
+                  ' ' +
+                  value.dateYears.join(', ') +
+                  '. '
+                : '') + m(value.warnings.dates)
             : '') ||
-            (value.start
-              ? t('От первого до последнего фото или видео по дате съёмки')
-              : ''),
+            (value.start ? t('createTrip.fromTheFirstToTheLastPhotoOr') : ''),
         );
       }
       if (autoDestination) {
@@ -177,7 +182,7 @@ export default function CreateTrip({
         setDestinationHint(
           value.warnings.destination ||
             (value.destination
-              ? t('Ближайшие города по GPS — проверьте направление')
+              ? t('createTrip.nearestTownsFromGpsPleaseCheckThe')
               : ''),
         );
       }
@@ -220,7 +225,7 @@ export default function CreateTrip({
           const message =
             e instanceof Error
               ? e.message
-              : t('Не удалось прочитать фотографии');
+              : t('createTrip.couldNotReadThePhotos');
           if (autoDates) setDateHint(message);
           if (autoDestination) setDestinationHint(message);
         })
@@ -241,16 +246,12 @@ export default function CreateTrip({
         if ((autoDates || autoDestination) && !source) {
           setPicker(true);
           setSourceError(
-            t('Выберите папку с фотографиями для автоопределения'),
+            t('createTrip.chooseAPhotoFolderForAutomaticDetection'),
           );
           return;
         }
         if (!destination.trim() || destination.length > 1000) {
-          setDestinationHint(
-            t(
-              'Выбери страну, город или добавь маршрут. Максимум 1000 символов.',
-            ),
-          );
+          setDestinationHint(t('createTrip.chooseACountryCityOrAddA'));
           return;
         }
         const form = new FormData(event.currentTarget);
@@ -268,12 +269,16 @@ export default function CreateTrip({
         });
       }}
     >
-      <p className="muted">{t('Соберём фотографии в одну историю.')}</p>
+      <p className="muted">
+        {t('createTrip.bringYourPhotosTogetherIntoOneStory')}
+      </p>
 
       <section className="creation-source" aria-labelledby={folderId}>
         <div className="creation-source-heading">
-          <strong id={folderId}>{t('Фотографии')}</strong>
-          <span>{source ? t('Папка выбрана') : t('необязательно')}</span>
+          <strong id={folderId}>{t('gallery.photos')}</strong>
+          <span>
+            {source ? t('createTrip.folderSelected') : t('createTrip.optional')}
+          </span>
         </div>
         {source ? (
           <>
@@ -281,7 +286,7 @@ export default function CreateTrip({
               account={
                 accounts.find((a) => a.id === source.accountId) || {
                   id: source.accountId,
-                  label: t('Яндекс Диск'),
+                  label: t('common.yandexDisk'),
                 }
               }
             />
@@ -299,7 +304,7 @@ export default function CreateTrip({
               </svg>
               <strong>
                 {source.path === 'disk:/'
-                  ? t('Мой Диск')
+                  ? t('createTrip.myDrive')
                   : source.path.replace('disk:/', '')}
               </strong>
               <span aria-hidden="true">✓</span>
@@ -313,7 +318,7 @@ export default function CreateTrip({
                   if (!picker) void browse(source.accountId, source.path);
                 }}
               >
-                {t('Изменить папку')}
+                {t('createTrip.changeFolder')}
               </FeedbackButton>
               <FeedbackButton
                 type="button"
@@ -328,7 +333,7 @@ export default function CreateTrip({
                   setCount(null);
                 }}
               >
-                {t('Убрать папку')}
+                {t('createTrip.removeFolder')}
               </FeedbackButton>
             </div>
           </>
@@ -340,8 +345,8 @@ export default function CreateTrip({
             onClick={() => setPicker(!picker)}
           >
             {loadingAccounts
-              ? t('Проверяем аккаунты…')
-              : t('Выбрать папку Яндекс Диска')}
+              ? t('createTrip.checkingAccounts')
+              : t('createTrip.chooseAYandexDiskFolder')}
           </FeedbackButton>
         )}
         <Collapse open={picker}>
@@ -359,7 +364,7 @@ export default function CreateTrip({
                       <FeedbackButton
                         type="button"
                         className="text-button"
-                        aria-label={t('На папку выше')}
+                        aria-label={t('createTrip.parentFolder')}
                         disabled={browsing || folder === 'disk:/'}
                         onClick={() => {
                           const last = folder.lastIndexOf('/');
@@ -387,14 +392,16 @@ export default function CreateTrip({
                         </FeedbackButton>
                       ))}
                       {browsing && !folders.length && (
-                        <p className="folder-empty">{t('Ищем подпапки…')}</p>
+                        <p className="folder-empty">
+                          {t('createTrip.lookingForSubfolders')}
+                        </p>
                       )}
                       {!browsing && !folders.length && !folderStatus && (
                         <p className="folder-empty">
                           {t(
                             nextOffset !== null
-                              ? 'На этой странице подпапок нет. Продолжите поиск.'
-                              : 'Вложенных папок нет. Можно выбрать текущую папку.',
+                              ? 'common.noSubfoldersOnThisPageKeepSearching'
+                              : 'createTrip.noSubfoldersYouCanSelectTheCurrent',
                           )}
                         </p>
                       )}
@@ -411,7 +418,7 @@ export default function CreateTrip({
                       aria-live="polite"
                       aria-atomic="true"
                     >
-                      {t(folderStatus)}
+                      {m(folderStatus)}
                     </div>
                     <FeedbackButton
                       type="button"
@@ -434,14 +441,14 @@ export default function CreateTrip({
                         setCount(null);
                       }}
                     >
-                      {t('Выбрать эту папку')}
+                      {t('common.selectThisFolder')}
                     </FeedbackButton>
                   </>
                 )}
               </>
             ) : (
               <p className="fine">
-                {t('Пока нет подключённых аккаунтов Яндекса.')}
+                {t('createTrip.noYandexAccountsConnectedYet')}
               </p>
             )}
             {yandexEnabled && !accounts.length ? (
@@ -449,14 +456,12 @@ export default function CreateTrip({
                 className="text-button"
                 href="/api/auth/yandex?intent=link&returnTo=%2F%3Fcreate%3D1"
               >
-                {t('Подключить аккаунт Яндекса ↗')}
+                {t('disk.connectAccountExternal')}
               </a>
             ) : (
               !accounts.length && (
                 <p className="fine">
-                  {t(
-                    'Подключение Яндекс Диска ещё не настроено. Обратитесь к владельцу приложения; пока поездку можно создать вручную.',
-                  )}
+                  {t('common.yandexDiskIsNotConfiguredYetContact')}
                 </p>
               )
             )}
@@ -465,30 +470,28 @@ export default function CreateTrip({
 
         {sourceError && (
           <p className="field-error" role="alert">
-            {t(sourceError)}
+            {m(sourceError)}
           </p>
         )}
         {analyzing && (
           <p className="analysis-status" role="status">
             <span className="spinner" />
-            {t(
-              'Читаем даты и координаты фотографий… Это может занять несколько минут.',
-            )}
+            {t('createTrip.readingPhotoDatesAndCoordinatesThisMay')}
           </p>
         )}
         {count !== null && !analyzing && (
           <p className="fine" role="status">
-            {t('Проверено файлов:')}
+            {t('createTrip.filesChecked')}
             {count}
           </p>
         )}
       </section>
       <Field
-        label={t('Название поездки')}
+        label={t('createTrip.tripName')}
         name="title"
         required
         maxLength={120}
-        placeholder={t('Например, осень в Грузии')}
+        placeholder={t('createTrip.forExampleAutumnInGeorgia')}
       />
       <div className="auto-field-group">
         <DestinationPicker
@@ -501,8 +504,8 @@ export default function CreateTrip({
           disabled={busy}
           hint={
             autoDestination && !source
-              ? t('Сначала выберите папку с фотографиями')
-              : destinationHint
+              ? t('createTrip.chooseAPhotoFolderFirst')
+              : m(destinationHint)
           }
         />
         <label className="auto-toggle">
@@ -516,12 +519,12 @@ export default function CreateTrip({
             }}
           />
           <span>
-            <strong>{t('Определить место по фото')}</strong>
+            <strong>{t('createTrip.detectDestinationFromPhotos')}</strong>
           </span>
         </label>
         {autoDestination && source && destination && (
           <p className="fine geodata-attribution">
-            {t('Города:')}{' '}
+            {t('createTrip.towns')}{' '}
             <a
               href="https://www.geonames.org/"
               target="_blank"
@@ -544,7 +547,7 @@ export default function CreateTrip({
       <div className="auto-field-group">
         <div className="form-row">
           <Field
-            label={t('Начало')}
+            label={t('dates.start')}
             name="start"
             type="date"
             required
@@ -556,7 +559,7 @@ export default function CreateTrip({
             }}
           />
           <Field
-            label={t('Окончание')}
+            label={t('dates.end')}
             name="end"
             type="date"
             required
@@ -579,38 +582,36 @@ export default function CreateTrip({
             }}
           />
           <span>
-            <strong>{t('Определить даты по фото и видео')}</strong>
+            <strong>{t('createTrip.detectDatesFromPhotosAndVideos')}</strong>
           </span>
         </label>
         <p className="field-hint" role="status">
           {autoDates && !source
-            ? t('Сначала выберите папку с фотографиями')
-            : t(dateHint)}
+            ? t('createTrip.chooseAPhotoFolderFirst')
+            : m(dateHint)}
         </p>
       </div>
       <SmoothDetails className="trip-description">
-        <summary>{t('Добавить описание')}</summary>
+        <summary>{t('createTrip.addADescription')}</summary>
         <label className="field">
-          <span>{t('Пара слов о поездке')}</span>
+          <span>{t('createTrip.aFewWordsAboutTheTrip')}</span>
           <textarea
             name="description"
             rows={3}
             maxLength={3000}
-            placeholder={t('Что хочется запомнить?')}
+            placeholder={t('createTrip.whatWouldYouLikeToRemember')}
           />
         </label>
       </SmoothDetails>
       <FeedbackButton className="primary" disabled={busy || analyzing}>
         {analyzing
-          ? t('Определяем данные…')
+          ? t('createTrip.detectingDetails')
           : busy
-            ? t('Создаём путешествие…')
-            : t('Создать путешествие')}
+            ? t('createTrip.creatingYourTrip')
+            : t('createTrip.createTrip')}
         <span aria-hidden="true">→</span>
       </FeedbackButton>
-      <p className="creation-privacy">
-        {t('Оригиналы останутся на вашем Диске.')}
-      </p>
+      <p className="creation-privacy">{t('disk.originalsStayHint')}</p>
     </FeedbackForm>
   );
 }

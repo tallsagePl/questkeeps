@@ -8,7 +8,7 @@
 
 QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.10.1**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.11.0**.
 
 ## Screenshots
 
@@ -127,6 +127,7 @@ For a deployment, add the matching HTTPS callback to the same OAuth application 
 ## Checks
 
 ```sh
+npm run format:check
 npm run typecheck
 npm test
 npm run build
@@ -169,6 +170,8 @@ See [deploy/README.md](deploy/README.md) for server configuration, certificates,
 - Revoking a guest link cannot revoke files that have already been viewed or downloaded.
 - Password recovery, email changes and account deletion are not implemented yet.
 - Automated tests do not replace manual testing with real media or a completed security audit. Review scope and status are documented in [docs/SECURITY.md (Russian)](docs/SECURITY.md).
+
+Interface copy uses typed keys from [Russian and English JSON locales](docs/I18N.md). [Code style](docs/CODE_STYLE.md) is enforced with formatting and unused-code checks; the latest [focused code review](docs/CODE_REVIEW.md) records fixes and remaining refactoring work.
 
 ## Source layout
 

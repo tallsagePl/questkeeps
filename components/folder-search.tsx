@@ -5,6 +5,7 @@ import { FeedbackButton } from './feedback';
 import { useLocale } from './appearance';
 
 export type DiskFolder = { name: string; path: string };
+
 export async function readFolderPages(
   account: string,
   path: string,
@@ -36,6 +37,7 @@ export async function readFolderPages(
   } while (pages < 10);
   return result;
 }
+
 export function mergeFolders(previous: DiskFolder[], incoming: DiskFolder[]) {
   return [
     ...new Map(
@@ -43,6 +45,7 @@ export function mergeFolders(previous: DiskFolder[], incoming: DiskFolder[]) {
     ).values(),
   ];
 }
+
 export function FolderSearchButton({
   busy,
   onClick,
@@ -74,7 +77,7 @@ export function FolderSearchButton({
         <path d="M20 7v5h-5M4 17v-5h5" />
         <path d="M6.1 7a7 7 0 0 1 11.5-1.1L20 9M4 15l2.4 3.1A7 7 0 0 0 17.9 17" />
       </svg>
-      {t('Поискать ещё')}
+      {t('messages.searchAgain')}
     </FeedbackButton>
   );
 }

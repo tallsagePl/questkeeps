@@ -1,5 +1,7 @@
 'use client';
+
 import { useState } from 'react';
+
 export type ProfileUser = {
   id: string;
   name: string;
@@ -9,6 +11,7 @@ export type ProfileUser = {
   avatarVersion?: string | null;
   yandexAccountId?: string | null;
 };
+
 export default function UserAvatar({
   user,
   large = false,
@@ -19,6 +22,7 @@ export default function UserAvatar({
   const key = (user.avatarVersion || '') + ':' + (user.yandexAccountId || '');
   return <AvatarImage key={key} user={user} large={large} />;
 }
+
 function AvatarImage({ user, large }: { user: ProfileUser; large: boolean }) {
   const [failed, setFailed] = useState(false);
   const version = user.avatarVersion || user.yandexAccountId || '';

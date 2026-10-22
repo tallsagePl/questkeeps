@@ -1,4 +1,5 @@
 'use client';
+
 import { useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
@@ -12,6 +13,7 @@ type Note = {
   day: string;
   deleted?: boolean | number;
 };
+
 export type NoteReply = {
   id: string;
   note_id: string;
@@ -22,6 +24,7 @@ export type NoteReply = {
   created: number;
   deleted?: boolean | number;
 };
+
 export default function NoteThread({
   note,
   replies,
@@ -38,18 +41,18 @@ export default function NoteThread({
   onChange: () => Promise<void>;
 }) {
   const { t, language } = useLocale();
-  const [expanded, setExpanded] = useState(false),
-    [target, setTarget] = useState<{
-      id: string | null;
-      author: string;
-    } | null>(null),
-    [text, setText] = useState(''),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
-  const threadId = useId(),
-    inputId = useId(),
-    input = useRef<HTMLTextAreaElement>(null),
-    replyTrigger = useRef<HTMLButtonElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [target, setTarget] = useState<{
+    id: string | null;
+    author: string;
+  } | null>(null);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const threadId = useId();
+  const inputId = useId();
+  const input = useRef<HTMLTextAreaElement>(null);
+  const replyTrigger = useRef<HTMLButtonElement>(null);
   const branch = useMemo(() => {
     const children = new Map<string | null, NoteReply[]>();
     for (const reply of replies) {
@@ -57,8 +60,8 @@ export default function NoteThread({
       if (siblings) siblings.push(reply);
       else children.set(reply.parent_id, [reply]);
     }
-    const rows: { reply: NoteReply; depth: number; parent?: NoteReply }[] = [],
-      seen = new Set<string>();
+    const rows: { reply: NoteReply; depth: number; parent?: NoteReply }[] = [];
+    const seen = new Set<string>();
     const byId = new Map(replies.map((reply) => [reply.id, reply]));
     const pending = [...(children.get(null) || [])]
       .reverse()
@@ -111,7 +114,7 @@ export default function NoteThread({
       );
       await onChange();
     } catch {
-      setError(t('Не удалось удалить сообщение. Попробуйте ещё раз.'));
+      setError('messages.couldNotDeleteTheMessageTryAgain');
     } finally {
       setBusy(false);
     }
@@ -137,14 +140,14 @@ export default function NoteThread({
             setText('');
             setExpanded(true);
           } catch {
-            setError(t('Не удалось отправить ответ. Попробуйте ещё раз.'));
+            setError('messages.couldNotSendTheReplyTryAgain');
           } finally {
             setBusy(false);
           }
         }}
       >
         <label htmlFor={inputId}>
-          {t('Ответ для')} {target.author}
+          {t('messages.replyTo')} {target.author}
         </label>
         <textarea
           id={inputId}
@@ -169,7 +172,7 @@ export default function NoteThread({
             className="primary"
             disabled={busy || !text.trim()}
           >
-            {t(busy ? 'Отправляем…' : 'Отправить ответ')}
+            {t(busy ? 'messages.sending' : 'messages.sendReply')}
           </button>
           <button
             type="button"
@@ -180,7 +183,7 @@ export default function NoteThread({
               requestAnimationFrame(() => replyTrigger.current?.focus());
             }}
           >
-            {t('Отмена')}
+            {t('common.cancel')}
           </button>
         </div>
       </form>
@@ -196,7 +199,7 @@ export default function NoteThread({
             disabled={busy}
             onClick={() => void remove(replyId)}
           >
-            {t(replyId ? 'Удалить ответ' : 'Удалить запись')}
+            {t(replyId ? 'messages.deleteReply' : 'messages.deleteEntry')}
           </button>
         ) : (
           <button
@@ -208,7 +211,7 @@ export default function NoteThread({
               startReply(replyId || null, item.author);
             }}
           >
-            {t('Ответить')}
+            {t('messages.reply')}
           </button>
         )}
       </div>
@@ -223,7 +226,7 @@ export default function NoteThread({
         · {note.author}
       </span>
       <p className={note.deleted ? 'note-deleted' : ''}>
-        {note.deleted ? t('Запись удалена автором') : note.text}
+        {note.deleted ? t('messages.entryDeletedByItsAuthor') : note.text}
       </p>
       {actions(note)}
       {composer(null)}
@@ -239,11 +242,14 @@ export default function NoteThread({
               if (expanded && target?.id) setTarget(null);
             }}
           >
-            {t(expanded ? 'Свернуть ответы' : 'Показать ответы')} (
+            {t(expanded ? 'messages.hideReplies' : 'messages.showReplies')} (
             {branch.length})
           </button>
           <Collapse id={threadId} open={expanded}>
-            <ol className="note-replies" aria-label={t('Ответы на запись')}>
+            <ol
+              className="note-replies"
+              aria-label={t('messages.repliesToThisEntry')}
+            >
               {branch.map(({ reply, depth, parent }) => (
                 <li
                   key={reply.id}
@@ -269,11 +275,13 @@ export default function NoteThread({
                   </div>
                   {parent && (
                     <span className="fine note-reply-recipient">
-                      {t('Ответ для')} {parent.author}
+                      {t('messages.replyTo')} {parent.author}
                     </span>
                   )}
                   <p className={reply.deleted ? 'note-deleted' : ''}>
-                    {reply.deleted ? t('Ответ удалён автором') : reply.text}
+                    {reply.deleted
+                      ? t('messages.replyDeletedByItsAuthor')
+                      : reply.text}
                   </p>
                   {actions(reply, reply.id)}
                   {composer(reply.id)}

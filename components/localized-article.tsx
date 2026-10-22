@@ -1,4 +1,5 @@
 'use client';
+
 import {
   useContext,
   useEffect,
@@ -16,6 +17,7 @@ import {
 } from '../lib/place-client-cache';
 import { queuePlaceDescription } from '../lib/place-description-queue';
 import { retryPlaceWhenIdle } from '../lib/place-resource-queue';
+
 export default function LocalizedArticle({
   place,
   endpoint,
@@ -27,12 +29,12 @@ export default function LocalizedArticle({
   scope: string;
   children: (place: any) => ReactElement;
 }) {
-  const { language, t } = useLocale(),
-    priority = useContext(PreviewPriority);
+  const { language, t } = useLocale();
+  const priority = useContext(PreviewPriority);
   const ref = useRef<HTMLElement>(null);
-  const [near, setNear] = useState(false),
-    [attempt, setAttempt] = useState(0),
-    [failed, setFailed] = useState(false);
+  const [near, setNear] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [failed, setFailed] = useState(false);
   const key = language + ':' + scope + ':' + endpoint;
   const [loaded, setLoaded] = useState<{ key: string; data: PlaceText } | null>(
     null,
@@ -75,12 +77,14 @@ export default function LocalizedArticle({
   }, [failed, near, priority, attempt]);
   const data = loaded?.key === key ? loaded.data : null;
   const loading = t(
-    failed ? 'Описание пока недоступно' : 'Загружаем описание…',
+    failed
+      ? 'messages.descriptionIsCurrentlyUnavailable'
+      : 'common.loadingDescription',
   );
   const originalAllowed = language === 'ru';
   const localized = {
     ...place,
-    title: data?.title || (originalAllowed ? place.title : t('Место')),
+    title: data?.title || (originalAllowed ? place.title : t('messages.place')),
     summary:
       data?.summary ||
       data?.description ||
