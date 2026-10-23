@@ -769,5 +769,6 @@
   "welcome.slideshow": "Slideshow",
   "welcome.theGreatWallOfChinaWindingThrough": "The Great Wall of China winding through the mountains",
   "welcome.thePyramidsOfGizaAtSunset": "The pyramids of Giza at sunset",
-  "welcome.whiteHousesInSantoriniAboveTheAegean": "White houses in Santorini above the Aegean Sea"
+  "welcome.whiteHousesInSantoriniAboveTheAegean": "White houses in Santorini above the Aegean Sea",
+  "errors.requestTimedOut": "The server is taking too long to respond. Please try again."
 }

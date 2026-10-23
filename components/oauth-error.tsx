@@ -1,5 +1,7 @@
 'use client';
 
+import SiteFooter from './site-footer';
+
 import { HeaderBrand } from './brand';
 import { useLocale, AppearanceControls } from './appearance';
 import { oauthErrors, type OAuthErrorReason } from '@/lib/oauth-errors';
@@ -51,6 +53,7 @@ export default function OAuthError({
           </a>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

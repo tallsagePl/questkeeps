@@ -45,16 +45,29 @@ export async function api<T = LegacyApiResponse>(
   data?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
-  const response = await fetch('/api/' + path, {
-    method,
-    headers: data === undefined ? {} : { 'Content-Type': 'application/json' },
-    body: data === undefined ? undefined : JSON.stringify(data),
-    signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch('/api/' + path, {
+      method,
+      headers: data === undefined ? {} : { 'Content-Type': 'application/json' },
+      body: data === undefined ? undefined : JSON.stringify(data),
+      signal,
+    });
+  } catch (error) {
+    if (signal?.aborted && signal.reason?.name !== 'TimeoutError') throw error;
+    throw new ApiError(
+      signal?.reason?.name === 'TimeoutError'
+        ? 'errors.requestTimedOut'
+        : 'errors.requestFailed',
+    );
+  }
   let value: unknown;
   try {
     value = applyMessageTranslations(await response.json());
   } catch (error) {
+    if (signal?.aborted && signal.reason?.name === 'TimeoutError') {
+      throw new ApiError('errors.requestTimedOut', {}, response.status);
+    }
     if (
       signal?.aborted ||
       (error instanceof Error && error.name === 'AbortError')

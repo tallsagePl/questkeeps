@@ -41,7 +41,7 @@ for (const name of files) {
     /[\r\n]/.test(name) ||
     name.startsWith('-') ||
     /(^|\/)\.\.(\/|$)/.test(name) ||
-    /^(?:data|node_modules|\.git|\.next(?:-e2e)?)(?:\/|$)/.test(name) ||
+    /^(?:data|node_modules|\.git|\.next(?:-(?:e2e|dev))?)(?:\/|$)/.test(name) ||
     (/(^|\/)\.env[^/]*$/.test(name) && name !== '.env.example') ||
     /\.(?:sqlite(?:-wal|-shm)?|pem|key|log)$/i.test(name)
   )

@@ -8,7 +8,7 @@
 
 QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.12.0**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.12.1**.
 
 ## Screenshots
 
@@ -109,6 +109,8 @@ npm run dev
 ```
 
 Open [localhost:3000](http://localhost:3000). Register with an email address, create a trip and write your first journal entry. The web application and worker start together; press `Ctrl+C` to stop them. The worker checks jobs every 30 seconds, with each source scheduled for synchronization at 15-minute intervals.
+
+Local development uses `.next-dev`, production build/start uses `.next`, and browser tests use `.next-e2e`. Use `npm run dev` while editing: a production process must be restarted after its build files are replaced.
 
 ## Connect Yandex Disk
 

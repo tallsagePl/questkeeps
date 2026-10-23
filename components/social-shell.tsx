@@ -1,11 +1,13 @@
 'use client';
 
+import SiteFooter from './site-footer';
+
 import {
   announceSessionChange,
   observeSessionChanges,
 } from '../lib/browser-session';
 import { useEffect, useState, type ReactNode } from 'react';
-import Brand, { HeaderBrand } from './brand';
+import { HeaderBrand } from './brand';
 import { AppearanceControls, useLocale } from './appearance';
 import UserAvatar, { type ProfileUser } from './user-avatar';
 import { api } from './api';
@@ -139,11 +141,7 @@ export function SocialShell({
         </p>
       )}
       {children}
-      <footer>
-        <Brand footer />
-        <p>{t('common.moreThanWhereYouWentHowIt')}</p>
-        <a href="/about">{t('navigation.about')}</a>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

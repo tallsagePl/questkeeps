@@ -214,6 +214,9 @@ export function useArchive({
       try {
         me = await api<{ user: UserProfile | null; yandexEnabled: boolean }>(
           'me',
+          'GET',
+          undefined,
+          AbortSignal.timeout(10000),
         );
       } catch (error) {
         setBootFailed(true);

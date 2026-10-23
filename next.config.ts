@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
+
 const config: NextConfig = {
-  distDir: process.env.QUESTKEEPS_E2E === '1' ? '.next-e2e' : '.next',
   serverExternalPackages: ['better-sqlite3', 'exifr', 'cities.json'],
   async headers() {
     return [
@@ -16,4 +17,15 @@ const config: NextConfig = {
     ];
   },
 };
-export default config;
+
+export default function configure(phase: string): NextConfig {
+  return {
+    ...config,
+    distDir:
+      process.env.QUESTKEEPS_E2E === '1'
+        ? '.next-e2e'
+        : phase === PHASE_DEVELOPMENT_SERVER
+          ? '.next-dev'
+          : '.next',
+  };
+}

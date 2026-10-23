@@ -1,5 +1,7 @@
 'use client';
 
+import SiteFooter from '@/components/site-footer';
+
 import { HeaderBrand } from '@/components/brand';
 
 import { AppearanceControls } from '@/components/appearance';
@@ -18,6 +20,7 @@ export default function NotFound() {
         <p>{t('messages.thisPageDoesNotExistOrIts')}</p>
         <a href="/">{t('messages.backToYourTrips')}</a>
       </main>
+      <SiteFooter />
     </>
   );
 }

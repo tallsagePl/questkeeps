@@ -63,3 +63,58 @@ test('legacy error consumers retain a translatable key while feedback keeps para
   assert.deepEqual(parameterized.applicationMessage, message);
   assert.equal(parameterized.message, 'Минимум 12 символов');
 });
+
+test('transport failures are localized, and timeouts have a distinct retry message', async () => {
+  const original = globalThis.fetch;
+  try {
+    const failure = new TypeError('Network unavailable');
+    globalThis.fetch = async () => {
+      throw failure;
+    };
+    await assert.rejects(
+      api('fixture'),
+      (error) =>
+        error instanceof ApiError &&
+        error.applicationMessage === 'errors.requestFailed',
+    );
+    const timeout = new DOMException('Too slow', 'TimeoutError');
+    globalThis.fetch = async () => {
+      throw timeout;
+    };
+    await assert.rejects(
+      api('fixture', 'GET', undefined, AbortSignal.abort(timeout)),
+      (error) =>
+        error instanceof ApiError &&
+        error.applicationMessage === 'errors.requestTimedOut',
+    );
+    const slowBody = new Response();
+    slowBody.json = async () => {
+      throw timeout;
+    };
+    globalThis.fetch = async () => slowBody;
+    await assert.rejects(
+      api('fixture', 'GET', undefined, AbortSignal.abort(timeout)),
+      (error) =>
+        error instanceof ApiError &&
+        error.applicationMessage === 'errors.requestTimedOut',
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('intentional request cancellation is preserved by the transport boundary', async () => {
+  const original = globalThis.fetch;
+  const cancellation = new DOMException('Cancelled', 'AbortError');
+  globalThis.fetch = async () => {
+    throw cancellation;
+  };
+  try {
+    await assert.rejects(
+      api('fixture', 'GET', undefined, AbortSignal.abort(cancellation)),
+      (error) => error === cancellation,
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+});

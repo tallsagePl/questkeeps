@@ -27,10 +27,6 @@ export default function Brand({ footer = false }: { footer?: boolean }) {
   return (
     <a
       href="/"
-      onClick={(event) => {
-        if (window.location.pathname === '/' && !window.location.search)
-          event.preventDefault();
-      }}
       className={'brand qk-brand' + (footer ? ' qk-brand-footer' : '')}
       aria-label="QuestKeeps"
     >

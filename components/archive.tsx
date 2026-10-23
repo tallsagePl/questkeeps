@@ -1,5 +1,7 @@
 'use client';
 
+import SiteFooter from './site-footer';
+
 import { FriendLinkArrival } from './friend-link';
 import WelcomeSlideshow from './welcome-slideshow';
 import { useLocale } from '@/components/appearance';
@@ -7,7 +9,7 @@ import { api } from './api';
 import TripDescription from './trip-description';
 import TripPreloader from './trip-preloader';
 import { BackToTop } from './media-controls';
-import Brand, { LogoMark } from './brand';
+import { LogoMark } from './brand';
 import { FeedbackProvider, FeedbackButton, PageFeedback } from './feedback';
 import { useArchive } from './archive/use-archive';
 import { Icon, date, period } from './archive/shared';
@@ -76,7 +78,7 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
           {t('trip.openingTheArchive')}
         </main>
       ) : bootFailed ? (
-        <main id="main-content" tabIndex={-1} className="loading">
+        <main id="main-content" tabIndex={-1} className="loading archive-error">
           <h1>{t('trip.couldNotOpenTheArchive')}</h1>
           <p>{t('trip.couldNotReachTheServerYourSign')}</p>
           <PageFeedback />
@@ -284,11 +286,7 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
           <SettingsTab archive={archive} />
         </main>
       )}
-      <footer>
-        <Brand footer />
-        <p>{t('common.moreThanWhereYouWentHowIt')}</p>
-        <a href="/about">{t('navigation.about')}</a>
-      </footer>
+      <SiteFooter />
       {modal === 'create' && <CreateDialog archive={archive} />}
       {modal === 'source' && <FolderDialog archive={archive} />}
       {(modal === 'invite' || modal.startsWith('member:')) && (

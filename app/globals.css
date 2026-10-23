@@ -13,12 +13,33 @@
   box-sizing: border-box;
 }
 body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   margin: 0;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--sans);
   font-size: 1rem;
   line-height: 1.6;
+}
+body > main {
+  flex: 1 0 auto;
+  width: 100%;
+}
+body > main#main-content {
+  min-height: 0;
+}
+body > header,
+body > footer {
+  flex-shrink: 0;
+}
+body > footer {
+  margin-top: auto;
+}
+body > .social-shell {
+  flex: 1;
 }
 button,
 input,
@@ -1199,6 +1220,17 @@ select {
   min-height: 70vh;
   color: var(--muted);
   font-size: 0.9375rem;
+}
+.archive-error {
+  flex-direction: column;
+  padding: 32px 24px;
+  text-align: center;
+}
+.archive-error h1 {
+  margin: 0;
+}
+.archive-error p {
+  max-width: 640px;
 }
 .spinner {
   width: 18px;
