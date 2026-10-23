@@ -24,7 +24,7 @@ export function wiki(
     throw new Error('Invalid Wikipedia language');
   signal?.throwIfAborted();
   if (pendingWikiRequests >= 64)
-    fail(429, 'Сервис мест занят. Попробуй немного позже.');
+    fail(429, 'messages.thePlaceServiceIsBusyPleaseTry');
   const lifetime = AbortSignal.any([
     AbortSignal.timeout(45000),
     ...(signal ? [signal] : []),
@@ -71,35 +71,32 @@ async function requestWiki(
         await delay(500 * (attempt + 1), undefined, { signal });
         continue;
       }
-      fail(
-        503,
-        'Сервис поиска мест временно недоступен. Попробуй немного позже.',
-      );
+      fail(503, 'messages.thePlaceSearchServiceIsTemporarilyUnavailable');
     }
     if ([429, 502, 503, 504].includes(res.status)) {
       if (attempt < 2) {
         await delay(500 * (attempt + 1), undefined, { signal });
         continue;
       }
-      fail(503, 'Сервис поиска мест перегружен. Попробуй немного позже.');
+      fail(503, 'messages.thePlaceSearchServiceIsBusyTry');
     }
-    if (!res.ok) fail(502, 'Не удалось получить описание места');
+    if (!res.ok) fail(502, 'messages.couldNotLoadThePlaceDescription');
     const data = await res.json();
     if (data.error) {
       if (/busy|ratelimit|readonly|maxlag/i.test(data.error.code || '')) {
         if (language === 'ru' && params.list === 'geosearch')
-          fail(503, 'Сервис поиска мест перегружен. Попробуй немного позже.');
+          fail(503, 'messages.thePlaceSearchServiceIsBusyTry');
         if (attempt < 2) {
           await delay(500 * (attempt + 1), undefined, { signal });
           continue;
         }
-        fail(503, 'Сервис поиска мест перегружен. Попробуй немного позже.');
+        fail(503, 'messages.thePlaceSearchServiceIsBusyTry');
       }
-      fail(502, 'Сервис поиска мест не смог обработать запрос.');
+      fail(502, 'messages.thePlaceSearchServiceCouldNotProcess');
     }
     return data;
   }
-  fail(503, 'Сервис поиска мест временно недоступен. Попробуй немного позже.');
+  fail(503, 'messages.thePlaceSearchServiceIsTemporarilyUnavailable');
 }
 
 type NearbyPlace = {
@@ -305,9 +302,9 @@ export async function placeSummary(
       }))
       .sort((a: any, b: any) => a.distance - b.distance)[0];
     if (!position || position.distance > 2000)
-      fail(400, 'Место должно находиться рядом с фотографией');
+      fail(400, 'messages.thePlaceMustBeNearThePhoto');
   }
-  if (!p?.extract) fail(404, 'У этого места пока нет описания');
+  if (!p?.extract) fail(404, 'messages.noDescriptionIsAvailableForThisPlace');
   const text = placeTextContent(String(p.extract), p.terms?.description?.[0]);
   textCache.set(pageId, {
     expires: Date.now() + CACHE_TTL,
@@ -356,7 +353,7 @@ export async function placeImage(
   let pending = pendingImages.get(key);
   if (!pending) {
     if (pendingImages.size >= 64)
-      fail(429, 'Сервис мест занят. Попробуй немного позже.');
+      fail(429, 'messages.thePlaceServiceIsBusyPleaseTry');
     pending = loadPlaceImage(pageId, language, signal).finally(() =>
       pendingImages.delete(key),
     );
@@ -447,7 +444,8 @@ export async function placeText(pageId: number) {
     wbptterms: 'description',
   }).then((data) => {
     const page = data.query?.pages?.[pageId];
-    if (!page?.extract) fail(404, 'У этого места пока нет описания');
+    if (!page?.extract)
+      fail(404, 'messages.noDescriptionIsAvailableForThisPlace');
     return placeTextContent(String(page.extract), page.terms?.description?.[0]);
   });
   if (textCache.size >= 1000) textCache.delete(textCache.keys().next().value!);

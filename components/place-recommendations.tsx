@@ -1,5 +1,8 @@
 'use client';
 
+import type { MediaItem, ConfirmedPlace } from '../lib/contracts';
+import { hasCoordinates, type Coordinates } from '../lib/geo';
+
 import { MemoryCache, CACHE_TTL } from '../lib/memory-cache';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { includesDate } from '../lib/date-selection';
@@ -16,21 +19,9 @@ import {
   type SavedSearches,
 } from '../lib/place-recommendation-store';
 
-type Photo = {
-  id: string;
-  name: string;
-  title?: string;
-  taken: string;
-  author?: string;
-  kind?: string;
-  revision?: string;
-  lat: number;
-  lon: number;
-  hidden?: number;
-  user_id: string;
-};
+type Photo = MediaItem & Coordinates;
 
-type Place = { id: string; media_id: string; url: string; [key: string]: any };
+type Place = ConfirmedPlace;
 
 type Suggestion = { pageid: number; title: string; dist: number };
 
@@ -71,7 +62,7 @@ export default function PlaceRecommendations({
 }: {
   dayRange?: string;
   headerContent?: ReactNode;
-  media: Photo[];
+  media: MediaItem[];
   tripId: string;
   places: Place[];
   scope: string;
@@ -199,11 +190,10 @@ export default function PlaceRecommendations({
   const allPhotos = useMemo(
     () =>
       media.filter(
-        (photo) =>
+        (photo): photo is Photo =>
           !photo.hidden &&
           photo.kind !== 'video' &&
-          Number.isFinite(photo.lat) &&
-          Number.isFinite(photo.lon) &&
+          hasCoordinates(photo) &&
           (isOwner || photo.user_id === userId),
       ),
     [media, isOwner, userId],

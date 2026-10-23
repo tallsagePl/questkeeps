@@ -1,3 +1,4 @@
+import { sourceMessageKeys } from './004-source-message-keys';
 import type Database from 'better-sqlite3';
 import { baseline } from './001-baseline';
 import { identityMail } from './002-identity-mail';
@@ -7,6 +8,7 @@ export const migrations = [
   { version: 1, name: 'baseline', up: baseline },
   { version: 2, name: 'identity-mail', up: identityMail },
   { version: 3, name: 'friend-links', up: friendLinks },
+  { version: 4, name: 'source-message-keys', up: sourceMessageKeys },
 ];
 
 export function migrate(db: Database.Database) {

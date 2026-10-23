@@ -186,7 +186,7 @@ export async function areaWiki(
       areaId,
     )
   )
-    fail(404, 'Место не найдено');
+    fail(404, 'messages.placeNotFound');
   const saved = one(
     'SELECT json,updated FROM map_area_wiki_i18n WHERE area_id=? AND language=?',
     areaId,

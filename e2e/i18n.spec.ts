@@ -62,3 +62,35 @@ test('OAuth failures are translated from the same locale dictionaries', async ({
   );
   expect(await page.locator('main').innerText()).not.toMatch(/[А-Яа-яЁё]/);
 });
+
+test('parameterized server errors keep their parameters when the language changes', async ({
+  page,
+}) => {
+  await page.route('**/api/auth/login', (route) =>
+    route.fulfill({
+      status: 400,
+      json: {
+        error: 'Минимум 12 символов',
+        errorTranslation: {
+          key: 'validation.minLength',
+          params: { count: 12 },
+        },
+      },
+    }),
+  );
+  await page.goto('/');
+  await page
+    .getByLabel('Электронная почта или никнейм', { exact: true })
+    .fill('fixture@example.test');
+  await page.getByLabel('Пароль', { exact: true }).fill('ValidPassword');
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await expect(page.locator('main').getByRole('alert')).toContainText(
+    'Минимум 12 символов',
+  );
+  await page
+    .getByRole('button', { name: 'Переключить на английский', exact: true })
+    .click();
+  await expect(page.locator('main').getByRole('alert')).toContainText(
+    'At least 12 characters',
+  );
+});

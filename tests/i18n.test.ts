@@ -66,15 +66,15 @@ test('API translation metadata leaves user content and large geometry untouched'
     type: 'LineString',
   };
   const input = {
-    error: 'Неверный email, никнейм или пароль',
+    error: 'auth.invalidCredentials',
     title: 'Начало',
     notes: [{ text: 'Сохранить' }],
     geometry,
-    fieldErrors: { password: 'Неверный email, никнейм или пароль' },
-    sources: [{ error: 'Аккаунт не найден' }],
+    fieldErrors: { password: 'auth.invalidCredentials' },
+    sources: [{ error: 'auth.invalidCredentials' }],
   };
   const result = withMessageTranslations(input) as any;
-  assert.equal(result.error, input.error);
+  assert.equal(result.error, russian['auth.invalidCredentials']);
   assert.equal(result.errorTranslation.key, 'auth.invalidCredentials');
   assert.equal(
     result.fieldErrorsTranslations.password.key,

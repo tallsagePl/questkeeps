@@ -1,17 +1,25 @@
+import { messageDescriptor } from './i18n/messages';
+import { localizeMessage, type LocalizedMessage } from './i18n/translate';
+import type { UserProfile, TripRecord, TripAccess } from './contracts';
 import { ensureUsername, descriptionMentions } from './profiles';
 import { addMapDetails } from './map-details';
 import { one, all, run, hash, token, Row } from './db';
 
 export class HttpError extends Error {
+  public translation?: LocalizedMessage;
   constructor(
     public status: number,
-    message: string,
+    message: string | LocalizedMessage,
   ) {
-    super(message);
+    super(localizeMessage(message, 'ru'));
+    this.translation = messageDescriptor(message);
   }
 }
 
-export function fail(status: number, message: string): never {
+export function fail(
+  status: number,
+  message: string | LocalizedMessage,
+): never {
   throw new HttpError(status, message);
 }
 
@@ -25,9 +33,9 @@ export function cookie(req: Request, name: string) {
   );
 }
 
-export function userProfile(userId: string): Row | undefined {
+export function userProfile(userId: string): UserProfile | undefined {
   const username = ensureUsername(userId);
-  const user = one(
+  const user = one<Omit<UserProfile, 'username' | 'linkedEmails'>>(
     'SELECT u.id,u.email,u.name,(SELECT version FROM user_avatars WHERE user_id=u.id) avatarVersion,(SELECT id FROM accounts WHERE user_id=u.id AND disk_enabled=1 LIMIT 1) yandexAccountId FROM users u WHERE u.id=?',
     userId,
   );
@@ -35,7 +43,7 @@ export function userProfile(userId: string): Row | undefined {
     ? {
         ...user,
         username,
-        linkedEmails: all(
+        linkedEmails: all<{ email: string }>(
           "SELECT DISTINCT provider_email email FROM accounts WHERE user_id=? AND provider_email IS NOT NULL AND provider_email<>COALESCE(?,'') ORDER BY provider_email",
           userId,
           user.email,
@@ -58,8 +66,8 @@ export function currentUser(req: Request) {
     : undefined;
 }
 
-export function requireUser(req: Request): Row {
-  return currentUser(req) || fail(401, 'Сначала войдите в аккаунт');
+export function requireUser(req: Request): UserProfile {
+  return currentUser(req) || fail(401, 'messages.pleaseSignInFirst');
 }
 
 export function session(userId: string) {
@@ -84,10 +92,10 @@ export function sessionCookie(raw: string, seconds = 30 * 86400) {
   );
 }
 
-export function membership(tripId: string, userId: string): Row {
+export function membership(tripId: string, userId: string): TripAccess {
   const trip =
-    one('SELECT * FROM trips WHERE id=?', tripId) ||
-    fail(404, 'Поездка не найдена');
+    one<TripRecord>('SELECT * FROM trips WHERE id=?', tripId) ||
+    fail(404, 'messages.tripNotFound');
   if (trip.owner_id === userId)
     return { ...trip, role: 'owner', from: trip.start, to: trip.end };
   const m =
@@ -95,25 +103,25 @@ export function membership(tripId: string, userId: string): Row {
       'SELECT * FROM members WHERE trip_id=? AND user_id=? AND active=1',
       tripId,
       userId,
-    ) || fail(403, 'Нет доступа к поездке');
+    ) || fail(403, 'messages.youDoNotHaveAccessToThis');
   return { ...trip, role: 'member', from: m.start, to: m.end };
 }
 
 export function owner(tripId: string, userId: string) {
   const t = membership(tripId, userId);
-  if (t.role !== 'owner') fail(403, 'Это действие доступно владельцу');
+  if (t.role !== 'owner') fail(403, 'messages.thisActionIsOnlyAvailableToThe');
   return t;
 }
 
-export function viewAccess(req: Request, tripId: string): Row {
+export function viewAccess(req: Request, tripId: string): TripAccess {
   const share = new URL(req.url).searchParams.get('share');
   if (share) {
-    const t = one(
+    const t = one<TripRecord>(
       'SELECT * FROM trips WHERE id=? AND share_hash=?',
       tripId,
       hash(share),
     );
-    if (!t) fail(404, 'Ссылка недействительна');
+    if (!t) fail(404, 'messages.invalidLink');
     return { ...t, role: 'guest', from: t.start, to: t.end };
   }
   return membership(tripId, requireUser(req).id);
@@ -124,7 +132,8 @@ export function inRange(day: string, from: string, to: string) {
 }
 
 export function assertDay(day: string, t: Row) {
-  if (!inRange(day, t.from, t.to)) fail(403, 'Дата вне периода вашего участия');
+  if (!inRange(day, t.from, t.to))
+    fail(403, 'messages.thisDateIsOutsideYourParticipationPeriod');
 }
 
 export function mediaFor(req: Request, mediaId: string) {
@@ -132,10 +141,11 @@ export function mediaFor(req: Request, mediaId: string) {
     one(
       'SELECT m.*,s.account_id,s.approved FROM media m JOIN sources s ON s.id=m.source_id WHERE m.id=?',
       mediaId,
-    ) || fail(404, 'Файл не найден');
+    ) || fail(404, 'messages.fileNotFound');
   const t = viewAccess(req, m.trip_id);
   assertDay(m.taken.slice(0, 10), t);
-  if (m.hidden || m.missing || !m.approved) fail(404, 'Файл недоступен');
+  if (m.hidden || m.missing || !m.approved)
+    fail(404, 'profileFiles.fileUnavailable');
   return m;
 }
 
@@ -148,7 +158,7 @@ export function throttle(key: string, limit = 10, period = 15 * 60000) {
     now + period,
   );
   if (one('SELECT count FROM throttle WHERE key=?', key)!.count > limit)
-    fail(429, 'Слишком много попыток. Попробуйте позже');
+    fail(429, 'messages.tooManyAttemptsPleaseTryAgainLater');
 }
 
 export function tripData(req: Request, tripId: string) {

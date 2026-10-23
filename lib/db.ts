@@ -38,12 +38,12 @@ db.pragma('busy_timeout = 5000');
 
 migrate(db);
 
-export function one(sql: string, ...args: any[]): Row | undefined {
-  return db.prepare(sql).get(...args) as Row | undefined;
+export function one<T = Row>(sql: string, ...args: any[]): T | undefined {
+  return db.prepare(sql).get(...args) as T | undefined;
 }
 
-export function all(sql: string, ...args: any[]): Row[] {
-  return db.prepare(sql).all(...args) as Row[];
+export function all<T = Row>(sql: string, ...args: any[]): T[] {
+  return db.prepare(sql).all(...args) as T[];
 }
 
 export function run(sql: string, ...args: any[]) {

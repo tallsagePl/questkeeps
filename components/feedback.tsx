@@ -18,23 +18,29 @@ import {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
 } from 'react';
-import type { LocalizedMessage } from '@/lib/i18n/translate';
+import { localizeMessage, type LocalizedMessage } from '@/lib/i18n/translate';
 
 type Fields = Record<string, string | LocalizedMessage>;
 
 type Failure = {
   scope: string;
-  message: string;
+  message: string | LocalizedMessage;
   fields: Fields;
 };
 
 export class ApiError extends Error {
   constructor(
-    message: string,
+    public applicationMessage: string | LocalizedMessage,
     public fields: Fields = {},
     public status?: number,
   ) {
-    super(message);
+    super(
+      typeof applicationMessage === 'string'
+        ? applicationMessage
+        : applicationMessage.params
+          ? localizeMessage(applicationMessage, 'ru')
+          : applicationMessage.key,
+    );
   }
 }
 
@@ -43,11 +49,11 @@ type Feedback = {
   failure: Failure | null;
   clear: () => void;
   report: (error: unknown, scope: string) => void;
-  setError: (message: string) => void;
-  setNotice: (message: string) => void;
+  setError: (message: string | LocalizedMessage) => void;
+  setNotice: (message: string | LocalizedMessage) => void;
   notice: {
     scope: string;
-    message: string;
+    message: string | LocalizedMessage;
   } | null;
   setFailure: React.Dispatch<React.SetStateAction<Failure | null>>;
 };
@@ -73,7 +79,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [failure, setFailure] = useState<Failure | null>(null);
   const [notice, setNoticeState] = useState<{
     scope: string;
-    message: string;
+    message: string | LocalizedMessage;
   } | null>(null);
   useEffect(() => {
     if (!notice) return;
@@ -86,9 +92,11 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     setFailure({
       scope,
       message:
-        error instanceof Error
-          ? error.message
-          : 'validation.theActionCouldNotBeCompleted',
+        error instanceof ApiError
+          ? error.applicationMessage
+          : error instanceof Error
+            ? error.message
+            : 'validation.theActionCouldNotBeCompleted',
       fields,
     });
     if (Object.keys(fields).length)
@@ -110,7 +118,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         report,
         setFailure,
         setError: (message) =>
-          message ? report(new Error(message), active.current) : clear(),
+          message ? report(new ApiError(message), active.current) : clear(),
         setNotice: (message) =>
           setNoticeState({
             scope: active.current,
@@ -210,7 +218,7 @@ export function FeedbackForm({
   onChange,
   ...props
 }: FormHTMLAttributes<HTMLFormElement>) {
-  const { t, m } = useLocale();
+  const { m } = useLocale();
   const id = useId();
   const feedback = useFeedback();
   const fields = feedback.failure?.scope === id ? feedback.failure.fields : {};
@@ -316,13 +324,10 @@ export function FeedbackForm({
           ) as HTMLInputElement | null;
           const end = form.elements.namedItem('end') as HTMLInputElement | null;
           if (start?.value && end?.value && start.value > end.value)
-            errors.end = t('validation.endDateMustNotBeEarlierThan');
+            errors.end = 'validation.endDateMustNotBeEarlierThan';
           if (Object.keys(errors).length) {
             event.preventDefault();
-            feedback.report(
-              new ApiError(t('validation.checkFields'), errors),
-              id,
-            );
+            feedback.report(new ApiError('validation.checkFields', errors), id);
             return;
           }
           onSubmit?.(event);

@@ -184,7 +184,7 @@ export default function Friends({
   const load = useCallback(
     async (signal?: AbortSignal) => {
       try {
-        const r = await api('friends', 'GET', undefined, signal);
+        const r = await api<Lists>('friends', 'GET', undefined, signal);
         if (signal?.aborted) return;
         setLists(r);
         setError('');

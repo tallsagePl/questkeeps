@@ -8,7 +8,7 @@
 
 QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.11.0**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.12.0**.
 
 ## Screenshots
 
@@ -126,6 +126,8 @@ For a deployment, add the matching HTTPS callback to the same OAuth application 
 
 ## Checks
 
+GitHub Actions runs these checks for pushes to main and pull requests, using isolated test data. See [architecture](docs/ARCHITECTURE.md) for module boundaries.
+
 ```sh
 npm run format:check
 npm run typecheck
@@ -177,7 +179,8 @@ Interface copy uses typed keys from [Russian and English JSON locales](docs/I18N
 
 - `app/` — pages and API routes.
 - `components/` — interface, gallery, map, profile and About page.
-- `lib/access.ts`, `lib/api.ts` — access control and request handlers.
+- `lib/access.ts`, `lib/api.ts`, `lib/api/` — access control, dispatcher and domain handlers.
+- `lib/contracts.ts`, `components/archive/` — shared domain types and archive controller/views.
 - `lib/db.ts`, `lib/migrations/` — database, encryption and migrations.
 - `lib/yandex.ts`, `lib/sync.ts`, `lib/photo-metadata.ts` — Disk integration, indexing and metadata.
 - `lib/places.ts`, `lib/data/` — places and localized geographic names.

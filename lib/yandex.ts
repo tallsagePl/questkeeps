@@ -21,9 +21,9 @@ export interface Resource {
 export async function accountToken(accountId: string) {
   const a =
     one('SELECT * FROM accounts WHERE id=?', accountId) ||
-    fail(404, 'Аккаунт не найден');
+    fail(404, 'messages.accountNotFound');
   if (!a.disk_enabled || !a.token)
-    fail(409, 'Аккаунт Яндекса отключён. Подключите его снова в профиле');
+    fail(409, 'messages.yandexAccountDisconnectedReconnectItInYour');
   if (a.expires && a.expires < Date.now() + 60000 && a.refresh) {
     const response = await fetch('https://oauth.yandex.ru/token', {
       method: 'POST',
@@ -35,7 +35,7 @@ export async function accountToken(accountId: string) {
       }),
       signal: AbortSignal.timeout(20000),
     });
-    if (!response.ok) fail(502, 'Переподключите аккаунт Яндекса');
+    if (!response.ok) fail(502, 'messages.reconnectYourYandexAccount');
     const data = await response.json();
     run(
       'UPDATE accounts SET token=?,refresh=?,expires=? WHERE id=? AND disk_enabled=1',
@@ -70,10 +70,14 @@ export async function disk(
     },
   );
   if (!response.ok) {
-    if (response.status === 401) fail(502, 'Переподключите аккаунт Яндекса');
+    if (response.status === 401)
+      fail(502, 'messages.reconnectYourYandexAccount');
     if (response.status === 404)
-      fail(404, 'Файл или папка на Диске не найдены');
-    fail(502, 'Яндекс Диск временно недоступен (' + response.status + ')');
+      fail(404, 'messages.fileOrFolderNotFoundOnDrive');
+    fail(502, {
+      key: 'errors.yandexUnavailable',
+      params: { status: response.status },
+    });
   }
   return response.json();
 }
@@ -84,7 +88,7 @@ export function normalizePath(p: string) {
     p.includes('\0') ||
     p.split('/').some((v) => v === '.' || v === '..')
   )
-    fail(400, 'Неверный путь папки');
+    fail(400, 'messages.invalidFolderPath');
   return p === 'disk:/' ? p : p.replace(/\/+$/, '');
 }
 
@@ -111,7 +115,7 @@ export async function trustedFetch(
       u.hostname.endsWith('.yandex.ru')
     )
   )
-    fail(502, 'Неожиданный адрес файла');
+    fail(502, 'messages.unexpectedFileAddress');
   const r = await fetch(u, {
     headers,
     redirect: 'manual',
@@ -122,7 +126,7 @@ export async function trustedFetch(
   });
   if ([301, 302, 303, 307, 308].includes(r.status)) {
     await r.body?.cancel();
-    if (depth >= 5) fail(502, 'Слишком много перенаправлений');
+    if (depth >= 5) fail(502, 'messages.tooManyRedirects');
     const target = new URL(r.headers.get('location') || '', u);
     const nextHeaders = { ...headers };
     if (target.origin !== u.origin)
@@ -146,7 +150,7 @@ export async function mediaURL(m: Row, preview = false, signal?: AbortSignal) {
       },
       signal,
     )) as Resource;
-    if (!meta.preview) fail(404, 'Для этого файла нет миниатюры');
+    if (!meta.preview) fail(404, 'messages.noThumbnailIsAvailableForThisFile');
     return meta.preview;
   }
   const info = await disk(
@@ -177,7 +181,7 @@ export async function fetchMedia(
         url.hostname,
       )
     )
-      fail(502, 'Неожиданный адрес миниатюры');
+      fail(502, 'messages.unexpectedPreviewAddress');
     headers.Authorization = 'OAuth ' + (await accountToken(m.account_id));
   }
   return trustedFetch(link, headers, 0, signal);

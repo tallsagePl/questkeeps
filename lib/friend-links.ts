@@ -35,7 +35,8 @@ export function revokeFriendLink(userId: string) {
 }
 
 export function acceptFriendLink(userId: string, value: string) {
-  if (!validFriendToken(value)) fail(404, 'Ссылка недействительна или истекла');
+  if (!validFriendToken(value))
+    fail(404, 'friends.thisLinkIsInvalidOrHasExpired');
   return db
     .transaction(() => {
       const inviter = one(
@@ -43,8 +44,9 @@ export function acceptFriendLink(userId: string, value: string) {
         hash(value),
         Date.now(),
       );
-      if (!inviter) fail(404, 'Ссылка недействительна или истекла');
-      if (inviter.id === userId) fail(400, 'Это твоя ссылка для друзей');
+      if (!inviter) fail(404, 'friends.thisLinkIsInvalidOrHasExpired');
+      if (inviter.id === userId)
+        fail(400, 'messages.thisIsYourOwnFriendInvitationLink');
       ensureUsername(userId);
       ensureUsername(inviter.id);
       const [a, b] =

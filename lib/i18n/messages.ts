@@ -1,48 +1,78 @@
-import russian from './ru.json';
 import {
   isTranslationKey,
+  localizeMessage,
   type LocalizedMessage,
-  type TranslationKey,
 } from './translate';
-
-// Compatibility with human-readable API fields and errors already persisted in
-// SQLite. This allowlist is used only on the server's application-message fields;
-// titles, journal text, profile names and other user content are never inspected.
-const legacyMessageKeys = new Map<string, TranslationKey>(
-  Object.entries(russian).map(([key, text]) => [text, key as TranslationKey]),
-);
 
 export function messageDescriptor(
   value: unknown,
 ): LocalizedMessage | undefined {
-  if (typeof value !== 'string') return undefined;
-  const key = isTranslationKey(value) ? value : legacyMessageKeys.get(value);
-  return key ? { key } : undefined;
+  if (isTranslationKey(value)) return { key: value };
+  if (
+    value &&
+    typeof value === 'object' &&
+    'key' in value &&
+    isTranslationKey(value.key)
+  ) {
+    return value as LocalizedMessage;
+  }
+  return undefined;
 }
 
+const storedPrefix = 'qk:message:';
+
+export function storeMessage(message: LocalizedMessage): string {
+  return message.params ? storedPrefix + JSON.stringify(message) : message.key;
+}
+
+export function readStoredMessage(value: unknown): unknown {
+  if (typeof value !== 'string' || !value.startsWith(storedPrefix))
+    return value;
+  try {
+    return (
+      messageDescriptor(JSON.parse(value.slice(storedPrefix.length))) || value
+    );
+  } catch {
+    return value;
+  }
+}
+
+// Normalize application-message fields only. Never inspect titles, journal text,
+// profile names, third-party prose or large nested geometry.
 export function withMessageTranslations(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withMessageTranslations);
   if (!value || typeof value !== 'object') return value;
-
   const result: Record<string, unknown> = { ...value };
-  if (Array.isArray(result.sources)) {
-    result.sources = result.sources.map(withMessageTranslations);
-  }
+  if (Array.isArray(result.sources))
+    result.sources = result.sources.map((source) =>
+      source && typeof source === 'object'
+        ? withMessageTranslations({
+            ...source,
+            error: readStoredMessage(source.error),
+          })
+        : source,
+    );
   for (const field of ['error', 'message']) {
     const descriptor = messageDescriptor(result[field]);
-    if (descriptor && !result[field + 'Translation'])
-      result[field + 'Translation'] = descriptor;
+    if (descriptor) {
+      result[field] = localizeMessage(descriptor, 'ru');
+      result[field + 'Translation'] ??= descriptor;
+    }
   }
   for (const field of ['fieldErrors', 'warnings']) {
     const messages = result[field];
     if (!messages || typeof messages !== 'object' || Array.isArray(messages))
       continue;
-    const descriptors = Object.fromEntries(
-      Object.entries(messages).flatMap(([key, text]) => {
-        const descriptor = messageDescriptor(text);
-        return descriptor ? [[key, descriptor]] : [];
-      }),
-    );
+    const readable: Record<string, unknown> = { ...messages };
+    const descriptors: Record<string, LocalizedMessage> = {};
+    for (const [key, value] of Object.entries(messages)) {
+      const descriptor = messageDescriptor(value);
+      if (descriptor) {
+        descriptors[key] = descriptor;
+        readable[key] = localizeMessage(descriptor, 'ru');
+      }
+    }
+    result[field] = readable;
     result[field + 'Translations'] = {
       ...descriptors,
       ...(result[field + 'Translations'] as object | undefined),

@@ -356,7 +356,7 @@ export function addAreaToPhotos(
       'SELECT a.* FROM map_areas a JOIN trip_area_candidates c ON c.area_id=a.id WHERE c.trip_id=? AND a.id=?',
       tripId,
       areaId,
-    ) || fail(404, 'Предложение места не найдено');
+    ) || fail(404, 'errors.suggestionNotFound');
   const savedWiki = one(
     'SELECT json FROM map_area_wiki WHERE area_id=?',
     areaId,
@@ -372,7 +372,7 @@ export function addAreaToPhotos(
       : russianAreaDescription(title, area.kind);
   const geometry = JSON.parse(area.geometry);
   const matches = photos.filter((p) => photoInArea(p as any, geometry));
-  if (!matches.length) fail(400, 'В этой области нет доступных фотографий');
+  if (!matches.length) fail(400, 'errors.areaHasNoPhotos');
   let added = 0;
   db.transaction(() => {
     for (const photo of matches) {

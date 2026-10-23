@@ -22,7 +22,7 @@ type Point = {
   taken: string;
   kind?: string;
   author?: string;
-  title?: string;
+  title?: string | null;
   revision?: string;
   capture_time?: string | null;
   map_city?: {

@@ -10,9 +10,9 @@ function pair(a: string, b: string) {
 }
 
 function targetUser(userId: string, targetId: string) {
-  if (userId === targetId) fail(400, 'Нельзя добавить себя в друзья');
+  if (userId === targetId) fail(400, 'messages.youCannotAddYourselfAsAFriend');
   if (!one('SELECT 1 FROM users WHERE id=?', targetId))
-    fail(404, 'Пользователь не найден');
+    fail(404, 'tripDescription.userNotFound');
 }
 
 export function relationship(userId: string, targetId: string): Relationship {
@@ -62,7 +62,7 @@ export function requestFriend(userId: string, targetId: string) {
     .transaction(() => {
       const state = relationship(userId, targetId);
       if (state === 'incoming')
-        fail(409, 'У тебя уже есть заявка от этого человека');
+        fail(409, 'messages.youAlreadyHaveARequestFromThis');
       if (state !== 'none') return state;
       ensureUsername(userId);
       ensureUsername(targetId);
@@ -86,7 +86,7 @@ export function acceptFriend(userId: string, targetId: string) {
       const state = relationship(userId, targetId);
       if (state === 'friends') return state;
       if (state !== 'incoming')
-        fail(403, 'Принять заявку может только её получатель');
+        fail(403, 'messages.onlyTheRecipientCanAcceptARequest');
       const [a, b] = pair(userId, targetId);
       run(
         "UPDATE friendships SET status='accepted' WHERE user_a=? AND user_b=? AND status='pending' AND requested_by<>?",

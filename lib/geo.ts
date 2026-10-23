@@ -16,3 +16,11 @@ export function distanceMeters(
     Math.atan2(Math.sqrt(Math.min(1, a)), Math.sqrt(Math.max(0, 1 - a)))
   );
 }
+
+export type Coordinates = { lat: number; lon: number };
+
+export function hasCoordinates<
+  T extends { lat: number | null; lon: number | null },
+>(point: T): point is T & Coordinates {
+  return Number.isFinite(point.lat) && Number.isFinite(point.lon);
+}

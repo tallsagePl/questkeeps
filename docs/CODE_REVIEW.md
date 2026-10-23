@@ -1,30 +1,28 @@
 # Code review — 23 October 2026
 
-Scope: source readability, localization boundaries, API message handling, TypeScript diagnostics and existing regression coverage. This is a focused engineering review, not a claim that every possible defect has been eliminated.
+Scope: source readability, localization boundaries, API message handling, TypeScript diagnostics and regression coverage. The follow-up in version 1.12.0 addresses the five refactoring items identified in version 1.11.0.
 
-## Fixed
+## Completed follow-up
 
-- UI translation relied on whole phrases, reverse English lookup and pattern matching. Two JSON dictionaries now use typed stable keys and explicit interpolation parameters.
-- Matching user text could be mistaken for interface copy. User-authored content is rendered directly; regression coverage includes the name `Start`.
-- Validation and OAuth copy used different mechanisms, and several controls lacked English labels. They now use the same dictionaries; stored field validation changes language without resubmission.
-- Malformed JSON responses produced a raw parsing exception. The client now reports a localized request error while preserving cancellation.
-- Interleaved imports, long multi-variable declarations and inconsistent spacing made scanning files difficult. The source formatter normalizes these and has a check mode.
-- Unused imports, bindings and callback parameters have been cleaned up. TypeScript now enforces unused-code diagnostics.
+- Split the archive into a shared state/navigation hook, focused tabs, dialogs and shell components. The original session and navigation generation guards remain in the controller.
+- Split the API dispatcher into domain handlers while retaining shared origin, authentication and error handling boundaries.
+- Added user, trip, media, place, journal, source and invitation contracts; removed the generic `Row` / `any` model from the archive and its extracted views. JSON request bodies remain `unknown` until validated. Typed query helpers and generic response types support gradual adoption in older modules.
+- Replaced message lookup by Russian text with explicit application keys/descriptors. Migration 004 upgrades existing sync errors without rewriting profile names, journal text, paths or other user content. Provider messages remain verbatim.
+- Preserved parameters through feedback and inference state so a language change does not require resubmission or another API call.
+- Added a GitHub Actions workflow for formatting, types, unit/API tests, production build and the isolated browser suite. It does not require production secrets.
+- Added guards for missing media selections and missing/non-finite coordinates, plus regression tests for message boundaries and migration idempotence.
 
-## Remaining work
+See [ARCHITECTURE.md](ARCHITECTURE.md) for module responsibilities and [I18N.md](I18N.md) for the message contract.
 
-- `components/archive.tsx` combines authentication, trip state, tabs, sharing and media interaction. Split it by domain, keeping state ownership and cancellation behavior explicit.
-- `lib/api.ts` remains a large endpoint dispatcher. Extract handlers by domain and introduce response types before replacing broad `Row` / `any` usage.
-- Legacy API errors are still readable Russian strings with translation metadata added at the boundary. Migrate producers gradually to explicit message codes; do not translate arbitrary third-party or user text by dictionary matching.
-- Some assembled hints and short-lived parameterized notices are resolved when created. A later cleanup can store descriptors throughout state for immediate language switching in every transient status.
-- There is no hosted CI workflow yet. Run formatting, type checking, unit tests and isolated browser checks before merging; automate these when the deployment pipeline is established.
+## Quality boundaries
 
-The database already uses SQLite with migrations, foreign keys, WAL mode and parameterized queries through the database helpers. Application data is not being moved to JSON; the new JSON files contain interface translations only.
+The extracted archive and route contexts have concrete contracts. Older helper modules still contain legacy database row defaults and a compatibility API result type; those are isolated from the newly typed archive model. This review does not claim that every old helper now has a complete runtime response schema or that every possible defect has been eliminated.
+
+SQLite remains the application database, with migrations, foreign keys, WAL mode and parameterized queries. JSON files contain translations, geographic reference data and fixtures; user accounts and trips are not stored in JSON files.
 
 ## Validation
 
-- Production build completed successfully.
-- TypeScript passed with unused-local and unused-parameter checks enabled.
-- Formatting checks passed.
-- 114 unit/API tests passed, followed by 3 focused client API regression tests.
-- All 53 browser scenarios passed against an isolated database (desktop, mobile, localization and accessibility coverage).
+- TypeScript checks include unused locals and parameters.
+- The unit/API suite covers access control, migrations, locale parity, literal interpolation, preservation of user content, coordinate guards and typed message transport.
+- Browser checks cover desktop/mobile authentication, trip navigation, media, map, journal, sharing, profile, both languages/themes and parameterized messages after a language change.
+- External Yandex and email calls are stubbed in automated tests. Live production integration checks are separate from these regression results.

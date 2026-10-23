@@ -47,7 +47,7 @@ export async function searchPhotoPlaces(
   } catch {}
   let pending = requests.get(key);
   if (!pending) {
-    pending = api(
+    pending = api<{ suggestions: SavedSuggestion[] }>(
       'media/' + photo.id + '/places',
       'GET',
       undefined,

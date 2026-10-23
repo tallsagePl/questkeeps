@@ -16,7 +16,7 @@ export default function MapThumbnail({
   point: {
     id: string;
     name: string;
-    title?: string;
+    title?: string | null;
     taken: string;
     capture_time?: string | null;
     author?: string;

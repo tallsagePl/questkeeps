@@ -3,6 +3,7 @@
 import SmoothDetails, { Collapse } from './smooth-details';
 import { routeLabel, type RouteCity } from '@/lib/route-label';
 import { useLocale } from '@/components/appearance';
+import type { ApplicationMessage } from '../lib/contracts';
 import { useState, useEffect, useRef, useId } from 'react';
 import { api } from './api';
 import DestinationPicker from './destination-picker';
@@ -34,7 +35,7 @@ type Inference = {
   start: string | null;
   end: string | null;
   destination: string | null;
-  warnings: Record<string, string>;
+  warnings: Record<string, ApplicationMessage>;
 };
 
 export default function CreateTrip({
@@ -69,8 +70,10 @@ export default function CreateTrip({
   const [end, setEnd] = useState('');
   const [destination, setDestination] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
-  const [dateHint, setDateHint] = useState('');
-  const [destinationHint, setDestinationHint] = useState('');
+  const [dateHint, setDateHint] = useState<ApplicationMessage>('');
+  const [inferredYears, setInferredYears] = useState<string[]>([]);
+  const [destinationHint, setDestinationHint] =
+    useState<ApplicationMessage>('');
   const [count, setCount] = useState<number | null>(null);
   const cache = useRef<{
     key: string;
@@ -161,16 +164,10 @@ export default function CreateTrip({
       if (autoDates) {
         setStart(value.start || '');
         setEnd(value.end || '');
+        setInferredYears(value.dateYears || []);
         setDateHint(
-          (value.warnings.dates
-            ? (value.dateYears && value.dateYears.length > 1
-                ? t('createTrip.yearsInFiles') +
-                  ' ' +
-                  value.dateYears.join(', ') +
-                  '. '
-                : '') + m(value.warnings.dates)
-            : '') ||
-            (value.start ? t('createTrip.fromTheFirstToTheLastPhotoOr') : ''),
+          value.warnings.dates ||
+            (value.start ? 'createTrip.fromTheFirstToTheLastPhotoOr' : ''),
         );
       }
       if (autoDestination) {
@@ -182,7 +179,7 @@ export default function CreateTrip({
         setDestinationHint(
           value.warnings.destination ||
             (value.destination
-              ? t('createTrip.nearestTownsFromGpsPleaseCheckThe')
+              ? 'createTrip.nearestTownsFromGpsPleaseCheckThe'
               : ''),
         );
       }
@@ -199,7 +196,7 @@ export default function CreateTrip({
     setAnalyzing(true);
     setSourceError('');
     const timer = setTimeout(() => {
-      void api(
+      void api<Inference>(
         'trips/infer',
         'POST',
         {
@@ -588,7 +585,12 @@ export default function CreateTrip({
         <p className="field-hint" role="status">
           {autoDates && !source
             ? t('createTrip.chooseAPhotoFolderFirst')
-            : m(dateHint)}
+            : inferredYears.length > 1
+              ? t('inference.yearsHint', {
+                  years: inferredYears.join(', '),
+                  hint: m(dateHint),
+                })
+              : m(dateHint)}
         </p>
       </div>
       <SmoothDetails className="trip-description">

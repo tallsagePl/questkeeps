@@ -11,7 +11,7 @@ export function ownProfileMedia(req: Request, id: string) {
     user.id,
     user.id,
   );
-  return media || fail(404, 'Файл недоступен');
+  return media || fail(404, 'profileFiles.fileUnavailable');
 }
 
 export function profileMediaGroups(userId: string) {
@@ -23,7 +23,7 @@ export function profileMediaGroups(userId: string) {
 
 export function profileMediaPage(userId: string, url: URL) {
   const trip = url.searchParams.get('trip');
-  if (!trip || trip.length > 100) fail(400, 'Выберите поездку');
+  if (!trip || trip.length > 100) fail(400, 'messages.chooseATrip');
   let cursor: { taken: string; id: string } | undefined;
   const raw = url.searchParams.get('cursor');
   if (raw) {
@@ -39,7 +39,7 @@ export function profileMediaPage(userId: string, url: URL) {
         throw Error();
       cursor = value;
     } catch {
-      fail(400, 'Некорректная страница');
+      fail(400, 'messages.invalidPage');
     }
   }
   const rows = all(

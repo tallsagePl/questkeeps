@@ -8,9 +8,9 @@ export async function readAvatar(req: Request) {
       req.headers.get('content-type') || '',
     )
   )
-    fail(400, 'Выберите фотографию JPG, PNG или WebP');
+    fail(400, 'messages.chooseAJpgPngOrWebpPhoto');
   const reader = req.body?.getReader();
-  if (!reader) fail(400, 'Выберите фотографию');
+  if (!reader) fail(400, 'messages.chooseAPhoto');
   const chunks: Uint8Array[] = [];
   let size = 0;
   while (true) {
@@ -19,7 +19,7 @@ export async function readAvatar(req: Request) {
     size += chunk.value.length;
     if (size > max) {
       await reader.cancel();
-      fail(413, 'Фотография должна быть не больше 5 МБ');
+      fail(413, 'profile.avatarTooLarge');
     }
     chunks.push(chunk.value);
   }
@@ -37,9 +37,6 @@ export async function readAvatar(req: Request) {
       .webp({ quality: 85 })
       .toBuffer();
   } catch {
-    fail(
-      400,
-      'Не удалось прочитать фотографию. Выберите другой JPG, PNG или WebP',
-    );
+    fail(400, 'messages.unableToReadThisPhotoChooseAnother');
   }
 }

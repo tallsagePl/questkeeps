@@ -1,14 +1,15 @@
+import { storeMessage } from './i18n/messages';
 import { readPhotoExif, captureDay } from './photo-metadata';
 import { db, one, all, run, id, Row } from './db';
 import { disk, inside, Resource } from './yandex';
-import { fail, inRange } from './access';
+import { fail, inRange, HttpError } from './access';
 
 export async function syncSource(sourceId: string) {
   const s = one(
     'SELECT s.*,t.start trip_start,t.end trip_end,t.owner_id FROM sources s JOIN trips t ON t.id=s.trip_id WHERE s.id=?',
     sourceId,
   );
-  if (!s || !s.approved) fail(403, 'Источник не одобрен');
+  if (!s || !s.approved) fail(403, 'errors.sourceNotApproved');
   const lease = id();
   if (
     !run(
@@ -42,10 +43,7 @@ export async function syncSource(sourceId: string) {
       let offset = 0;
       while (true) {
         if (++pages > 2000 || Date.now() - started > 15 * 60000)
-          fail(
-            422,
-            'Папка слишком большая для одного прохода. Выберите папку конкретной поездки',
-          );
+          fail(422, 'errors.folderTooLarge');
         if (
           !run(
             'UPDATE sources SET lock_until=? WHERE id=? AND lock_id=?',
@@ -54,20 +52,17 @@ export async function syncSource(sourceId: string) {
             lease,
           ).changes
         )
-          fail(409, 'Синхронизация перезапущена');
+          fail(409, 'messages.synchronizationWasRestarted');
         const page = (await disk(s.account_id, 'resources', {
           path: folder,
           limit: '100',
           offset: String(offset),
           sort: 'name',
         })) as Resource;
-        if (!page._embedded) fail(422, 'Источник должен быть папкой');
+        if (!page._embedded) fail(422, 'errors.sourceMustBeFolder');
         for (const r of page._embedded.items) {
           if (Date.now() - started > 15 * 60000)
-            fail(
-              422,
-              'Сканирование заняло слишком много времени. Выберите папку меньшего размера',
-            );
+            fail(422, 'messages.scanningTookTooLongChooseASmaller');
           if (
             !run(
               'UPDATE sources SET lock_until=? WHERE id=? AND lock_id=?',
@@ -76,7 +71,7 @@ export async function syncSource(sourceId: string) {
               lease,
             ).changes
           )
-            fail(409, 'Синхронизация перезапущена');
+            fail(409, 'messages.synchronizationWasRestarted');
           if (!inside(r.path, s.path)) continue;
           if (r.type === 'dir') {
             queue.push(r.path);
@@ -133,16 +128,18 @@ export async function syncSource(sourceId: string) {
         }
         offset += page._embedded.items.length;
         if (offset >= page._embedded.total) break;
-        if (!page._embedded.items.length) fail(502, 'Неполный ответ Диска');
+        if (!page._embedded.items.length)
+          fail(502, 'errors.incompleteDiskResponse');
       }
     }
     db.transaction(() => {
       if (
         one('SELECT lock_id FROM sources WHERE id=?', s.id)?.lock_id !== lease
       )
-        fail(409, 'Синхронизация перезапущена');
+        fail(409, 'messages.synchronizationWasRestarted');
       const latestSource = one('SELECT approved FROM sources WHERE id=?', s.id);
-      if (!latestSource?.approved) fail(403, 'Одобрение источника отозвано');
+      if (!latestSource?.approved)
+        fail(403, 'messages.sourceApprovalWasRevoked');
       if (s.user_id !== s.owner_id) {
         const latestMember = one(
           'SELECT * FROM members WHERE trip_id=? AND user_id=? AND active=1',
@@ -154,7 +151,10 @@ export async function syncSource(sourceId: string) {
           latestMember.start !== from ||
           latestMember.end !== to
         )
-          fail(409, 'Период участия изменился. Повторите синхронизацию');
+          fail(
+            409,
+            'messages.participationDatesChangedRunSynchronizationAgain',
+          );
       }
       if (
         !one(
@@ -162,7 +162,7 @@ export async function syncSource(sourceId: string) {
           s.account_id,
         )
       )
-        fail(409, 'Аккаунт Яндекса отключён. Подключите его снова в профиле');
+        fail(409, 'messages.yandexAccountDisconnectedReconnectItInYour');
       run('UPDATE media SET missing=1 WHERE source_id=?', s.id);
       const statement = db.prepare(
         'INSERT INTO media (id,source_id,trip_id,user_id,resource_id,path,name,mime,kind,taken,date_basis,lat,lon,revision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id,resource_id) DO UPDATE SET path=excluded.path,name=excluded.name,mime=excluded.mime,kind=excluded.kind,taken=excluded.taken,date_basis=excluded.date_basis,lat=excluded.lat,lon=excluded.lon,revision=excluded.revision,missing=0',
@@ -195,7 +195,11 @@ export async function syncSource(sourceId: string) {
   } catch (error) {
     run(
       'UPDATE sources SET error=? WHERE id=? AND lock_id=?',
-      error instanceof Error ? error.message : 'Ошибка синхронизации',
+      error instanceof HttpError && error.translation
+        ? storeMessage(error.translation)
+        : error instanceof Error
+          ? error.message
+          : 'trip.couldNotSynchronizeTheFolder',
       s.id,
       lease,
     );

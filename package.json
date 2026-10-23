@@ -1,6 +1,6 @@
 {
   "name": "questkeeps",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -11,12 +11,12 @@
     "test": "node --import ./scripts/test-env.mjs --import tsx --test tests/*.test.ts",
     "worker": "node --env-file=.env.local --import tsx scripts/worker.ts",
     "test:e2e": "playwright test",
-    "format": "node scripts/format-source.mjs && prettier --write \"lib/i18n/*.json\" \"docs/**/*.md\" \"README*.md\"",
+    "format": "node scripts/format-source.mjs && prettier --write \"lib/i18n/*.json\" \"docs/**/*.md\" \"README*.md\" && prettier --write \".github/**/*.yml\"",
     "health": "node --env-file=.env.local --import tsx scripts/health.ts",
     "backup": "node --env-file=.env.local --import tsx scripts/backup.ts",
     "test:social": "playwright test e2e/social.spec.ts --workers=1",
     "migrate": "node --env-file=.env.local --import tsx scripts/migrate.ts",
-    "format:check": "node scripts/format-source.mjs --check && prettier --check \"lib/i18n/*.json\" \"docs/**/*.md\" \"README*.md\""
+    "format:check": "node scripts/format-source.mjs --check && prettier --check \"lib/i18n/*.json\" \"docs/**/*.md\" \"README*.md\" && prettier --check \".github/**/*.yml\""
   },
   "keywords": [],
   "author": "",

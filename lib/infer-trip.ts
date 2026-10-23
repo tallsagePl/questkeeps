@@ -3,7 +3,12 @@ import { one } from './db';
 import { fail } from './access';
 import { disk, normalizePath, inside, Resource } from './yandex';
 import { readPhotoExif, captureDay, captureOrder } from './photo-metadata';
-import { translate } from './i18n/translate';
+import {
+  translate,
+  type TranslationKey,
+  type TranslationParams,
+  type LocalizedMessage,
+} from './i18n/translate';
 import { closestCity } from './city-lookup';
 
 export { closestCity } from './city-lookup';
@@ -16,9 +21,9 @@ export function ownFolder(userId: string, accountId: string, path: string) {
       userId,
     )
   )
-    fail(403, 'Нет доступа к этому аккаунту');
+    fail(403, 'messages.youDoNotHaveAccessToThisAccount');
   const folder = normalizePath(path);
-  if (folder === 'disk:/') fail(400, 'Выберите папку конкретной поездки');
+  if (folder === 'disk:/') fail(400, 'messages.chooseAFolderForThisTrip');
   return folder;
 }
 
@@ -53,26 +58,20 @@ export async function inferTrip(
     seen.add(path);
     let offset = 0;
     while (true) {
-      if (signal?.aborted) fail(499, 'Анализ отменён');
+      if (signal?.aborted) fail(499, 'messages.analysisCancelled');
       if (++pages > 2000 || Date.now() - started > 5 * 60000)
-        fail(
-          422,
-          'Анализ занял слишком много времени. Выберите папку меньшего размера',
-        );
+        fail(422, 'messages.analysisTookTooLongChooseASmaller');
       const page = (await disk(input.accountId, 'resources', {
         path,
         limit: '100',
         offset: String(offset),
         sort: 'name',
       })) as Resource;
-      if (!page._embedded) fail(400, 'Выберите папку с фотографиями');
+      if (!page._embedded) fail(400, 'messages.chooseAFolderWithPhotos');
       for (const r of page._embedded.items) {
-        if (signal?.aborted) fail(499, 'Анализ отменён');
+        if (signal?.aborted) fail(499, 'messages.analysisCancelled');
         if (Date.now() - started > 5 * 60000)
-          fail(
-            422,
-            'Анализ занял слишком много времени. Выберите папку меньшего размера',
-          );
+          fail(422, 'messages.analysisTookTooLongChooseASmaller');
         if (!inside(r.path, folder)) continue;
         if (r.type === 'dir') {
           queue.push(r.path);
@@ -85,10 +84,7 @@ export async function inferTrip(
         if (seenPhotos.has(key)) continue;
         seenPhotos.add(key);
         if (photos.length >= 5000)
-          fail(
-            422,
-            'В папке больше 5000 фотографий. Выберите папку одной поездки',
-          );
+          fail(422, 'messages.theFolderHasOver5000Photos');
         const needsExif =
           isPhoto &&
           (input.destination || (!r.exif?.date_time && !r.photoslice_time));
@@ -112,7 +108,7 @@ export async function inferTrip(
       offset += page._embedded.items.length;
       if (offset >= page._embedded.total) break;
       if (!page._embedded.items.length)
-        fail(502, 'Диск вернул неполный список файлов. Повторите анализ');
+        fail(502, 'messages.driveReturnedAnIncompleteFileListTry');
     }
   }
   const days = photos
@@ -152,36 +148,56 @@ export async function inferTrip(
       ) === index,
   );
   const destination = routeLabel(uniqueRoute, input.language || 'ru');
+  const warningsTranslations: Record<string, LocalizedMessage> = {};
+  function warning(
+    field: string,
+    key: TranslationKey,
+    params?: TranslationParams,
+  ) {
+    warningsTranslations[field] = { key, ...(params ? { params } : {}) };
+    return translate(key, 'ru', params);
+  }
   const warnings: Record<string, string> = {};
   if (!photos.length) {
-    warnings.dates = 'В выбранной папке нет фотографий — укажите даты вручную';
-    warnings.destination =
-      'В выбранной папке нет фотографий — укажите место вручную';
+    warnings.dates = warning('dates', 'messages.thereAreNoPhotosInThisFolder');
+    warnings.destination = warning(
+      'destination',
+      'messages.thereAreNoPhotosInThisFolderEnter',
+    );
   } else {
     if (conflictingYears)
-      warnings.dates =
-        'В файлах встречаются разные годы. Проверьте дату в камере и укажите период поездки вручную.';
+      warnings.dates = warning(
+        'dates',
+        'messages.theFilesContainDatesFromDifferentYears',
+      );
     else if (!days.length)
-      warnings.dates = 'В фотографиях нет даты съёмки — укажите даты вручную';
+      warnings.dates = warning(
+        'dates',
+        'messages.thePhotosHaveNoCaptureDatesEnter',
+      );
     else if (days.length < photos.length)
-      warnings.dates = translate('inference.partialDates', 'ru', {
+      warnings.dates = warning('dates', 'inference.partialDates', {
         dated: days.length,
         total: photos.length,
       });
     if (!geolocated.length)
       warnings.destination = readFailures
-        ? 'Не удалось прочитать метаданные части фотографий. Повторите анализ или укажите место вручную.'
-        : 'В фотографиях нет координат — укажите место вручную';
+        ? warning('destination', 'messages.somePhotoMetadataCouldNotBeRead')
+        : warning('destination', 'messages.thePhotosHaveNoCoordinatesEnterThe');
     else if (!destination)
-      warnings.destination =
-        'Не удалось определить города рядом с фотографиями — укажите место вручную';
+      warnings.destination = warning(
+        'destination',
+        'messages.couldNotFindTownsNearThePhotos',
+      );
     else if (
       unmapped ||
       geolocated.length < photos.length ||
       uniqueRoute.length > 5
     )
-      warnings.destination =
-        'Направление определено по части фото с GPS — проверьте и при необходимости исправьте';
+      warnings.destination = warning(
+        'destination',
+        'messages.destinationDetectedFromSomeGpsPhotosPlease',
+      );
   }
   return {
     photoCount: photos.filter((p) => p.kind === 'photo').length,
@@ -194,15 +210,7 @@ export async function inferTrip(
     destination: input.destination ? destination : null,
     route: input.destination ? uniqueRoute : [],
     warnings,
-    warningsTranslations:
-      days.length > 0 && days.length < photos.length && !conflictingYears
-        ? {
-            dates: {
-              key: 'inference.partialDates',
-              params: { dated: days.length, total: photos.length },
-            },
-          }
-        : {},
+    warningsTranslations,
     attribution: 'GeoNames / cities.json · CC BY 4.0',
   };
 }
