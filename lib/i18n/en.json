@@ -839,5 +839,9 @@
   "welcome.slideshow": "Slideshow",
   "welcome.theGreatWallOfChinaWindingThrough": "The Great Wall of China winding through the mountains",
   "welcome.thePyramidsOfGizaAtSunset": "The pyramids of Giza at sunset",
-  "welcome.whiteHousesInSantoriniAboveTheAegean": "White houses in Santorini above the Aegean Sea"
+  "welcome.whiteHousesInSantoriniAboveTheAegean": "White houses in Santorini above the Aegean Sea",
+  "about.contactAction": "Contact us on Telegram",
+  "about.contactDescription": "Have an idea, found a bug, or want to share your experience? Send us a message through our Telegram bot. Tell us what you like and what is missing, and attach photos or screenshots if they help.",
+  "about.contactHeading": "Help make QuestKeeps better",
+  "navigation.telegram": "Telegram bot"
 }

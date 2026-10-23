@@ -48,3 +48,5 @@ Use this inventory whenever changing the logo, colors, typography or product voi
 4. Refresh README and About screenshots, favicon/install/social exports and policy navigation where necessary.
 5. Upload external Telegram assets separately and inspect the actual bot profile. Check one real email as well as a browser preview.
 6. Record what was uploaded and what still needs external verification; do not describe a prepared asset as activated.
+
+The shared footer and the contact section in `components/about.tsx` link to https://t.me/questkeepsbot. Keep both languages in `lib/i18n/` aligned with the bot identity when changing support details.

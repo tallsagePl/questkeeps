@@ -3358,6 +3358,7 @@ a:any-link:focus-visible,
   color: var(--accent);
   font-weight: 600;
 }
+.about-contact .secondary,
 .about-ending .secondary {
   justify-self: start;
 }

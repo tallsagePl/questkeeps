@@ -839,5 +839,9 @@
   "welcome.slideshow": "Слайд-шоу",
   "welcome.theGreatWallOfChinaWindingThrough": "Великая Китайская стена среди гор",
   "welcome.thePyramidsOfGizaAtSunset": "Пирамиды Гизы на закате",
-  "welcome.whiteHousesInSantoriniAboveTheAegean": "Белые дома Санторини над Эгейским морем"
+  "welcome.whiteHousesInSantoriniAboveTheAegean": "Белые дома Санторини над Эгейским морем",
+  "about.contactAction": "Написать нам в Telegram",
+  "about.contactDescription": "Есть идея, что-то не работает или хочется поделиться впечатлениями? Напишите нам в Telegram-бот: расскажите, что понравилось и чего не хватает. К сообщению можно приложить фотографии и скриншоты.",
+  "about.contactHeading": "Давайте сделаем QuestKeeps лучше",
+  "navigation.telegram": "Telegram-бот"
 }

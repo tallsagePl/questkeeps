@@ -60,6 +60,20 @@ export default function About() {
               </details>
             </div>
           </section>
+          <section className="about-contact">
+            <h2>{t('about.contactHeading')}</h2>
+            <div>
+              <p>{t('about.contactDescription')}</p>
+              <a
+                className="secondary"
+                href="https://t.me/questkeepsbot"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t('about.contactAction')}
+              </a>
+            </div>
+          </section>
           <section className="about-ending">
             <h2>{t('about.thePlacesAndThePeople')}</h2>
             <div>
