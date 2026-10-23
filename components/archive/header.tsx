@@ -19,13 +19,13 @@ export default function Header({ archive }: { archive: ArchiveController }) {
         <HeaderBrand back={!!(selected || share || invite)} />
         <span className="top-caption">{t('trip.yourTravelCollection')}</span>
         <div className="top-actions">
-          {!guest && user && (
+          {user && (
             <a
               className="text-button trips-nav-link"
               href="/"
-              aria-current={!invite ? 'page' : undefined}
+              aria-current={!invite && !guest ? 'page' : undefined}
               onClick={(event) => {
-                if (!selected && !invite) event.preventDefault();
+                if (!selected && !invite && !guest) event.preventDefault();
               }}
             >
               {t('navigation.trips')}

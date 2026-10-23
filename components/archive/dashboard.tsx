@@ -2,6 +2,7 @@
 
 import { useLocale } from '@/components/appearance';
 import Friends from '../friends';
+import FollowedTrips from '../followed-trips';
 import { LogoMark } from '../brand';
 import { FeedbackButton, PageFeedback } from '../feedback';
 import { type ArchiveController } from './use-archive';
@@ -33,6 +34,7 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
           </FeedbackButton>
         </div>
         {user && <Friends key={user.id} viewerId={user.id} compact />}
+        {user && <FollowedTrips key={'follows:' + user.id} userId={user.id} />}
         <div className="section-line">
           <span>{t('trip.allTrips')}</span>
           <span>{String(trips.length).padStart(2, '0')}</span>

@@ -1,6 +1,7 @@
 'use client';
 
 import SiteFooter from './site-footer';
+import TripFollow, { FollowArrival } from './trip-follow';
 
 import { FriendLinkArrival } from './friend-link';
 import WelcomeSlideshow from './welcome-slideshow';
@@ -71,6 +72,7 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
       <BackToTop />
       <Header archive={archive} />
       <FriendLinkArrival userId={user?.id} />
+      <FollowArrival userId={user?.id} />
       {!ready ? (
         <main id="main-content" tabIndex={-1} className="loading">
           <PageFeedback />
@@ -210,12 +212,22 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
                 </span>
               )}
             </div>
-            <div className="trip-summary">
-              <strong>
-                {data?.media.filter((m) => !m.hidden).length || 0}
-              </strong>
-              <span>{t('trip.photosVideos')}</span>
-              <Icon name="compass" size={42} />
+            <div className="trip-heading-side">
+              {guest && props.share && (
+                <TripFollow
+                  key={trip.id + ':' + (user?.id || '')}
+                  token={props.share}
+                  tripId={trip.id}
+                  userId={user?.id}
+                />
+              )}
+              <div className="trip-summary">
+                <strong>
+                  {data?.media.filter((m) => !m.hidden).length || 0}
+                </strong>
+                <span>{t('trip.photosVideos')}</span>
+                <Icon name="compass" size={42} />
+              </div>
             </div>
           </div>
           <div className="tabbar">

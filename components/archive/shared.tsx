@@ -32,6 +32,9 @@ export function values(event: FormEvent<HTMLFormElement>) {
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
+    star: (
+      <path d="m12 3 2.78 5.63L21 9.54l-4.5 4.39 1.06 6.2L12 17.2l-5.56 2.93 1.06-6.2L3 9.54l6.22-.91L12 3Z" />
+    ),
     compass: (
       <>
         <circle cx="12" cy="12" r="9" />

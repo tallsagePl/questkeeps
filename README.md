@@ -8,7 +8,7 @@
 
 QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.16.1**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.17.0**.
 
 ## Screenshots
 
@@ -36,6 +36,8 @@ These screenshots show the running application with fictional data and placehold
 Light and dark themes, English and Russian interfaces, and responsive layouts. The Onest font is served locally. The screenshot showcase on the About page supports keyboard navigation and reduced motion.
 
 ## Features
+
+- **Follow shared trips.** Star a guest trip above its photo count and return to it from a private Followed trips section. Sign-in preserves the action; following respects guest visibility and link revocation.
 
 - **Telegram feedback.** Text and attachments, private admin review, recent registration emails and queued notifications. See [bot setup](docs/TELEGRAM-SETUP.md).
 

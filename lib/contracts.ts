@@ -23,6 +23,8 @@ export type TripSummary = {
   media_count: number;
 };
 
+export type FollowedTrip = Omit<TripSummary, 'description'> & { url: string };
+
 export type TripView = Omit<TripSummary, 'media_count'> & {
   role: 'owner' | 'member' | 'guest';
   from: string;

@@ -7,6 +7,7 @@ import { json, appURL } from './api/http';
 import { oauthFailure } from './api/oauth';
 import type { RequestContext } from './api/context';
 import { authRoutes } from './api/auth';
+import { followRoutes } from './api/follows';
 import { publicRoutes } from './api/public';
 import { mediaRoutes } from './api/media';
 import { friendRoutes } from './api/friends';
@@ -48,6 +49,10 @@ export async function handle(
     }
     {
       const result = await mediaRoutes(context);
+      if (result) return result;
+    }
+    {
+      const result = await followRoutes(context);
       if (result) return result;
     }
     const u = requireUser(req);

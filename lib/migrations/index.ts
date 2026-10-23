@@ -1,4 +1,5 @@
 import { telegram } from './006-telegram';
+import { tripFollows } from './007-trip-follows';
 import { mediaGuestVisibility } from './005-media-guest-visibility';
 import { sourceMessageKeys } from './004-source-message-keys';
 import type Database from 'better-sqlite3';
@@ -13,6 +14,7 @@ export const migrations = [
   { version: 4, name: 'source-message-keys', up: sourceMessageKeys },
   { version: 5, name: 'media-guest-visibility', up: mediaGuestVisibility },
   { version: 6, name: 'telegram', up: telegram },
+  { version: 7, name: 'trip-follows', up: tripFollows },
 ];
 
 export function migrate(db: Database.Database) {
