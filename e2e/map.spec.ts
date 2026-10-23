@@ -4,6 +4,8 @@ import sharp from 'sharp';
 test('резервная карта при 403 и миниатюры кадров под картой', async ({
   page,
 }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.stack || error.message));
   const trip = {
     id: 'map-photos',
     title: 'Карта',
@@ -134,6 +136,24 @@ test('резервная карта при 403 и миниатюры кадро�
   await expect(page.locator('dialog.modal.wide')).toBeVisible();
   await expect(page.locator('dialog.modal.wide h2')).toContainText('Frame0');
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+  // Leave while Leaflet still has a zoom transition queued.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.evaluate(() => {
+      document
+        .querySelector<HTMLAnchorElement>('.leaflet-control-zoom-in')!
+        .click();
+      setTimeout(() => {
+        [...document.querySelectorAll('button')]
+          .find((button) => button.textContent?.trim() === 'Галерея')!
+          .click();
+      }, 50);
+    });
+    await expect(page.locator('.travel-map')).toHaveCount(0);
+    await page.waitForTimeout(350);
+    await page.getByRole('button', { name: 'Карта', exact: true }).click();
+    await expect(page.locator('.leaflet-control-zoom-in')).toBeVisible();
+  }
+  expect(errors).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect
     .poll(() =>

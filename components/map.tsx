@@ -11,6 +11,7 @@ import { useLocale } from '@/components/appearance';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import MapThumbnail from './map-thumbnail';
+import { removeLeafletMap } from '../lib/leaflet-lifecycle';
 import type { Map as LeafletMap, CircleMarker } from 'leaflet';
 import { mapRegions, mapDateTime } from '../lib/map-regions';
 
@@ -244,7 +245,7 @@ export default function TravelMap({
       activeMarker.current = null;
       cancelled = true;
       resizeObserver?.disconnect();
-      map?.remove();
+      removeLeafletMap(map);
     };
   }, [points, t, compact, retry]);
   const [geometryMissing, setGeometryMissing] = useState(false);

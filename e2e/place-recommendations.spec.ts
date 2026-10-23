@@ -316,6 +316,17 @@ test('следующая порция загружается, лимит не в
   );
   await expect(more).toBeDisabled();
   expect(laterCalls).toBeLessThanOrEqual(2);
+  const callsBeforeNotification = laterCalls;
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new CustomEvent('questkeeps:place-search-updated', {
+        detail: 'pagination',
+      }),
+    ),
+  );
+  await page.waitForTimeout(300);
+  expect(laterCalls).toBe(callsBeforeNotification);
+  await expect(more).toBeDisabled();
   limited = false;
   await page.clock.fastForward(61000);
   await expect(

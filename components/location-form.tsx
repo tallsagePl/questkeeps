@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import { removeLeafletMap } from '../lib/leaflet-lifecycle';
 import type { Map as LeafletMap, Marker } from 'leaflet';
 import { useLocale } from './appearance';
 import { FeedbackForm, FeedbackButton, Field } from './feedback';
@@ -159,7 +160,7 @@ function LocationMap({
       putMarker.current = () => {};
       marker.current = null;
       map.current = null;
-      instance?.remove();
+      removeLeafletMap(instance);
     };
   }, [initial?.lat, initial?.lon, retry, t]);
   useEffect(() => putMarker.current(value), [value?.lat, value?.lon, ready]);

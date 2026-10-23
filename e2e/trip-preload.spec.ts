@@ -150,6 +150,18 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
   await expect.poll(() => geometries, { timeout: 15000 }).toBe(1);
   await expect.poll(() => texts).toBe(1);
   await expect.poll(() => lookups, { timeout: 25000 }).toBe(12);
+  await page
+    .getByRole('button', { name: 'Открытые места', exact: true })
+    .click();
+  await expect(page.locator('.place-recommendations')).toBeVisible();
+  await page.waitForTimeout(700);
+  await page.reload();
+  await page
+    .getByRole('button', { name: 'Открытые места', exact: true })
+    .click();
+  await expect(page.locator('.place-recommendations')).toBeVisible();
+  await page.waitForTimeout(700);
+  expect(lookups).toBe(12);
   const map = () =>
     page
       .locator('.tabbar nav')

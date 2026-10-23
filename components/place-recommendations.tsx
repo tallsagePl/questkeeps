@@ -9,7 +9,7 @@ import { includesDate } from '../lib/date-selection';
 import { useLocale } from './appearance';
 import { api } from './api';
 import MapThumbnail from './map-thumbnail';
-import { searchPhotoPlaces } from '../lib/place-search-client';
+import { photoSearchKey, searchPhotoPlaces } from '../lib/place-search-client';
 import { ApiError, FeedbackButton, useFeedback } from './feedback';
 import DismissPlaceSuggestion from './dismiss-place-suggestion';
 import LocalizedArticle from './localized-article';
@@ -127,6 +127,7 @@ export default function PlaceRecommendations({
   useEffect(() => {
     const update = (event: Event) => {
       if (
+        Date.now() >= retryAt &&
         (event as CustomEvent).detail === tripId &&
         uniqueCards(
           cardSnapshot.current,
@@ -139,7 +140,7 @@ export default function PlaceRecommendations({
     window.addEventListener('questkeeps:place-search-updated', update);
     return () =>
       window.removeEventListener('questkeeps:place-search-updated', update);
-  }, [tripId]);
+  }, [tripId, retryAt]);
   const [attempt, setAttempt] = useState(0);
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(false);
@@ -204,16 +205,7 @@ export default function PlaceRecommendations({
   );
   useEffect(() => {
     const controller = new AbortController();
-    const photoKey = (photo: Photo) =>
-      scope +
-      ':' +
-      photo.id +
-      ':' +
-      photo.revision +
-      ':' +
-      photo.lat +
-      ':' +
-      photo.lon;
+    const photoKey = (photo: Photo) => photoSearchKey(photo, scope);
     const resultsKey = 'questkeeps:found-places:v2:' + scope + ':' + tripId;
     {
       completed.current.clear();
@@ -256,16 +248,7 @@ export default function PlaceRecommendations({
         )
           break;
         const photo = targets[next++];
-        const key =
-          scope +
-          ':' +
-          photo.id +
-          ':' +
-          photo.revision +
-          ':' +
-          photo.lat +
-          ':' +
-          photo.lon;
+        const key = photoKey(photo);
         try {
           let result = cache.get(key);
           if (!result || result.expires < Date.now()) {

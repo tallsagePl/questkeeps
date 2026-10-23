@@ -6,6 +6,8 @@ for (const mobile of [false, true])
     'choose missing GPS on a map and save ' +
       (mobile ? 'on mobile' : 'on desktop'),
     async ({ page }) => {
+      const errors: string[] = [];
+      page.on('pageerror', (error) => errors.push(error.message));
       if (mobile) await page.setViewportSize({ width: 390, height: 844 });
       const trip = {
         id: 'location-trip',
@@ -174,9 +176,16 @@ for (const mobile of [false, true])
       expect(
         await form.evaluate((el) => el.scrollWidth <= el.clientWidth),
       ).toBe(true);
-      await form
-        .getByRole('button', { name: 'Скрыть карту', exact: true })
-        .click();
+      await form.evaluate((element) => {
+        element
+          .querySelector<HTMLAnchorElement>('.leaflet-control-zoom-in')!
+          .click();
+        setTimeout(() => {
+          [...element.querySelectorAll('button')]
+            .find((button) => button.textContent?.trim() === 'Скрыть карту')!
+            .click();
+        }, 50);
+      });
       await expect(map).toHaveCount(0);
       expect(
         Number(await form.getByLabel('Широта', { exact: true }).inputValue()),
@@ -186,5 +195,7 @@ for (const mobile of [false, true])
         .click();
       await expect.poll(() => saved).toEqual({ lat, lon });
       await expect(form).toHaveCount(0);
+      await page.waitForTimeout(350);
+      expect(errors).toEqual([]);
     },
   );
