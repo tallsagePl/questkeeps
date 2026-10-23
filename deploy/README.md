@@ -1,5 +1,16 @@
 # QuestKeeps on a single Ubuntu VPS
 
+## Verified deployment: 23 October 2026
+
+- Application version: **1.16.0**, application source revision `82040f7`; previous live version was 1.10.0.
+- The active app path links to `releases/1.16.0-82040f7`; persistent data and private configuration are in `shared/`. The previous application/build and pre-migration database/configuration were preserved separately.
+- Production SQLite migrated to schema 6 with a successful integrity/foreign-key check. A fresh backup through the systemd backup service also passed SQLite integrity checking.
+- HTTPS `/`, `/about` and bilingual `/privacy` return 200. The footer links to `/privacy`; `/api/trips` returns 401 without a session. Requests for `.env.local`, `.git/config` and `data/travel.sqlite` return 404.
+- Nginx configuration validates. The app listens only on loopback. Firewall rules expose SSH and HTTP/HTTPS. Application autostart, daily backup timer and certificate renewal timer are enabled.
+- Mail verification is enabled, Resend accepted a production test email, and the support URL points to the real feedback bot. Inbox placement still requires checking the recipient mailbox.
+- Telegram polling is active on the VPS and disabled locally. At verification time the administrator had not yet started the bot. Press Start before expecting registration notifications, and set `https://questkeeps.ru/privacy` in BotFather. Botpic/description-image uploads remain separate BotFather actions.
+- Validation: 142 unit tests, 3 privacy browser tests (mobile/desktop, light/dark, accessibility and no-JavaScript content), Linux production build and public browser smoke check with no script errors or horizontal overflow. The npm production dependency advisory check reported zero known advisories at this time; this is not a complete application security audit.
+
 Runtime: Node.js 24 LTS, Nginx, systemd, SQLite. On the initial 1 GB VPS,
 use 2 GB swap and monitor RAM, disk and sync latency. This is a small trial
 deployment, not a capacity guarantee. Build native dependencies on Linux;
