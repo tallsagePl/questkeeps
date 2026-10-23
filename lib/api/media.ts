@@ -249,8 +249,11 @@ export async function mediaRoutes({
       }
       if (method === 'GET') {
         return json({
-          suggestions: await nearby(m.lat, m.lon, () =>
-            throttle('place-search:' + u.id, 120, 60000),
+          suggestions: await nearby(
+            m.lat,
+            m.lon,
+            () => throttle('place-search:' + u.id, 120, 60000),
+            new URL(req.url).searchParams.get('refresh') === '1',
           ),
         });
       }

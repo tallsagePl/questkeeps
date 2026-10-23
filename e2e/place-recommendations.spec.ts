@@ -150,7 +150,7 @@ test('лента предлагает уникальные места, сохр�
   await expect(rail.getByText('Сбой поиска', { exact: true })).toHaveCount(0);
   await expect(
     rail.getByRole('button', { name: 'Найти ещё места', exact: true }),
-  ).toHaveCount(0);
+  ).toBeEnabled();
   const dismiss = rail.getByRole('button', {
     name: 'Удалить возможное место: Башня',
     exact: true,
@@ -332,7 +332,7 @@ test('следующая порция загружается, лимит не в
   await expect(
     rail.getByRole('heading', { name: 'Последнее место', exact: true }),
   ).toBeVisible();
-  await expect(more).toHaveCount(0);
+  await expect(more).toBeEnabled();
 });
 
 test('не больше 20 карточек, фон прогревает поиск и список пополняется после удаления', async ({
@@ -549,4 +549,101 @@ test('не больше 20 карточек, фон прогревает пои�
   expect(
     [...lookupsPerPhoto.values()].filter((n) => n > 1).length,
   ).toBeLessThanOrEqual(1);
+  await rail
+    .getByRole('button', { name: 'Найти ещё места', exact: true })
+    .click();
+  await expect(rail.locator('article')).toHaveCount(40);
+});
+
+test('completed discovery can be refreshed and keeps earlier suggestions', async ({
+  page,
+}) => {
+  const trip = {
+    id: 'refresh-places',
+    destination: '',
+    sharing: false,
+    title: 'Стамбул',
+    start: '2026-10-10',
+    end: '2026-10-18',
+    from: '2026-10-10',
+    to: '2026-10-18',
+    role: 'owner',
+    description: '',
+  };
+  const photo = {
+    id: 'cistern-photo',
+    name: 'Стамбул.jpg',
+    kind: 'photo',
+    mime: 'image/jpeg',
+    user_id: 'owner',
+    taken: '2026-10-11',
+    lat: 41.008,
+    lon: 28.978,
+    revision: '1',
+  };
+  await page.route('**/api/me', (r) =>
+    r.fulfill({ json: { user: { id: 'owner', name: 'Автор' } } }),
+  );
+  await page.route('**/api/trips', (r) =>
+    r.fulfill({ json: { trips: [trip] } }),
+  );
+  await page.route('**/api/trips/refresh-places', (r) =>
+    r.fulfill({ json: { trip, media: [photo], places: [], notes: [] } }),
+  );
+  await page.route('**/api/media/*/preview*', (r) =>
+    r.fulfill({ status: 404 }),
+  );
+  let refreshes = 0;
+  await page.route('**/api/media/cistern-photo/places**', (r) => {
+    const url = new URL(r.request().url());
+    if (url.pathname.endsWith('/description'))
+      return r.fulfill({
+        json: {
+          title:
+            url.searchParams.get('pageId') === '2'
+              ? 'Цистерна Базилика'
+              : 'Собор Святой Софии',
+          summary: 'Историческое место',
+        },
+      });
+    const refresh = url.searchParams.get('refresh') === '1';
+    if (refresh) refreshes++;
+    return r.fulfill({
+      json: {
+        suggestions: [
+          {
+            pageid: refresh ? 2 : 1,
+            title: refresh ? 'Цистерна Базилика' : 'Собор Святой Софии',
+            dist: 100,
+          },
+        ],
+      },
+    });
+  });
+  await page.goto('/?trip=refresh-places');
+  await page
+    .getByRole('button', { name: 'Открытые места', exact: true })
+    .click();
+  const rail = page.locator('.place-recommendations');
+  const more = rail.getByRole('button', {
+    name: 'Найти ещё места',
+    exact: true,
+  });
+  await expect(
+    rail.getByRole('heading', { name: 'Собор Святой Софии', exact: true }),
+  ).toBeVisible();
+  await expect(more).toBeEnabled();
+  await more.click();
+  await expect.poll(() => refreshes).toBe(1);
+  await expect(
+    rail.getByRole('heading', { name: 'Цистерна Базилика', exact: true }),
+  ).toBeVisible();
+  await expect(
+    rail.getByRole('heading', { name: 'Собор Святой Софии', exact: true }),
+  ).toBeVisible();
+  await expect(more).toBeEnabled();
+  await more.click();
+  await expect.poll(() => refreshes).toBe(2);
+  await expect(rail.locator('article')).toHaveCount(2);
+  await expect(more).toBeEnabled();
 });

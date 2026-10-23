@@ -229,22 +229,33 @@ async function searchNearby(lat: number, lon: number): Promise<NearbyPlace[]> {
 
 const nearbyCache = new MemoryCache<
   string,
-  { expires: number; result: Promise<NearbyPlace[]> }
+  { expires: number; result: Promise<NearbyPlace[]>; refreshing?: boolean }
 >();
 
 export async function nearby(
   lat: number,
   lon: number,
   beforeFetch?: () => void,
+  refresh = false,
 ) {
   const centerLat = Number(lat.toFixed(3));
   const centerLon = Number(lon.toFixed(3));
   const key = centerLat + ':' + centerLon;
   let cached = nearbyCache.get(key);
-  if (!cached || cached.expires < Date.now()) {
+  if (
+    !cached ||
+    cached.expires < Date.now() ||
+    (refresh && !cached.refreshing)
+  ) {
     beforeFetch?.();
     const result = searchNearby(centerLat, centerLon).then(filterAttractions);
-    cached = { expires: Date.now() + CACHE_TTL, result };
+    cached = { expires: Date.now() + CACHE_TTL, result, refreshing: refresh };
+    const entry = cached;
+    void result
+      .finally(() => {
+        entry.refreshing = false;
+      })
+      .catch(() => {});
     if (nearbyCache.size >= 1000)
       nearbyCache.delete(nearbyCache.keys().next().value!);
     nearbyCache.set(key, cached);

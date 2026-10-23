@@ -270,3 +270,35 @@ test('главное фото не требует запасного запро�
   };
   assert.equal(await placeImage(987651), null);
 });
+
+test('manual refresh bypasses a completed nearby cache and coalesces concurrent refreshes', async () => {
+  let calls = 0;
+  let changed = false;
+  globalThis.fetch = async () => {
+    calls++;
+    return Response.json({
+      query: {
+        geosearch: [
+          {
+            pageid: changed ? 911 : 910,
+            title: changed ? 'Цистерна Базилика' : 'Музей тест',
+            lat: 41.008,
+            lon: 28.978,
+          },
+        ],
+      },
+    });
+  };
+  const initial = await nearby(41.008, 28.978);
+  assert.equal(initial[0].pageid, 910);
+  changed = true;
+  assert.equal((await nearby(41.008, 28.978))[0].pageid, 910);
+  let charged = 0;
+  const results = await Promise.all([
+    nearby(41.008, 28.978, () => charged++, true),
+    nearby(41.008, 28.978, () => charged++, true),
+  ]);
+  assert.ok(results.every((items) => items[0].pageid === 911));
+  assert.equal(calls, 2);
+  assert.equal(charged, 1);
+});

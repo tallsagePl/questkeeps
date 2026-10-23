@@ -119,6 +119,12 @@ export default function PlaceRecommendations({
     return () => clearTimeout(timer);
   }, [retryAt]);
   const [remaining, setRemaining] = useState(true);
+  const [suggestionLimit, setSuggestionLimit] = useState(MAX_SUGGESTIONS);
+  const refreshPhotos = useRef(new Set<string>());
+  useEffect(() => {
+    refreshPhotos.current.clear();
+    setSuggestionLimit(MAX_SUGGESTIONS);
+  }, [scope, tripId, dayRange]);
   const completed = useRef(new Set<string>());
   const savedSearches = useRef<SavedSearches>(new Map());
   const cardSnapshot = useRef<Card[]>([]);
@@ -133,14 +139,14 @@ export default function PlaceRecommendations({
           cardSnapshot.current,
           exclusions.current.places,
           exclusions.current.dismissed,
-        ).length < MAX_SUGGESTIONS
+        ).length < suggestionLimit
       )
         setAttempt((n) => n + 1);
     };
     window.addEventListener('questkeeps:place-search-updated', update);
     return () =>
       window.removeEventListener('questkeeps:place-search-updated', update);
-  }, [tripId, retryAt]);
+  }, [tripId, retryAt, suggestionLimit]);
   const [attempt, setAttempt] = useState(0);
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(false);
@@ -228,7 +234,9 @@ export default function PlaceRecommendations({
     });
     setCards(cardSnapshot.current);
     const targets = photos.filter(
-      (photo) => !completed.current.has(photoKey(photo)),
+      (photo) =>
+        refreshPhotos.current.has(photoKey(photo)) ||
+        !completed.current.has(photoKey(photo)),
     );
     let next = 0;
     let paused = false;
@@ -244,15 +252,22 @@ export default function PlaceRecommendations({
             cardSnapshot.current,
             exclusions.current.places,
             exclusions.current.dismissed,
-          ).length >= MAX_SUGGESTIONS
+          ).length >= suggestionLimit &&
+          !refreshPhotos.current.size
         )
           break;
         const photo = targets[next++];
         const key = photoKey(photo);
         try {
-          let result = cache.get(key);
+          const refresh = refreshPhotos.current.has(key);
+          let result = refresh ? undefined : cache.get(key);
           if (!result || result.expires < Date.now()) {
-            const response = await searchPhotoPlaces(photo, scope, tripId);
+            const response = await searchPhotoPlaces(
+              photo,
+              scope,
+              tripId,
+              refresh,
+            );
             result = {
               expires: Date.now() + CACHE_TTL,
               suggestions: response.suggestions,
@@ -261,6 +276,7 @@ export default function PlaceRecommendations({
             cache.set(key, result);
           }
           if (!controller.signal.aborted) {
+            refreshPhotos.current.delete(key);
             savedSearches.current.set(photoKey(photo), result.suggestions);
             try {
               const validKeys = new Set(allPhotos.map(photoKey));
@@ -320,17 +336,21 @@ export default function PlaceRecommendations({
     void worker().then(() => {
       if (!controller.signal.aborted) {
         setRemaining(
-          photos.some((photo) => !completed.current.has(photoKey(photo))),
+          photos.some(
+            (photo) =>
+              refreshPhotos.current.has(photoKey(photo)) ||
+              !completed.current.has(photoKey(photo)),
+          ),
         );
         setLoading(false);
         setFailed(failedPhotos.current.size > 0);
       }
     });
     return () => controller.abort();
-  }, [photos, allPhotos, scope, tripId, attempt]);
+  }, [photos, allPhotos, scope, tripId, attempt, suggestionLimit]);
   const visible = useMemo(
-    () => uniqueCards(cards, places, dismissed).slice(0, MAX_SUGGESTIONS),
-    [cards, places, dismissed],
+    () => uniqueCards(cards, places, dismissed).slice(0, suggestionLimit),
+    [cards, places, dismissed, suggestionLimit],
   );
   useEffect(() => {
     if (
@@ -338,11 +358,19 @@ export default function PlaceRecommendations({
       checked > 0 &&
       !failed &&
       !retryAt &&
-      visible.length < MAX_SUGGESTIONS &&
+      visible.length < suggestionLimit &&
       remaining
     )
       setAttempt((value) => value + 1);
-  }, [loading, checked, failed, retryAt, visible.length, remaining]);
+  }, [
+    loading,
+    checked,
+    failed,
+    retryAt,
+    visible.length,
+    remaining,
+    suggestionLimit,
+  ]);
   if (!allPhotos.length && !headerContent) return null;
   return (
     <section
@@ -549,12 +577,23 @@ export default function PlaceRecommendations({
             : t('placeSearch.somePlacesCouldNotBeLoaded')}
         </p>
       )}
-      {visible.length < MAX_SUGGESTIONS && (remaining || failed) && (
+      {allPhotos.length > 0 && (
         <button
           type="button"
           className="secondary"
           disabled={loading || retryAt > 0}
           onClick={() => {
+            const knownCount = uniqueCards(
+              cardSnapshot.current,
+              places,
+              dismissed,
+            ).length;
+            if (!remaining && !failed && knownCount <= visible.length) {
+              refreshPhotos.current = new Set(
+                photos.map((photo) => photoSearchKey(photo, scope)),
+              );
+            }
+            setSuggestionLimit((value) => value + MAX_SUGGESTIONS);
             setAttempt((v) => v + 1);
           }}
         >

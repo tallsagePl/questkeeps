@@ -34,6 +34,7 @@ export async function searchPhotoPlaces(
   photo: Photo,
   scope: string,
   tripId: string,
+  refresh = false,
 ) {
   const version = generation;
   const key = photoSearchKey(photo, scope);
@@ -43,12 +44,13 @@ export async function searchPhotoPlaces(
       localStorage.getItem(storageKey),
       new Set([key]),
     );
-    if (saved.has(key)) return { suggestions: saved.get(key)! };
+    if (!refresh && saved.has(key)) return { suggestions: saved.get(key)! };
   } catch {}
-  let pending = requests.get(key);
+  const requestKey = refresh ? key + ':refresh' : key;
+  let pending = requests.get(requestKey);
   if (!pending) {
     pending = api<{ suggestions: SavedSuggestion[] }>(
-      'media/' + photo.id + '/places',
+      'media/' + photo.id + '/places' + (refresh ? '?refresh=1' : ''),
       'GET',
       undefined,
       AbortSignal.timeout(20000),
@@ -59,6 +61,17 @@ export async function searchPhotoPlaces(
         const valid = Array.isArray(entries)
           ? entries.filter((item) => Array.isArray(item) && item[0] !== key)
           : [];
+        const previous =
+          readSavedSearches(JSON.stringify(entries), new Set([key])).get(key) ||
+          [];
+        result.suggestions = [
+          ...new Map(
+            [...previous, ...result.suggestions].map((place) => [
+              place.pageid,
+              place,
+            ]),
+          ).values(),
+        ];
         localStorage.setItem(
           storageKey,
           JSON.stringify([...valid, [key, result.suggestions]]),
@@ -66,8 +79,10 @@ export async function searchPhotoPlaces(
       } catch {}
       return result as { suggestions: SavedSuggestion[] };
     });
-    requests.set(key, pending);
-    void pending.catch(() => requests.delete(key));
+    requests.set(requestKey, pending);
+    if (refresh)
+      void pending.finally(() => requests.delete(requestKey)).catch(() => {});
+    void pending.catch(() => requests.delete(requestKey));
   }
   return pending;
 }
