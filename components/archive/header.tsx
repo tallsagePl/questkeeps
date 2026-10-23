@@ -1,5 +1,6 @@
 'use client';
 
+import TripInvitations from '../trip-invitations';
 import { useLocale } from '@/components/appearance';
 import { AppearanceControls } from '../appearance';
 import UserAvatar from '../user-avatar';
@@ -19,6 +20,7 @@ export default function Header({ archive }: { archive: ArchiveController }) {
         <HeaderBrand back={!!(selected || share || invite)} />
         <span className="top-caption">{t('trip.yourTravelCollection')}</span>
         <div className="top-actions">
+          {user && <TripInvitations key={user.id} userId={user.id} />}
           {user && (
             <a
               className="text-button trips-nav-link"

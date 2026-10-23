@@ -4330,3 +4330,21 @@ a:any-link:focus-visible,
     margin-top: 20px;
   }
 }
+
+/* Trip invitations and the member's own days. */
+.invite-method { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 12px 24px; }
+.invite-method legend { margin-bottom: 10px; font-weight: 600; }
+.invite-method label, .invite-all-photos { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.invite-method input, .invite-all-photos input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--accent); }
+.invite-search-results { display: grid; gap: 8px; max-height: 240px; overflow-y: auto; }
+.invite-person { display: flex; align-items: center; justify-content: flex-start; gap: 12px; text-align: left; min-width: 0; }
+.invite-person span { min-width: 0; overflow-wrap: anywhere; }
+.invite-person small { display: block; }
+.invite-person[aria-pressed="true"] { border-color: var(--accent); background: var(--selection); }
+.invitation-notifications { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; }
+.invitation-count { min-width: 18px; padding: 1px 4px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-size: 0.75rem; }
+.invitation-item { padding: 16px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.invitation-item:first-child { padding-top: 0; }
+.invitation-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.trip-calendar-days button[data-participation="true"] { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 5px; }
+.calendar-participation-legend { color: var(--accent); }

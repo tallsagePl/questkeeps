@@ -36,6 +36,7 @@ const required = [
   'delivery_jobs',
   'friend_links',
   'trip_follows',
+  'trip_invitations',
   'telegram_state',
   'telegram_feedback',
   'telegram_outbox',

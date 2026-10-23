@@ -1,3 +1,4 @@
+import { joinTrip } from '../trip-invitations';
 import { sharedProfileTrips } from '../profile-media';
 import { guestTrip } from '../guest-links';
 import { publicProfile } from '../profiles';
@@ -68,6 +69,7 @@ export async function publicRoutes({
         destination: invite.destination,
         start: invite.start,
         end: invite.end,
+        allPhotos: !!invite.all_photos,
       });
     if (method === 'POST') {
       const u = requireUser(req);
@@ -77,23 +79,11 @@ export async function publicRoutes({
             .changes
         )
           fail(409, 'messages.invitationAlreadyAccepted');
-        const t = one('SELECT * FROM trips WHERE id=?', invite.trip_id)!;
-        if (t.owner_id === u.id) fail(400, 'messages.youAlreadyOwnThisTrip');
-        if (
-          one(
-            'SELECT * FROM members WHERE trip_id=? AND user_id=? AND active=1',
-            t.id,
-            u.id,
-          )
-        )
-          fail(409, 'messages.youAlreadyParticipateInThisTrip');
-        run(
-          'INSERT INTO members (trip_id,user_id,start,end,active) VALUES (?,?,?,?,1) ON CONFLICT(trip_id,user_id) DO UPDATE SET start=excluded.start,end=excluded.end,active=1',
-          t.id,
-          u.id,
-          invite.start,
-          invite.end,
-        );
+        joinTrip(invite.trip_id, u.id, {
+          start: invite.start,
+          end: invite.end,
+          all_photos: invite.all_photos,
+        });
       })();
       return json({ tripId: invite.trip_id });
     }

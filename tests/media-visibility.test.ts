@@ -40,7 +40,7 @@ test('guest-only hiding protects listings, places and direct files while partici
   );
   for (const user of ['author', 'member'])
     run(
-      'INSERT INTO members VALUES (?,?,?,?,1)',
+      'INSERT INTO members(trip_id,user_id,start,end,active) VALUES (?,?,?,?,1)',
       'trip',
       user,
       '2026-10-10',
@@ -195,5 +195,5 @@ test('guest-only hiding protects listings, places and direct files while partici
     (await (await api('share/fixture-share')).json()).places.length,
     1,
   );
-  assert.equal(db.pragma('user_version', { simple: true }), 7);
+  assert.equal(db.pragma('user_version', { simple: true }), 8);
 });

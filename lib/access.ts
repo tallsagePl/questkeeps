@@ -105,7 +105,15 @@ export function membership(tripId: string, userId: string): TripAccess {
       tripId,
       userId,
     ) || fail(403, 'messages.youDoNotHaveAccessToThis');
-  return { ...trip, role: 'member', from: m.start, to: m.end };
+  return {
+    ...trip,
+    role: 'member',
+    from: m.all_photos ? trip.start : m.start,
+    to: m.all_photos ? trip.end : m.end,
+    participationStart: m.start,
+    participationEnd: m.end,
+    allPhotos: !!m.all_photos,
+  };
 }
 
 export function owner(tripId: string, userId: string) {
@@ -220,6 +228,9 @@ export function tripData(req: Request, tripId: string) {
       from: t.from,
       to: t.to,
       sharing: !!t.share_hash,
+      participationStart: t.participationStart,
+      participationEnd: t.participationEnd,
+      allPhotos: t.allPhotos,
     },
     media,
     notes: all(

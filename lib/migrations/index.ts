@@ -1,3 +1,4 @@
+import { tripInvitations } from './008-trip-invitations';
 import { telegram } from './006-telegram';
 import { tripFollows } from './007-trip-follows';
 import { mediaGuestVisibility } from './005-media-guest-visibility';
@@ -15,6 +16,7 @@ export const migrations = [
   { version: 5, name: 'media-guest-visibility', up: mediaGuestVisibility },
   { version: 6, name: 'telegram', up: telegram },
   { version: 7, name: 'trip-follows', up: tripFollows },
+  { version: 8, name: 'trip-invitations', up: tripInvitations },
 ];
 
 export function migrate(db: Database.Database) {

@@ -42,7 +42,7 @@ export async function tripRoutes({
       if (method === 'GET')
         return json({
           trips: all(
-            'SELECT DISTINCT t.id,t.title,t.destination,t.start,t.end,t.description,(SELECT count(*) FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=t.id AND m.hidden=0 AND m.missing=0 AND s.approved=1 AND (t.owner_id=? OR substr(m.taken,1,10) BETWEEN mb.start AND mb.end)) media_count FROM trips t LEFT JOIN members mb ON mb.trip_id=t.id AND mb.user_id=? AND mb.active=1 WHERE t.owner_id=? OR mb.user_id=? ORDER BY t.created DESC',
+            'SELECT DISTINCT t.id,t.title,t.destination,t.start,t.end,t.description,(SELECT count(*) FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=t.id AND m.hidden=0 AND m.missing=0 AND s.approved=1 AND (t.owner_id=? OR mb.all_photos=1 OR substr(m.taken,1,10) BETWEEN mb.start AND mb.end)) media_count FROM trips t LEFT JOIN members mb ON mb.trip_id=t.id AND mb.user_id=? AND mb.active=1 WHERE t.owner_id=? OR mb.user_id=? ORDER BY t.created DESC',
             u.id,
             u.id,
             u.id,

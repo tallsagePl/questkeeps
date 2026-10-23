@@ -264,6 +264,15 @@ export default function SettingsTab({
                     {date(m.start)} — {date(m.end)} ·{' '}
                     {m.active ? t('trip.member') : t('trip.leftTheTrip')}
                   </p>
+                  {!!m.active && (
+                    <small>
+                      {t(
+                        m.all_photos
+                          ? 'invitations.viewAll'
+                          : 'invitations.viewPeriod',
+                      )}
+                    </small>
+                  )}
                 </div>
                 {isOwner && !!m.active && (
                   <FeedbackButton

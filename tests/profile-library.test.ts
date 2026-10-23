@@ -74,7 +74,14 @@ for (const [tid, u, start, end, active] of [
   [nonoverlap, alice, '2026-10-10', '2026-10-11', 1],
   [nonoverlap, bob, '2026-10-13', '2026-10-14', 1],
 ] as const)
-  run('INSERT INTO members VALUES (?,?,?,?,?)', tid, u, start, end, active);
+  run(
+    'INSERT INTO members(trip_id,user_id,start,end,active) VALUES (?,?,?,?,?)',
+    tid,
+    u,
+    start,
+    end,
+    active,
+  );
 
 const aid = id();
 

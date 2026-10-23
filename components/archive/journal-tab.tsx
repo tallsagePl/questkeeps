@@ -59,9 +59,9 @@ export default function JournalTab({
               label={t('common.tripDay')}
               name="day"
               type="date"
-              min={trip.from}
-              max={trip.to}
-              defaultValue={trip.from}
+              min={trip.participationStart || trip.from}
+              max={trip.participationEnd || trip.to}
+              defaultValue={trip.participationStart || trip.from}
               required
             />
             <label className="field">

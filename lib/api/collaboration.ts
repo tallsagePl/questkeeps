@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import {
+  invitationOptions,
+  sendTripInvitation,
+  findInvitees,
+} from '../trip-invitations';
 import { guestToken } from '../guest-links';
 import { publicProfile, ensureUsername } from '../profiles';
 import { db, one, all, run, id, token, hash } from '../db';
@@ -17,7 +22,7 @@ export async function collaborationRoutes(
     if (method === 'GET')
       return json({
         members: all(
-          'SELECT u.id,u.name,m.start,m.end,m.active FROM members m JOIN users u ON u.id=m.user_id WHERE m.trip_id=?',
+          'SELECT u.id,u.name,m.start,m.end,m.active,m.all_photos FROM members m JOIN users u ON u.id=m.user_id WHERE m.trip_id=?',
           tid,
         ).map((member) => ({
           ...member,
@@ -31,6 +36,7 @@ export async function collaborationRoutes(
         .object({
           userId: z.string(),
           active: z.boolean().optional(),
+          allPhotos: z.boolean().optional(),
           start: day.optional(),
           end: day.optional(),
         })
@@ -48,10 +54,13 @@ export async function collaborationRoutes(
       bounds(range, t);
       db.transaction(() => {
         run(
-          'UPDATE members SET start=?,end=?,active=? WHERE trip_id=? AND user_id=?',
+          'UPDATE members SET start=?,end=?,active=?,all_photos=? WHERE trip_id=? AND user_id=?',
           range.start,
           range.end,
           input.active === undefined ? m.active : Number(input.active),
+          input.allPhotos === undefined
+            ? m.all_photos
+            : Number(input.allPhotos),
           tid,
           input.userId,
         );
@@ -72,18 +81,35 @@ export async function collaborationRoutes(
     })();
     return json({ ok: true });
   }
+  if (p[2] === 'invitees' && method === 'GET') {
+    owner(tid, u.id);
+    throttle('trip-invite-search:' + u.id, 60, 60000);
+    return json({
+      users: findInvitees(
+        new URL(req.url).searchParams.get('q') || '',
+        tid,
+        u.id,
+      ),
+    });
+  }
   if (p[2] === 'invite' && method === 'POST') {
     const t = owner(tid, u.id);
-    const input = dates.parse(await body(req));
+    const input = invitationOptions.parse(await body(req));
     bounds(input, t);
+    throttle('trip-invite:' + u.id, 30, 60000);
+    if (input.recipientId) {
+      sendTripInvitation(tid, u.id, input.recipientId, input);
+      return json({ sent: true });
+    }
     const raw = token();
     run(
-      'INSERT INTO invites VALUES (?,?,?,?,?,0)',
+      'INSERT INTO invites(hash,trip_id,start,end,expires,used,all_photos) VALUES (?,?,?,?,?,0,?)',
       hash(raw),
       tid,
       input.start,
       input.end,
       Date.now() + 7 * 86400000,
+      Number(input.allPhotos),
     );
     return json({ url: appURL() + '/join/' + raw });
   }
@@ -106,6 +132,10 @@ export async function collaborationRoutes(
   }
   if (p[2] === 'notes') {
     const t = membership(tid, u.id);
+    if (method !== 'GET' && t.role === 'member') {
+      t.from = t.participationStart!;
+      t.to = t.participationEnd!;
+    }
     if (p[3] && p[4] === 'replies') {
       const note =
         one('SELECT * FROM notes WHERE id=? AND trip_id=?', p[3], tid) ||

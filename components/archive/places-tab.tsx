@@ -37,6 +37,12 @@ export default function PlacesTab({ archive }: { archive: ArchiveController }) {
               <TripDayCalendar
                 start={trip.start}
                 end={trip.end}
+                participationStart={
+                  trip.role === 'member' ? trip.participationStart : undefined
+                }
+                participationEnd={
+                  trip.role === 'member' ? trip.participationEnd : undefined
+                }
                 value={day}
                 onChange={setDay}
               />
@@ -49,6 +55,12 @@ export default function PlacesTab({ archive }: { archive: ArchiveController }) {
                 <TripDayCalendar
                   start={trip.start}
                   end={trip.end}
+                  participationStart={
+                    trip.role === 'member' ? trip.participationStart : undefined
+                  }
+                  participationEnd={
+                    trip.role === 'member' ? trip.participationEnd : undefined
+                  }
                   value={day}
                   onChange={setDay}
                 />

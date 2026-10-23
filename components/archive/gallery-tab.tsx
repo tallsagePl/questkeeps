@@ -68,6 +68,12 @@ export default function GalleryTab({
             <TripDayCalendar
               start={trip.start}
               end={trip.end}
+              participationStart={
+                trip.role === 'member' ? trip.participationStart : undefined
+              }
+              participationEnd={
+                trip.role === 'member' ? trip.participationEnd : undefined
+              }
               value={day}
               onChange={setDay}
             />

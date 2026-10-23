@@ -45,7 +45,7 @@ test('revoked source blocks every place read and write before a provider request
     Date.now(),
   );
   run(
-    'INSERT INTO members VALUES (?,?,?,?,1)',
+    'INSERT INTO members(trip_id,user_id,start,end,active) VALUES (?,?,?,?,1)',
     trip,
     member,
     '2026-10-10',

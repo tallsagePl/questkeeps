@@ -119,7 +119,7 @@ test('member metadata includes public avatars without emails or account identifi
     'version',
   );
   run(
-    'INSERT INTO members VALUES (?,?,?,?,1)',
+    'INSERT INTO members(trip_id,user_id,start,end,active) VALUES (?,?,?,?,1)',
     tripId,
     member.id,
     '2026-10-10',

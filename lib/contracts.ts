@@ -30,6 +30,9 @@ export type TripView = Omit<TripSummary, 'media_count'> & {
   from: string;
   to: string;
   sharing: boolean;
+  participationStart?: string;
+  participationEnd?: string;
+  allPhotos?: boolean;
   descriptionMentions: Mention[];
 };
 
@@ -116,6 +119,7 @@ export type TripMember = {
   start: string;
   end: string;
   active: number;
+  all_photos: number;
 };
 
 export type DriveSource = {
@@ -137,7 +141,7 @@ export type DriveFolder = { name: string; path: string };
 export type TripInvitation = Pick<
   TripSummary,
   'title' | 'destination' | 'start' | 'end'
->;
+> & { allPhotos?: boolean };
 
 export type TripRecord = Omit<TripSummary, 'media_count'> & {
   owner_id: string;
@@ -146,7 +150,22 @@ export type TripRecord = Omit<TripSummary, 'media_count'> & {
 };
 
 export type TripAccess = TripRecord & {
+  participationStart?: string;
+  participationEnd?: string;
+  allPhotos?: boolean;
   role: 'owner' | 'member' | 'guest';
   from: string;
   to: string;
+};
+
+export type DirectTripInvitation = {
+  id: string;
+  trip_id: string;
+  title: string;
+  destination: string;
+  sender: string;
+  start: string;
+  end: string;
+  all_photos: number;
+  expires: number;
 };

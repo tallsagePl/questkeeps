@@ -1,7 +1,7 @@
 'use client';
 
+import TripInvitations from './trip-invitations';
 import SiteFooter from './site-footer';
-
 import {
   announceSessionChange,
   observeSessionChanges,
@@ -85,6 +85,7 @@ export function SocialShell({
           </a>
         </nav>
         <div className="top-actions">
+          {user && <TripInvitations key={user.id} userId={user.id} />}
           {user ? (
             <>
               <a

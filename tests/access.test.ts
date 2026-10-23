@@ -56,7 +56,7 @@ run(
 );
 
 run(
-  'INSERT INTO members VALUES (?,?,?,?,1)',
+  'INSERT INTO members(trip_id,user_id,start,end,active) VALUES (?,?,?,?,1)',
   tid,
   mid,
   '2026-10-12',

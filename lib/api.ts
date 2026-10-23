@@ -1,3 +1,4 @@
+import { invitationRoutes } from './api/invitations';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { hash } from './db';
@@ -56,6 +57,10 @@ export async function handle(
       if (result) return result;
     }
     const u = requireUser(req);
+    {
+      const result = await invitationRoutes({ ...context, u });
+      if (result) return result;
+    }
     {
       const result = await friendRoutes({ ...context, u });
       if (result) return result;

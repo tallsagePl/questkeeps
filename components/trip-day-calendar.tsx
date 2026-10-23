@@ -18,7 +18,11 @@ export default function TripDayCalendar({
   end,
   value,
   onChange,
+  participationStart,
+  participationEnd,
 }: {
+  participationStart?: string;
+  participationEnd?: string;
   start: string;
   end: string;
   value: string;
@@ -170,6 +174,12 @@ export default function TripDayCalendar({
           <p className="trip-calendar-range">
             {fullDate(start)} — {fullDate(end)}
           </p>
+          {participationStart && participationEnd && (
+            <p className="fine calendar-participation-legend">
+              {t('invitations.yourDays')}: {fullDate(participationStart)} —{' '}
+              {fullDate(participationEnd)}
+            </p>
+          )}
           <p className="fine trip-calendar-hint" aria-live="polite">
             {t(
               anchor
@@ -204,8 +214,22 @@ export default function TripDayCalendar({
                   data-date={day}
                   data-selected={!!value && includesDate(day, value)}
                   className={allowed ? 'in-trip' : ''}
+                  data-participation={
+                    !!participationStart &&
+                    !!participationEnd &&
+                    day >= participationStart &&
+                    day <= participationEnd
+                  }
                   disabled={!allowed}
-                  aria-label={fullDate(day)}
+                  aria-label={
+                    fullDate(day) +
+                    (participationStart &&
+                    participationEnd &&
+                    day >= participationStart &&
+                    day <= participationEnd
+                      ? ', ' + t('invitations.yourDays')
+                      : '')
+                  }
                   aria-pressed={!!value && includesDate(day, value)}
                   onClick={() => {
                     if (!anchor) {

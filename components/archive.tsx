@@ -97,13 +97,22 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
           <span className="eyebrow">{t('trip.goodJourneysAreShared')}</span>
           <h1>{invitation?.title || t('trip.tripInvitation')}</h1>
           {invitation && (
+            <p>
+              {t(
+                invitation.allPhotos
+                  ? 'invitations.viewAll'
+                  : 'invitations.viewPeriod',
+              )}
+            </p>
+          )}
+          {invitation && (
             <>
               <p>
                 {invitation.destination} · {period(invitation)}
               </p>
               <div className="panel">
                 <h2>{t('trip.youAreInvitedOnATrip')}</h2>
-                <p>{t('trip.photosAndEntriesWillBeAvailableTo')}</p>
+
                 {user ? (
                   <FeedbackButton
                     className="primary"
@@ -208,7 +217,9 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
               />
               {trip.role === 'member' && (
                 <span className="pill">
-                  {t('trip.yourDates')} {date(trip.from)} — {date(trip.to)}
+                  {t('trip.yourDates')}{' '}
+                  {date(trip.participationStart || trip.from)} —{' '}
+                  {date(trip.participationEnd || trip.to)}
                 </span>
               )}
             </div>

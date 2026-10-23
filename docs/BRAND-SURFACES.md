@@ -50,3 +50,5 @@ Use this inventory whenever changing the logo, colors, typography or product voi
 6. Record what was uploaded and what still needs external verification; do not describe a prepared asset as activated.
 
 The shared footer and the contact section in `components/about.tsx` link to https://t.me/questkeepsbot. Keep both languages in `lib/i18n/` aligned with the bot identity when changing support details.
+
+Trip invitations (1.18.0): `components/archive/invite-dialog.tsx` holds link/in-app invitation controls and visibility copy; `components/trip-invitations.tsx` is the shared header bell and invitation inbox; `components/trip-day-calendar.tsx` marks participation days. Review both languages, mobile layout and dark mode together.

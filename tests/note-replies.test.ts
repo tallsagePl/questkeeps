@@ -36,7 +36,7 @@ for (const trip of ['trip', 'different'])
   );
 
 run(
-  'INSERT INTO members VALUES (?,?,?,?,1)',
+  'INSERT INTO members(trip_id,user_id,start,end,active) VALUES (?,?,?,?,1)',
   'trip',
   'member',
   '2026-10-12',
