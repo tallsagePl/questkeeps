@@ -35,6 +35,10 @@ const required = [
   'email_verifications',
   'delivery_jobs',
   'friend_links',
+  'telegram_state',
+  'telegram_feedback',
+  'telegram_outbox',
+  'telegram_feedback_messages',
 ];
 
 const tables = (
@@ -64,6 +68,9 @@ const report = {
       process.env.EMAIL_VERIFICATION_REQUIRED === 'true',
     mailTransportConfigured:
       !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM,
+    telegramConfigured:
+      !!process.env.TELEGRAM_BOT_TOKEN &&
+      /^\d+$/.test(process.env.TELEGRAM_ADMIN_ID || ''),
   },
   emailQueue: {
     pending: (
@@ -80,6 +87,36 @@ const report = {
         )
         .get() as { n: number }
     ).n,
+  },
+  telegramQueue: {
+    administratorStarted: tables.includes('telegram_state')
+      ? !!db
+          .prepare("SELECT value FROM telegram_state WHERE key='admin_started'")
+          .get()
+      : false,
+    lastPollAt: tables.includes('telegram_state')
+      ? (
+          db
+            .prepare(
+              "SELECT value FROM telegram_state WHERE key='last_poll_at'",
+            )
+            .get() as { value: string } | undefined
+        )?.value || null
+      : null,
+    pending: tables.includes('telegram_outbox')
+      ? (
+          db.prepare('SELECT count(*) n FROM telegram_outbox').get() as {
+            n: number;
+          }
+        ).n
+      : null,
+    feedback: tables.includes('telegram_feedback')
+      ? (
+          db.prepare('SELECT count(*) n FROM telegram_feedback').get() as {
+            n: number;
+          }
+        ).n
+      : null,
   },
   records: {
     users: (db.prepare('SELECT count(*) n FROM users').get() as { n: number })

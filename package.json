@@ -1,6 +1,6 @@
 {
   "name": "questkeeps",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -17,7 +17,8 @@
     "test:social": "playwright test e2e/social.spec.ts --workers=1",
     "migrate": "node --env-file=.env.local --import tsx scripts/migrate.ts",
     "format:check": "node scripts/format-source.mjs --check && prettier --check \"lib/i18n/*.json\" \"docs/**/*.md\" \"README*.md\" && prettier --check \".github/**/*.yml\"",
-    "mail:test": "node --env-file=.env.local --import tsx scripts/test-email.ts"
+    "mail:test": "node --env-file=.env.local --import tsx scripts/test-email.ts",
+    "telegram:setup": "node --env-file=.env.local --import tsx scripts/setup-telegram.ts"
   },
   "keywords": [],
   "author": "",

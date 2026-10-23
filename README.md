@@ -8,7 +8,7 @@
 
 QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.14.0**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.15.0**.
 
 ## Screenshots
 
@@ -36,6 +36,8 @@ These screenshots show the running application with fictional data and placehold
 Light and dark themes, English and Russian interfaces, and responsive layouts. The Onest font is served locally. The screenshot showcase on the About page supports keyboard navigation and reduced motion.
 
 ## Features
+
+- **Telegram feedback.** Text and attachments, private admin review, recent registration emails and queued notifications. See [bot setup](docs/TELEGRAM-SETUP.md).
 
 - **Trips and shared stories.** Destinations, dates, descriptions with friend mentions, and participants with individual access periods.
 - **Photos and videos from Yandex Disk.** Connect a selected folder, index it recursively, and synchronize manually or periodically without duplicating files.
@@ -169,7 +171,7 @@ See [deploy/README.md](deploy/README.md) for server configuration, certificates,
 ## Current limitations
 
 - Cloud storage integration supports Yandex Disk; Google Drive is not connected yet.
-- An email-verification queue and Resend delivery are implemented. Verification is disabled by default and requires a configured sender, domain and API key. Follow [email setup](docs/EMAIL-SETUP.md) before enabling it. Telegram notifications for new registrations are not implemented yet.
+- An email-verification queue and Resend delivery are implemented. Verification is disabled by default and requires a configured sender, domain and API key. Follow [email setup](docs/EMAIL-SETUP.md) before enabling it. Telegram feedback and registration notifications run in the background worker; see [bot setup](docs/TELEGRAM-SETUP.md).
 - Video playback depends on browser format and codec support; there is no server-side transcoding. EXIF extraction is bounded by data size and format support; locations can be set manually.
 - Revoking a guest link cannot revoke files that have already been viewed or downloaded.
 - Password recovery, email changes and account deletion are not implemented yet.
@@ -200,3 +202,5 @@ Sign-in photography comes from Pexels; geographic data from GeoNames; maps from 
 - [Changelog (Russian)](CHANGELOG.md) and [versioning policy (Russian)](docs/VERSIONING.md).
 
 Documentation and screenshots reflect the current interface. The proposed design experiment will be a separate change.
+
+[Telegram feedback bot setup](docs/TELEGRAM-SETUP.md)

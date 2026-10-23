@@ -1,3 +1,4 @@
+import { queueTelegramRegistration } from '../telegram';
 import { oauthErrorReason, oauthReturnPath } from '../oauth-errors';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -159,6 +160,7 @@ export async function oauth(req: NextRequest, p: string[]) {
           null,
           Date.now(),
         );
+        queueTelegramRegistration(userId);
       }
       if (existing && s.intent === 'link')
         run(

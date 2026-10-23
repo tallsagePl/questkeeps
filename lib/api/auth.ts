@@ -1,3 +1,4 @@
+import { queueTelegramRegistration } from '../telegram';
 import {
   verificationRequired,
   mailConfigured,
@@ -147,6 +148,7 @@ export async function authRoutes({
             userId,
             Number(verificationRequired()),
           );
+          queueTelegramRegistration(userId);
           if (verificationRequired())
             queueVerification(
               userId,

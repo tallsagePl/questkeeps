@@ -27,3 +27,7 @@ process.env.EMAIL_VERIFICATION_REQUIRED = 'false';
 process.env.RESEND_API_KEY = '';
 
 process.env.EMAIL_FROM = '';
+
+process.env.TELEGRAM_BOT_TOKEN = '';
+
+process.env.TELEGRAM_ADMIN_ID = '';

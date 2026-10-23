@@ -1,3 +1,4 @@
+import { pollTelegram, deliverTelegram } from '../lib/telegram';
 import { deliverEmails } from '../lib/email-verification';
 import { syncDue } from '../lib/sync';
 import { runWorkerLoops } from '../lib/worker-loops';
@@ -14,6 +15,8 @@ console.log(
 
 void runWorkerLoops(
   [
+    { name: 'telegram-poll', intervalMs: 1000, run: pollTelegram },
+    { name: 'telegram-delivery', intervalMs: 1000, run: deliverTelegram },
     {
       name: 'email',
       intervalMs: 5000,
