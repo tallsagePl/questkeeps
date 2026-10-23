@@ -69,6 +69,7 @@ const report = {
     mailTransportConfigured:
       !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM,
     telegramConfigured:
+      process.env.TELEGRAM_ENABLED !== 'false' &&
       !!process.env.TELEGRAM_BOT_TOKEN &&
       /^\d+$/.test(process.env.TELEGRAM_ADMIN_ID || ''),
   },

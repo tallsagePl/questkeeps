@@ -9,7 +9,10 @@ export default function SiteFooter() {
     <footer>
       <Brand footer />
       <p>{t('common.moreThanWhereYouWentHowIt')}</p>
-      <a href="/about">{t('navigation.about')}</a>
+      <nav className="footer-links" aria-label={t('navigation.footer')}>
+        <a href="/about">{t('navigation.about')}</a>
+        <a href="/privacy">{t('navigation.privacy')}</a>
+      </nav>
     </footer>
   );
 }

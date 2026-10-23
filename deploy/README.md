@@ -49,6 +49,12 @@ form over unencrypted HTTP.
 
 ## Updates and rollback
 
+For staged releases, keep source/builds under `/opt/questkeeps/releases/`, point `/opt/questkeeps/app` at the active release, and keep persistent `data/` and the mode-600 `.env.local` under `/opt/questkeeps/shared/`. Each release links to the shared files. Build against an isolated temporary database first; never use the live database for a staging build.
+
+Back up the live SQLite database immediately before migrations. Preserve the previous source/build and private configuration. Stop the systemd unit only for the final data move/migration and active-release switch. Start it again, verify `npm run health`, HTTPS, the public `/privacy` page, private-path protection, email configuration and Telegram polling. A database schema upgrade can prevent an older release from starting; restoring a pre-upgrade database is a separate operation and can lose writes made after that backup.
+
+Set `TELEGRAM_ENABLED=false` on local development before enabling the production bot. Keep `APP_URL=https://questkeeps.ru`, `EMAIL_VERIFICATION_REQUIRED=true` after verifying delivery, and the real support bot URL in production. Never publish or overwrite the live database with a local development database.
+
 Before each deployment, retain the previous application revision and an online
 SQLite snapshot. Stop the service before replacing files, preserve .env.local
 and data/, install dependencies, migrate, build and restart. A source rollback

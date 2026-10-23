@@ -4203,3 +4203,71 @@ a:any-link:focus-visible,
 .friend-link-block .field {
   margin-bottom: 16px;
 }
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px 24px;
+  font-size: 0.875rem;
+}
+.privacy-page {
+  max-width: 900px;
+  padding-bottom: 80px;
+}
+.privacy-page h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  margin: 24px 0 28px;
+  overflow-wrap: anywhere;
+}
+.privacy-intro,
+.privacy-language {
+  max-width: 70ch;
+}
+.privacy-intro,
+.privacy-date {
+  color: var(--muted);
+}
+.privacy-language-nav,
+.privacy-provider-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.privacy-language-nav {
+  margin: 28px 0 48px;
+}
+.privacy-language {
+  scroll-margin-top: 100px;
+  border-top: 1px solid var(--line);
+  padding-top: 32px;
+  margin-top: 48px;
+}
+.privacy-language h2 {
+  font-size: 1.75rem;
+  margin: 0 0 12px;
+}
+.privacy-language h3 {
+  font-size: 1.25rem;
+  line-height: 1.4;
+  margin: 36px 0 12px;
+}
+.privacy-language p {
+  line-height: 1.75;
+  margin: 0 0 18px;
+}
+.privacy-provider-links,
+.privacy-date {
+  font-size: 0.875rem;
+}
+@media (max-width: 600px) {
+  .footer-links {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .privacy-language {
+    scroll-margin-top: 32px;
+  }
+}

@@ -7,6 +7,7 @@ The background worker runs the bot with long polling; no public webhook or extra
 Create a bot with [@BotFather](https://t.me/BotFather), then configure the ignored `.env.local` or private deployment environment:
 
 ```dotenv
+TELEGRAM_ENABLED=true
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_ADMIN_ID=
 EMAIL_SUPPORT_URL=https://t.me/YOUR_BOT_USERNAME
@@ -37,3 +38,5 @@ The update cursor and response queue survive restarts. Outgoing jobs use leases 
 4. Регистрация нового аккаунта присылает администратору email. Повторный вход уведомление не создаёт.
 
 Automated tests use isolated databases, fictional IDs and mocked transport; they never connect to the real bot.
+
+Disable the local bot with `TELEGRAM_ENABLED=false` before enabling production. The public bilingual policy is at https://questkeeps.ru/privacy; set this URL in BotFather. Upload `public/brand/telegram-avatar.png` as Botpic and `public/brand/telegram-description.png` as Description picture.

@@ -8,6 +8,7 @@ type Job = { method: string; params: Parameters; feedback?: string };
 
 export function telegramConfigured() {
   return Boolean(
+    process.env.TELEGRAM_ENABLED !== 'false' &&
     process.env.TELEGRAM_BOT_TOKEN &&
     /^\d+$/.test(process.env.TELEGRAM_ADMIN_ID || ''),
   );

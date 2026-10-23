@@ -59,6 +59,7 @@ beforeEach(() => {
   ])
     run('DELETE FROM ' + table);
   process.env.TELEGRAM_BOT_TOKEN = 'fixture-token';
+  process.env.TELEGRAM_ENABLED = 'true';
   process.env.TELEGRAM_ADMIN_ID = String(administrator);
   sent.length = 0;
   globalThis.fetch = async (url, options) => {
