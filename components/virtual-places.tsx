@@ -1,5 +1,6 @@
 'use client';
 
+import { useVirtualScrollPosition } from './use-virtual-scroll-position';
 import { PreviewPriority } from './preview-priority';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -51,6 +52,7 @@ export default function VirtualPlaces<T>({
     };
   }, []);
   const [layout, setLayout] = useState<Layout | null>(null);
+  useVirtualScrollPosition(layout?.baseRow || 0);
   const baseRow = useRef(0);
   const pendingScroll = useRef(0);
   const measuredHeight = useRef(0);

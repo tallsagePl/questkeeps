@@ -8,13 +8,33 @@ export function BackToTop() {
   const { t } = useLocale();
   const [visible, setVisible] = useState(false);
   useEffect(() => {
-    const header = document.querySelector('header.topbar');
-    if (!header) return;
-    const observer = new IntersectionObserver(([entry]) =>
-      setVisible(entry.boundingClientRect.bottom <= 0),
-    );
-    observer.observe(header);
-    return () => observer.disconnect();
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const header = document.querySelector('header.topbar');
+      const headerAbove = header
+        ? header.getBoundingClientRect().bottom <= 0
+        : window.scrollY > 0;
+      const recycledRows = [
+        ...document.querySelectorAll<HTMLElement>(
+          '.virtual-gallery[data-base-row], .virtual-places[data-base-row]',
+        ),
+      ].some((element) => Number(element.dataset.baseRow) > 0);
+      setVisible(headerAbove || recycledRows);
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    schedule();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    window.addEventListener('questkeeps:virtual-scroll', schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      window.removeEventListener('questkeeps:virtual-scroll', schedule);
+    };
   }, []);
   if (!visible) return null;
   return (

@@ -278,6 +278,9 @@ test('ограниченная лента сдвигается в обе сто�
       return r.fulfill({ status: 503, json: { error: 'Temporary outage' } });
     await r.fulfill({ body: image, contentType: 'image/jpeg' }).catch(() => {});
   });
+  await page.route('**/api/friends/link/accept', (r) =>
+    r.fulfill({ json: { accepted: false } }),
+  );
   await page.goto('/?trip=long-gallery');
   const grid = page.locator('.virtual-gallery');
   await expect(grid).toHaveAttribute('data-total', '630');
@@ -375,6 +378,28 @@ test('ограниченная лента сдвигается в обе сто�
   });
   expect(windowRows.first).toBe(windowRows.visible - 3);
   expect(windowRows.last).toBe(windowRows.visibleLast + 3);
+  // While the scrollbar thumb is held at the top, the browser can reject the
+  // list's compensating scrollBy. Keep that native-drag condition deterministic.
+  const stopDragging = await page.evaluateHandle(() => {
+    const scrollBy = window.scrollBy;
+    window.scrollBy = () => {};
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    return () => {
+      window.scrollBy = scrollBy;
+    };
+  });
+  await expect(page.locator('header.topbar')).toBeInViewport();
+  await expect
+    .poll(async () => Number(await grid.getAttribute('data-base-row')))
+    .toBeGreaterThan(0);
+  await page.waitForTimeout(200);
+  await expect(
+    page.getByRole('button', { name: 'Наверх', exact: true }),
+  ).toBeVisible();
+  await stopDragging.evaluate((release) => release());
+  await stopDragging.dispose();
+  await page.evaluate(() => window.scrollBy(0, 400));
+
   for (let row = 0; row < 45; row++) {
     await page.evaluate(() => window.scrollBy(0, -300));
     await page.waitForTimeout(50);
