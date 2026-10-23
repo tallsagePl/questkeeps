@@ -30,6 +30,14 @@ export default function LeaveDialog({
           >
             {t('common.copyLink')}
           </FeedbackButton>
+          <a
+            className="secondary centered"
+            href={generated}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('trip.openGuestView')}
+          </a>
         </div>
       </Modal>
     </>

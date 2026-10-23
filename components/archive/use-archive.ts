@@ -64,8 +64,8 @@ export function useArchive({
   const [register, setRegister] = useState(false);
   const [members, setMembers] = useState<TripMember[]>([]);
   const [tripOwner, setTripOwner] = useState<Pick<
-    UserProfile,
-    'id' | 'name'
+    TripMember,
+    'id' | 'name' | 'username' | 'hasAvatar'
   > | null>(null);
   const [sources, setSources] = useState<DriveSource[]>([]);
   const [accounts, setAccounts] = useState<DriveAccount[]>([]);
@@ -246,9 +246,10 @@ export function useArchive({
     if (!selected || guest || tab !== 'settings') return;
     void action(async () => {
       const [m, s, a] = await Promise.all([
-        api<{ members: TripMember[]; owner: Pick<UserProfile, 'id' | 'name'> }>(
-          'trips/' + selected + '/members',
-        ),
+        api<{
+          members: TripMember[];
+          owner: Pick<TripMember, 'id' | 'name' | 'username' | 'hasAvatar'>;
+        }>('trips/' + selected + '/members'),
         api<{ sources: DriveSource[] }>('trips/' + selected + '/sources'),
         api<{ accounts: DriveAccount[] }>('accounts'),
       ]);
@@ -523,6 +524,7 @@ export function useArchive({
     ready,
     bootFailed,
     verificationEmail,
+    setVerificationEmail,
     trips,
     selected,
     setSelected,

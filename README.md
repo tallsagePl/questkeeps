@@ -8,7 +8,7 @@
 
 QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.16.0**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.16.1**.
 
 ## Screenshots
 

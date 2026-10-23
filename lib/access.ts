@@ -1,4 +1,5 @@
 import { messageDescriptor } from './i18n/messages';
+import { guestTrip } from './guest-links';
 import { localizeMessage, type LocalizedMessage } from './i18n/translate';
 import type { UserProfile, TripRecord, TripAccess } from './contracts';
 import { ensureUsername, descriptionMentions } from './profiles';
@@ -116,11 +117,11 @@ export function owner(tripId: string, userId: string) {
 export function viewAccess(req: Request, tripId: string): TripAccess {
   const share = new URL(req.url).searchParams.get('share');
   if (share) {
-    const t = one<TripRecord>(
-      'SELECT * FROM trips WHERE id=? AND share_hash=?',
-      tripId,
-      hash(share),
-    );
+    const shared = guestTrip(share);
+    const t =
+      shared?.id === tripId
+        ? one<TripRecord>('SELECT * FROM trips WHERE id=?', tripId)
+        : undefined;
     if (!t) fail(404, 'messages.invalidLink');
     return { ...t, role: 'guest', from: t.start, to: t.end };
   }

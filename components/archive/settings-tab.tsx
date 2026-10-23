@@ -1,6 +1,7 @@
 'use client';
 
 import { useLocale } from '@/components/appearance';
+import { PersonAvatar } from '../friends';
 import { api } from '../api';
 import { FeedbackButton } from '../feedback';
 import { type ArchiveController } from './use-archive';
@@ -178,10 +179,8 @@ export default function SettingsTab({
                       void action(async () => {
                         const r = await api(
                           'trips/' + trip.id + '/share',
-                          'POST',
-                          {
-                            enabled: true,
-                          },
+                          trip.sharing ? 'GET' : 'POST',
+                          trip.sharing ? undefined : { enabled: true },
                         );
                         setGenerated(r.url);
                         setModal('share');
@@ -191,9 +190,31 @@ export default function SettingsTab({
                   >
                     <Icon name="link" />
                     {trip.sharing
-                      ? t('common.replaceLink')
+                      ? t('trip.getGuestLink')
                       : t('trip.createLink')}
                   </FeedbackButton>
+                  {trip.sharing && (
+                    <FeedbackButton
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() => {
+                        if (!window.confirm(t('trip.replaceGuestLinkConfirm')))
+                          return;
+                        void action(async () => {
+                          const result = await api(
+                            'trips/' + trip.id + '/share',
+                            'POST',
+                            { enabled: true },
+                          );
+                          setGenerated(result.url);
+                          setModal('share');
+                          await refresh();
+                        });
+                      }}
+                    >
+                      {t('common.replaceLink')}
+                    </FeedbackButton>
+                  )}
                   {trip.sharing && (
                     <FeedbackButton
                       className="text-button danger"
@@ -226,9 +247,7 @@ export default function SettingsTab({
               <Icon name="users" size={28} />
             </div>
             <div className="member">
-              <span className="avatar">
-                {tripOwner?.name?.[0] || t('trip.o')}
-              </span>
+              {tripOwner && <PersonAvatar person={tripOwner} />}
               <div>
                 <strong>{tripOwner?.name || t('trip.owner')}</strong>
                 <p>
@@ -238,7 +257,7 @@ export default function SettingsTab({
             </div>
             {members.map((m) => (
               <div className="member" key={m.id}>
-                <span className="avatar">{m.name[0]}</span>
+                <PersonAvatar person={m} />
                 <div>
                   <strong>{m.name}</strong>
                   <p>

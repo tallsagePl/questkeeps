@@ -17,6 +17,7 @@ import {
   sessionCookie,
   cookie,
   throttle,
+  currentUser,
 } from '../access';
 import { json, body } from './http';
 import { oauth } from './oauth';
@@ -37,9 +38,30 @@ export async function authRoutes({
         .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
         .parse(await body(req));
       throttle('email:verify:' + hash(input.token), 6);
-      if (!confirmEmail(input.token))
-        fail(400, 'messages.theVerificationLinkIsInvalidOrHas');
-      return json({ verified: true });
+      return db
+        .transaction(() => {
+          const pending = one(
+            'SELECT user_id FROM email_verifications WHERE hash=?',
+            hash(input.token),
+          );
+          if (!pending || !confirmEmail(input.token))
+            fail(400, 'messages.theVerificationLinkIsInvalidOrHas');
+          const viewer = currentUser(req);
+          // Confirm the address, but never silently replace a different signed-in account.
+          if (viewer && viewer.id !== pending.user_id)
+            return json({ verified: true, signInRequired: true });
+          const response = json({
+            verified: true,
+            user: userProfile(pending.user_id),
+          });
+          if (!viewer)
+            response.headers.set(
+              'Set-Cookie',
+              sessionCookie(session(pending.user_id)),
+            );
+          return response;
+        })
+        .immediate();
     }
     if (p[1] === 'resend-verification') {
       const input = z

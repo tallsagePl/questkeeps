@@ -1,4 +1,5 @@
 import { sharedProfileTrips } from '../profile-media';
+import { guestTrip } from '../guest-links';
 import { publicProfile } from '../profiles';
 import { accountAvatar } from '../account-avatar';
 import { db, one, run, hash } from '../db';
@@ -49,8 +50,7 @@ export async function publicRoutes({
   }
   if (p[0] === 'share' && p[1] && method === 'GET') {
     const t =
-      one('SELECT id FROM trips WHERE share_hash=?', hash(p[1])) ||
-      fail(404, 'messages.thisGuestLinkIsNoLongerValid');
+      guestTrip(p[1]) || fail(404, 'messages.thisGuestLinkIsNoLongerValid');
     const next = new URL(req.url);
     next.searchParams.set('share', p[1]);
     return json(tripData(new Request(next, { headers: req.headers }), t.id));

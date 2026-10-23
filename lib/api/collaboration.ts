@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { guestToken } from '../guest-links';
+import { publicProfile, ensureUsername } from '../profiles';
 import { db, one, all, run, id, token, hash } from '../db';
 import { fail, membership, owner, assertDay, throttle } from '../access';
 import { disk, normalizePath } from '../yandex';
@@ -17,8 +19,11 @@ export async function collaborationRoutes(
         members: all(
           'SELECT u.id,u.name,m.start,m.end,m.active FROM members m JOIN users u ON u.id=m.user_id WHERE m.trip_id=?',
           tid,
-        ),
-        owner: one('SELECT id,name FROM users WHERE id=?', t.owner_id),
+        ).map((member) => ({
+          ...member,
+          ...publicProfile(ensureUsername(member.id)),
+        })),
+        owner: publicProfile(ensureUsername(t.owner_id)),
       });
     if (method === 'PATCH') {
       owner(tid, u.id);
@@ -82,6 +87,11 @@ export async function collaborationRoutes(
     );
     return json({ url: appURL() + '/join/' + raw });
   }
+  if (p[2] === 'share' && method === 'GET') {
+    const trip = owner(tid, u.id);
+    const raw = guestToken(trip);
+    return json({ url: raw ? appURL() + '/s/' + raw : null });
+  }
   if (p[2] === 'share' && method === 'POST') {
     owner(tid, u.id);
     const input = z.object({ enabled: z.boolean() }).parse(await body(req));
@@ -91,7 +101,8 @@ export async function collaborationRoutes(
       raw ? hash(raw) : null,
       tid,
     );
-    return json({ url: raw ? appURL() + '/s/' + raw : null });
+    const shared = guestToken({ id: tid, share_hash: raw ? hash(raw) : null });
+    return json({ url: shared ? appURL() + '/s/' + shared : null });
   }
   if (p[2] === 'notes') {
     const t = membership(tid, u.id);

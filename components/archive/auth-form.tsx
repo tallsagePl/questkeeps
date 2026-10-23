@@ -11,6 +11,7 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
   const { t } = useLocale();
   const {
     verificationEmail,
+    setVerificationEmail,
     busy,
     yandex,
     register,
@@ -21,6 +22,44 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
     invite,
   } = archive;
 
+  if (verificationEmail)
+    return (
+      <div className="stack">
+        <div className="verification-pending" role="status">
+          <h3>{t('auth.checkYourEmail')}</h3>
+          <p>
+            <strong>{verificationEmail}</strong>
+          </p>
+          <p>{t('trip.verifyYourEmailUsingTheLinkIn')}</p>
+        </div>
+        <FeedbackButton
+          type="button"
+          className="secondary"
+          disabled={busy}
+          onClick={() =>
+            void action(async () => {
+              const result = await api('auth/resend-verification', 'POST', {
+                email: verificationEmail,
+              });
+              setNotice(result.message);
+            })
+          }
+        >
+          {t('trip.resendVerificationEmail')}
+        </FeedbackButton>
+        <FeedbackButton
+          type="button"
+          className="text-button"
+          onClick={() => {
+            setVerificationEmail('');
+            setRegister(false);
+          }}
+        >
+          {t('auth.backToSignIn')}
+        </FeedbackButton>
+      </div>
+    );
+
   return (
     <>
       <FeedbackForm
@@ -28,26 +67,6 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
         onSubmit={auth}
         className="stack"
       >
-        {verificationEmail && (
-          <div className="verification-pending" role="status">
-            <p>{t('trip.verifyYourEmailUsingTheLinkIn')}</p>
-            <FeedbackButton
-              type="button"
-              className="text-button"
-              disabled={busy}
-              onClick={() =>
-                void action(async () => {
-                  const result = await api('auth/resend-verification', 'POST', {
-                    email: verificationEmail,
-                  });
-                  setNotice(result.message);
-                })
-              }
-            >
-              {t('trip.resendVerificationEmail')}
-            </FeedbackButton>
-          </div>
-        )}
         {register && (
           <Field
             label={t('trip.yourName')}

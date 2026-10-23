@@ -109,6 +109,8 @@ export type TripData = {
 export type TripMember = {
   id: string;
   name: string;
+  username: string;
+  hasAvatar: boolean;
   start: string;
   end: string;
   active: number;
