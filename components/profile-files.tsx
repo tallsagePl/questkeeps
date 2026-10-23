@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useId } from 'react';
+import MediaVisibilityControls from './media-visibility-controls';
 import { api } from './api';
 import { useLocale } from './appearance';
 import { Collapse } from './smooth-details';
@@ -18,6 +19,7 @@ type File = {
   kind: string;
   taken: string;
   hidden: number;
+  hidden_from_guests?: number;
   missing: number;
   revision: string;
 };
@@ -219,7 +221,11 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                           ).toLocaleDateString(
                             language === 'en' ? 'en-GB' : 'ru-RU',
                           )}
-                          {m.hidden ? ' · ' + t('profileFiles.hidden') : ''}
+                          {m.hidden
+                            ? ' · ' + t('profileFiles.hidden')
+                            : m.hidden_from_guests
+                              ? ' · ' + t('visibility.membersOnly')
+                              : ''}
                           {m.missing
                             ? ' · ' + t('profileFiles.fileUnavailable')
                             : ''}
@@ -292,19 +298,23 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
             <a className="secondary" href={url(selected, 'download')}>
               {t('common.downloadOriginal')}
             </a>
-            <button
-              className="text-button"
+            <MediaVisibilityControls
+              hidden={selected.hidden}
+              hiddenFromGuests={selected.hidden_from_guests}
               disabled={saving}
-              onClick={async () => {
+              onChange={async (change) => {
                 setSaving(true);
                 setError('');
                 try {
-                  await api('media/' + selected.id, 'PATCH', {
-                    hidden: !selected.hidden,
-                  });
+                  await api('media/' + selected.id, 'PATCH', change);
                   const updated = {
                     ...selected,
-                    hidden: selected.hidden ? 0 : 1,
+                    ...(change.hidden !== undefined
+                      ? { hidden: Number(change.hidden) }
+                      : {}),
+                    ...(change.hiddenFromGuests !== undefined
+                      ? { hidden_from_guests: Number(change.hiddenFromGuests) }
+                      : {}),
                   };
                   setFiles((old) =>
                     old.map((f) => (f.id === updated.id ? updated : f)),
@@ -318,15 +328,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                   setSaving(false);
                 }
               }}
-            >
-              {t(
-                saving
-                  ? 'common.saving'
-                  : selected.hidden
-                    ? 'profileFiles.show'
-                    : 'common.hideMyPhoto',
-              )}
-            </button>
+            />
           </div>
           {error && <p role="alert">{m(error)}</p>}
         </Modal>

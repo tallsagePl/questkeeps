@@ -770,5 +770,11 @@
   "welcome.theGreatWallOfChinaWindingThrough": "The Great Wall of China winding through the mountains",
   "welcome.thePyramidsOfGizaAtSunset": "The pyramids of Giza at sunset",
   "welcome.whiteHousesInSantoriniAboveTheAegean": "White houses in Santorini above the Aegean Sea",
-  "errors.requestTimedOut": "The server is taking too long to respond. Please try again."
+  "errors.requestTimedOut": "The server is taking too long to respond. Please try again.",
+  "visibility.showParticipants": "Show to participants",
+  "visibility.showEveryone": "Show to everyone",
+  "visibility.hideEveryone": "Hide from everyone",
+  "visibility.showGuests": "Show to guests with a link",
+  "visibility.hideGuests": "Hide from guests with a link",
+  "visibility.membersOnly": "Participants only"
 }

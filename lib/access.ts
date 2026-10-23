@@ -144,7 +144,12 @@ export function mediaFor(req: Request, mediaId: string) {
     ) || fail(404, 'messages.fileNotFound');
   const t = viewAccess(req, m.trip_id);
   assertDay(m.taken.slice(0, 10), t);
-  if (m.hidden || m.missing || !m.approved)
+  if (
+    m.hidden ||
+    (t.role === 'guest' && m.hidden_from_guests) ||
+    m.missing ||
+    !m.approved
+  )
     fail(404, 'profileFiles.fileUnavailable');
   return m;
 }
@@ -165,12 +170,13 @@ export function tripData(req: Request, tripId: string) {
   const t = viewAccess(req, tripId);
   const user = currentUser(req);
   const media = all(
-    'SELECT m.id,m.name,m.kind,m.mime,m.revision,s.account_id _account_id,m.resource_id _resource_id,COALESCE((SELECT title FROM media_titles WHERE media_id=m.id),(SELECT substr(title,1,160) FROM confirmed_places WHERE media_id=m.id ORDER BY rowid DESC LIMIT 1)) title,EXISTS(SELECT 1 FROM media_favorites WHERE media_id=m.id AND user_id=?) favorite,m.taken,m.date_basis,m.lat,m.lon,m.user_id,m.hidden,u.name author FROM media m JOIN sources s ON s.id=m.source_id JOIN users u ON u.id=m.user_id WHERE m.trip_id=? AND s.approved=1 AND m.missing=0 AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (m.hidden=0 OR m.user_id=?) ORDER BY m.taken',
+    'SELECT m.id,m.name,m.kind,m.mime,m.revision,s.account_id _account_id,m.resource_id _resource_id,COALESCE((SELECT title FROM media_titles WHERE media_id=m.id),(SELECT substr(title,1,160) FROM confirmed_places WHERE media_id=m.id ORDER BY rowid DESC LIMIT 1)) title,EXISTS(SELECT 1 FROM media_favorites WHERE media_id=m.id AND user_id=?) favorite,m.taken,m.date_basis,m.lat,m.lon,m.user_id,m.hidden,m.hidden_from_guests,u.name author FROM media m JOIN sources s ON s.id=m.source_id JOIN users u ON u.id=m.user_id WHERE m.trip_id=? AND s.approved=1 AND m.missing=0 AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (m.hidden=0 OR m.user_id=?) AND (?=0 OR m.hidden_from_guests=0) ORDER BY m.taken',
     t.role === 'guest' ? '' : user?.id || '',
     tripId,
     t.from,
     t.to,
     t.role === 'guest' ? '' : user?.id || '',
+    Number(t.role === 'guest'),
   );
   addMapDetails(media);
   const sourceRows =
@@ -228,10 +234,11 @@ export function tripData(req: Request, tripId: string) {
       t.to,
     ),
     places: all(
-      'SELECT p.*,m.lat photo_lat,m.lon photo_lon FROM confirmed_places p JOIN media m ON m.id=p.media_id JOIN sources s ON s.id=m.source_id WHERE p.trip_id=? AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND m.hidden=0 AND m.missing=0 AND s.approved=1 ORDER BY p.rowid',
+      'SELECT p.*,m.lat photo_lat,m.lon photo_lon FROM confirmed_places p JOIN media m ON m.id=p.media_id JOIN sources s ON s.id=m.source_id WHERE p.trip_id=? AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND m.hidden=0 AND (?=0 OR m.hidden_from_guests=0) AND m.missing=0 AND s.approved=1 ORDER BY p.rowid',
       tripId,
       t.from,
       t.to,
+      Number(t.role === 'guest'),
     ),
   };
 }

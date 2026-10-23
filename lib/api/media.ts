@@ -178,6 +178,7 @@ export async function mediaRoutes({
         .object({
           title: z.string().trim().min(1).max(160).optional(),
           hidden: z.boolean().optional(),
+          hiddenFromGuests: z.boolean().optional(),
           lat: z.number().min(-90).max(90).optional(),
           lon: z.number().min(-180).max(180).optional(),
         })
@@ -191,8 +192,15 @@ export async function mediaRoutes({
           input.title,
         );
       }
-      if (input.hidden !== undefined)
-        run('UPDATE media SET hidden=? WHERE id=?', Number(input.hidden), m.id);
+      if (input.hidden !== undefined || input.hiddenFromGuests !== undefined)
+        run(
+          'UPDATE media SET hidden=COALESCE(?,hidden),hidden_from_guests=COALESCE(?,hidden_from_guests) WHERE id=?',
+          input.hidden === undefined ? null : Number(input.hidden),
+          input.hiddenFromGuests === undefined
+            ? null
+            : Number(input.hiddenFromGuests),
+          m.id,
+        );
       if (input.lat !== undefined && input.lon !== undefined) {
         assertDay(m.taken.slice(0, 10), membership(m.trip_id, u.id));
         run(

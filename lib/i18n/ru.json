@@ -770,5 +770,11 @@
   "welcome.theGreatWallOfChinaWindingThrough": "Великая Китайская стена среди гор",
   "welcome.thePyramidsOfGizaAtSunset": "Пирамиды Гизы на закате",
   "welcome.whiteHousesInSantoriniAboveTheAegean": "Белые дома Санторини над Эгейским морем",
-  "errors.requestTimedOut": "Сервер отвечает слишком долго. Повторите попытку."
+  "errors.requestTimedOut": "Сервер отвечает слишком долго. Повторите попытку.",
+  "visibility.showParticipants": "Показать участникам",
+  "visibility.showEveryone": "Показать всем",
+  "visibility.hideEveryone": "Скрыть для всех",
+  "visibility.showGuests": "Показать гостям по ссылке",
+  "visibility.hideGuests": "Скрыть от гостей по ссылке",
+  "visibility.membersOnly": "Только для участников"
 }

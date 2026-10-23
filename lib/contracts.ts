@@ -44,6 +44,7 @@ export type MediaItem = {
   author: string;
   favorite: number | boolean;
   hidden: number | boolean;
+  hidden_from_guests?: number | boolean;
   missing?: number | boolean;
   lat: number | null;
   lon: number | null;

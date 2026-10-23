@@ -1,3 +1,4 @@
+import { mediaGuestVisibility } from './005-media-guest-visibility';
 import { sourceMessageKeys } from './004-source-message-keys';
 import type Database from 'better-sqlite3';
 import { baseline } from './001-baseline';
@@ -9,6 +10,7 @@ export const migrations = [
   { version: 2, name: 'identity-mail', up: identityMail },
   { version: 3, name: 'friend-links', up: friendLinks },
   { version: 4, name: 'source-message-keys', up: sourceMessageKeys },
+  { version: 5, name: 'media-guest-visibility', up: mediaGuestVisibility },
 ];
 
 export function migrate(db: Database.Database) {

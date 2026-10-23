@@ -8,7 +8,7 @@
 
 QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.12.4**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.13.0**.
 
 ## Screenshots
 
@@ -39,7 +39,7 @@ Light and dark themes, English and Russian interfaces, and responsive layouts. T
 
 - **Trips and shared stories.** Destinations, dates, descriptions with friend mentions, and participants with individual access periods.
 - **Photos and videos from Yandex Disk.** Connect a selected folder, index it recursively, and synchronize manually or periodically without duplicating files.
-- **Gallery.** Filter by day and media type, save favorites, rename photos within the application, view and download originals. Authors can hide their own publications, including after leaving a trip.
+- **Gallery.** Filter by day and media type, save favorites, rename photos within the application, view and download originals. Authors can hide their own publications from everyone or only from guests with a shared link, including after leaving a trip.
 - **Maps and discoveries.** Coordinates from available EXIF metadata, manual location selection, Wikipedia landmark suggestions, and confirmed places near photos.
 - **Journal.** Entries organized by trip day, with replies from participants.
 - **Profiles and friends.** Usernames, avatars, public profiles, people search, friend requests and invitation links.

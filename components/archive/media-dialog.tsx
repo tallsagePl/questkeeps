@@ -1,5 +1,6 @@
 'use client';
 
+import MediaVisibilityControls from '../media-visibility-controls';
 import { Collapse } from '../smooth-details';
 import { useLocale } from '@/components/appearance';
 import { api } from '../api';
@@ -235,26 +236,27 @@ export default function MediaDialog({
             </a>
           )}
           {activeMedia.user_id === user?.id && !guest && (
-            <FeedbackButton
-              className="text-button"
+            <MediaVisibilityControls
+              feedback
+              hidden={activeMedia.hidden}
+              hiddenFromGuests={activeMedia.hidden_from_guests}
               disabled={busy}
-              onClick={() =>
+              onChange={(change) =>
                 void action(async () => {
-                  await api('media/' + activeMedia.id, 'PATCH', {
-                    hidden: !activeMedia.hidden,
-                  });
+                  await api('media/' + activeMedia.id, 'PATCH', change);
                   setActiveMedia({
                     ...activeMedia,
-                    hidden: !activeMedia.hidden,
+                    ...(change.hidden !== undefined
+                      ? { hidden: change.hidden }
+                      : {}),
+                    ...(change.hiddenFromGuests !== undefined
+                      ? { hidden_from_guests: change.hiddenFromGuests }
+                      : {}),
                   });
                   await refresh();
                 })
               }
-            >
-              {activeMedia.hidden
-                ? t('trip.showInTrip')
-                : t('common.hideMyPhoto')}
-            </FeedbackButton>
+            />
           )}
         </div>
         {!activeMedia.hidden &&

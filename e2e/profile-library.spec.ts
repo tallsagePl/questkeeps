@@ -118,7 +118,7 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
     page.getByRole('dialog', { name: 'Вечер у Босфора' }),
   ).toBeVisible();
   await expect(
-    page.getByRole('dialog').getByRole('button', { name: 'Скрыть мой кадр' }),
+    page.getByRole('dialog').getByRole('button', { name: 'Скрыть для всех' }),
   ).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1');
   expect(
@@ -131,12 +131,23 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
   ).toEqual([]);
   await page
     .getByRole('dialog')
-    .getByRole('button', { name: 'Скрыть мой кадр', exact: true })
+    .getByRole('button', { name: 'Скрыть от гостей по ссылке', exact: true })
+    .click();
+  await expect(page.locator('.profile-file-row').first()).toContainText(
+    'Только для участников',
+  );
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Показать гостям по ссылке', exact: true })
+    .click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Скрыть для всех', exact: true })
     .click();
   await expect(
     page
       .getByRole('dialog')
-      .getByRole('button', { name: 'Показать', exact: true }),
+      .getByRole('button', { name: 'Показать всем', exact: true }),
   ).toBeVisible();
   holdUpdate = true;
   const patchStarted = page.waitForRequest(
@@ -144,7 +155,7 @@ test('profile files stay collapsed, load bounded pages and previews, open modal,
   );
   await page
     .getByRole('dialog')
-    .getByRole('button', { name: 'Показать', exact: true })
+    .getByRole('button', { name: 'Показать всем', exact: true })
     .click();
   await patchStarted;
   await page.keyboard.press('Escape');

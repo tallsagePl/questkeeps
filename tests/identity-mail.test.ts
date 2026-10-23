@@ -47,12 +47,38 @@ test('numbered migrations preserve legacy records, apply once, and reject newer 
   legacy
     .prepare('INSERT INTO users VALUES (?,?,?,?,?)')
     .run('legacy', 'legacy@example.invalid', 'Legacy', 'hashed-fixture', 123);
+  for (const hidden of [0, 1])
+    legacy
+      .prepare(
+        'INSERT INTO media(id,resource_id,path,name,mime,kind,taken,date_basis,hidden) VALUES (?,?,?,?,?,?,?,?,?)',
+      )
+      .run(
+        'legacy-photo-' + hidden,
+        'resource-' + hidden,
+        'disk:/a.jpg',
+        'a.jpg',
+        'image/jpeg',
+        'photo',
+        '2026-10-13',
+        'manual',
+        hidden,
+      );
   migrate(legacy);
   migrate(legacy);
-  assert.equal(legacy.pragma('user_version', { simple: true }), 4);
+  assert.deepEqual(
+    legacy
+      .prepare('SELECT hidden,hidden_from_guests FROM media ORDER BY hidden')
+      .all(),
+    [
+      { hidden: 0, hidden_from_guests: 0 },
+      { hidden: 1, hidden_from_guests: 0 },
+    ],
+  );
+
+  assert.equal(legacy.pragma('user_version', { simple: true }), 5);
   assert.equal(
     (legacy.prepare('SELECT count(*) n FROM schema_migrations').get() as any).n,
-    4,
+    5,
   );
   assert.equal(
     (legacy.prepare('SELECT password FROM users').get() as any).password,
@@ -64,7 +90,7 @@ test('numbered migrations preserve legacy records, apply once, and reject newer 
   legacy.close();
   const fresh = new Database(':memory:');
   migrate(fresh);
-  assert.equal(fresh.pragma('user_version', { simple: true }), 4);
+  assert.equal(fresh.pragma('user_version', { simple: true }), 5);
   fresh.close();
 });
 
