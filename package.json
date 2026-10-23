@@ -1,6 +1,6 @@
 {
   "name": "questkeeps",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -16,7 +16,8 @@
     "backup": "node --env-file=.env.local --import tsx scripts/backup.ts",
     "test:social": "playwright test e2e/social.spec.ts --workers=1",
     "migrate": "node --env-file=.env.local --import tsx scripts/migrate.ts",
-    "format:check": "node scripts/format-source.mjs --check && prettier --check \"lib/i18n/*.json\" \"docs/**/*.md\" \"README*.md\" && prettier --check \".github/**/*.yml\""
+    "format:check": "node scripts/format-source.mjs --check && prettier --check \"lib/i18n/*.json\" \"docs/**/*.md\" \"README*.md\" && prettier --check \".github/**/*.yml\"",
+    "mail:test": "node --env-file=.env.local --import tsx scripts/test-email.ts"
   },
   "keywords": [],
   "author": "",

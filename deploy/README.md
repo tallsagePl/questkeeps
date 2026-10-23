@@ -43,7 +43,9 @@ and synchronization worker. Do not start a second worker unit.
 
 Only SSH, HTTP and HTTPS should be public. Next listens on loopback port 3000.
 Do not enable required email confirmation until the sender domain and mail
-transport are configured. Do not expose the login form over unencrypted HTTP.
+transport are configured. Complete the sender-domain and test-delivery steps in
+[EMAIL-SETUP.md](../docs/EMAIL-SETUP.md) before enabling it. Do not expose the login
+form over unencrypted HTTP.
 
 ## Updates and rollback
 

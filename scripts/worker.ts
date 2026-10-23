@@ -1,30 +1,45 @@
 import { deliverEmails } from '../lib/email-verification';
 import { syncDue } from '../lib/sync';
+import { runWorkerLoops } from '../lib/worker-loops';
 
-let stopped = false;
+const shutdown = new AbortController();
 
-process.on('SIGINT', () => {
-  stopped = true;
+process.on('SIGINT', () => shutdown.abort());
+
+process.on('SIGTERM', () => shutdown.abort());
+
+console.log(
+  'QuestKeeps: email queue every 5 seconds; Drive synchronization every 15 minutes',
+);
+
+void runWorkerLoops(
+  [
+    {
+      name: 'email',
+      intervalMs: 5000,
+      run: async () => {
+        const result = await deliverEmails();
+        if (result.sent || result.failed)
+          console.log(
+            new Date().toISOString(),
+            'email',
+            JSON.stringify(result),
+          );
+      },
+    },
+    {
+      name: 'sync',
+      intervalMs: 30000,
+      run: async () => {
+        const result = await syncDue();
+        if (result.length)
+          console.log(new Date().toISOString(), 'sync', JSON.stringify(result));
+      },
+    },
+  ],
+  shutdown.signal,
+  (name, error) => console.error(name, error),
+).catch((error) => {
+  console.error('Worker stopped', error);
+  process.exitCode = 1;
 });
-
-process.on('SIGTERM', () => {
-  stopped = true;
-});
-
-async function main() {
-  console.log('QuestKeeps: синхронизация каждые 15 минут');
-  while (!stopped) {
-    try {
-      await deliverEmails();
-      const result = await syncDue();
-      if (result.length)
-        console.log(new Date().toISOString(), JSON.stringify(result));
-    } catch (error) {
-      console.error(error);
-    }
-    for (let i = 0; i < 30 && !stopped; i++)
-      await new Promise((r) => setTimeout(r, 1000));
-  }
-}
-
-void main();

@@ -48,7 +48,11 @@ export async function authRoutes({
       throttle('email:resend:' + hash(email), 3, 3600000);
       const user = one('SELECT id FROM users WHERE email=?', email);
       if (user && emailPending(user.id) && mailConfigured())
-        queueVerification(user.id, email);
+        queueVerification(
+          user.id,
+          email,
+          req.headers.get('X-QuestKeeps-Language') === 'en' ? 'en' : 'ru',
+        );
       return json({
         message: 'messages.ifTheAddressIsAwaitingVerificationWe',
       });
@@ -143,7 +147,12 @@ export async function authRoutes({
             userId,
             Number(verificationRequired()),
           );
-          if (verificationRequired()) queueVerification(userId, input.email);
+          if (verificationRequired())
+            queueVerification(
+              userId,
+              input.email,
+              req.headers.get('X-QuestKeeps-Language') === 'en' ? 'en' : 'ru',
+            );
         }).immediate();
         u = one('SELECT * FROM users WHERE id=?', userId);
       } else {

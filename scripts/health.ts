@@ -1,3 +1,4 @@
+import { migrations } from '../lib/migrations';
 import Database from 'better-sqlite3';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
@@ -59,6 +60,26 @@ const report = {
     yandexOAuthConfigured:
       !!process.env.YANDEX_CLIENT_ID && !!process.env.YANDEX_CLIENT_SECRET,
     appURL: process.env.APP_URL || null,
+    emailVerificationRequired:
+      process.env.EMAIL_VERIFICATION_REQUIRED === 'true',
+    mailTransportConfigured:
+      !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM,
+  },
+  emailQueue: {
+    pending: (
+      db
+        .prepare(
+          "SELECT count(*) n FROM delivery_jobs WHERE kind='verify-email' AND finished IS NULL",
+        )
+        .get() as { n: number }
+    ).n,
+    exhausted: (
+      db
+        .prepare(
+          "SELECT count(*) n FROM delivery_jobs WHERE kind='verify-email' AND attempts>=8 AND last_error IS NOT NULL",
+        )
+        .get() as { n: number }
+    ).n,
   },
   records: {
     users: (db.prepare('SELECT count(*) n FROM users').get() as { n: number })
@@ -79,8 +100,10 @@ if (
   report.database.integrity !== 'ok' ||
   report.database.foreignKeyViolations ||
   report.database.missingTables.length ||
-  report.database.schemaVersion !== 3 ||
+  report.database.schemaVersion !== migrations.at(-1)!.version ||
   !report.configuration.encryptionKeyValid ||
-  !report.configuration.schedulerSecretConfigured
+  !report.configuration.schedulerSecretConfigured ||
+  (report.configuration.emailVerificationRequired &&
+    !report.configuration.mailTransportConfigured)
 )
   process.exitCode = 1;

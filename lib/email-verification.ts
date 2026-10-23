@@ -1,3 +1,4 @@
+import { verificationMail } from './verification-email';
 import { db, one, run, id, token, hash, encrypt, decrypt } from './db';
 
 export function verificationRequired() {
@@ -15,7 +16,11 @@ export function emailPending(userId: string) {
   );
 }
 
-export function queueVerification(userId: string, email: string) {
+export function queueVerification(
+  userId: string,
+  email: string,
+  language: 'ru' | 'en' = 'ru',
+) {
   const raw = token();
   const expires = Date.now() + 86400000;
   const origin = new URL(process.env.APP_URL || 'http://localhost:3000').origin;
@@ -45,6 +50,7 @@ export function queueVerification(userId: string, email: string) {
       encrypt(
         JSON.stringify({
           userId,
+          language,
           to: email,
           url: origin + '/verify-email#token=' + raw,
           expires,
@@ -81,7 +87,13 @@ export function confirmEmail(raw: string) {
     .immediate();
 }
 
-export type Mail = { to: string; subject: string; text: string };
+export type Mail = {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  attachments?: { filename: string; content: string; content_id: string }[];
+};
 
 export async function sendMail(mail: Mail, jobId: string) {
   if (!mailConfigured()) throw Error('Mail transport is disabled');
@@ -99,6 +111,8 @@ export async function sendMail(mail: Mail, jobId: string) {
       to: [mail.to],
       subject: mail.subject,
       text: mail.text,
+      html: mail.html,
+      attachments: mail.attachments,
     }),
   });
   if (!response.ok) throw Error('Mail provider rejected delivery');
@@ -138,14 +152,12 @@ export async function deliverEmails(
       const payload = JSON.parse(decrypt(job.payload));
       if (payload.expires > now && emailPending(payload.userId)) {
         await transport(
-          {
-            to: payload.to,
-            subject: 'Подтверди почту QuestKeeps',
-            text:
-              'Подтверди свой email, открыв ссылку и нажав кнопку подтверждения: ' +
-              payload.url +
-              '\nСсылка действует 24 часа. Если ты не регистрировался, проигнорируй письмо.',
-          },
+          await verificationMail(
+            payload.to,
+            payload.url,
+            false,
+            payload.language === 'en' ? 'en' : 'ru',
+          ),
           job.id,
         );
         sent++;

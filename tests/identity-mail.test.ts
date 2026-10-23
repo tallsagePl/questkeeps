@@ -344,3 +344,47 @@ test('unlinked Yandex with an existing primary email cannot create a duplicate o
     process.env.YANDEX_CLIENT_ID = '';
   }
 });
+
+test('Resend transport sends the configured sender and idempotency key and handles rejection', async () => {
+  const previousFetch = globalThis.fetch;
+  const previousKey = process.env.RESEND_API_KEY;
+  const previousFrom = process.env.EMAIL_FROM;
+  process.env.RESEND_API_KEY = 'fixture-resend-key';
+  process.env.EMAIL_FROM = 'QuestKeeps <noreply@mail.fixture.invalid>';
+  const { sendMail } = await import('../lib/email-verification');
+  let reject = false;
+  globalThis.fetch = async (url, init) => {
+    assert.equal(String(url), 'https://api.resend.com/emails');
+    assert.equal(init?.method, 'POST');
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.get('authorization'), 'Bearer fixture-resend-key');
+    assert.equal(headers.get('idempotency-key'), 'questkeeps/fixture-job');
+    assert.deepEqual(JSON.parse(String(init?.body)), {
+      from: 'QuestKeeps <noreply@mail.fixture.invalid>',
+      to: ['recipient@fixture.invalid'],
+      subject: 'Fixture subject',
+      text: 'Fixture body',
+    });
+    return reject
+      ? new Response('provider-private-details', { status: 403 })
+      : Response.json({ id: 'fixture-message' });
+  };
+  const mail = {
+    to: 'recipient@fixture.invalid',
+    subject: 'Fixture subject',
+    text: 'Fixture body',
+  };
+  try {
+    await sendMail(mail, 'fixture-job');
+    reject = true;
+    await assert.rejects(sendMail(mail, 'fixture-job'), {
+      message: 'Mail provider rejected delivery',
+    });
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.RESEND_API_KEY;
+    else process.env.RESEND_API_KEY = previousKey;
+    if (previousFrom === undefined) delete process.env.EMAIL_FROM;
+    else process.env.EMAIL_FROM = previousFrom;
+  }
+});

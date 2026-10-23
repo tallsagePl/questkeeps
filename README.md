@@ -8,7 +8,7 @@
 
 QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.13.0**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.14.0**.
 
 ## Screenshots
 
@@ -108,7 +108,7 @@ npm run migrate
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). Register with an email address, create a trip and write your first journal entry. The web application and worker start together; press `Ctrl+C` to stop them. The worker checks jobs every 30 seconds, with each source scheduled for synchronization at 15-minute intervals.
+Open [localhost:3000](http://localhost:3000). Register with an email address, create a trip and write your first journal entry. The web application and worker start together; press `Ctrl+C` to stop them. The worker checks email jobs every 5 seconds independently from Drive synchronization, with each source scheduled for synchronization at 15-minute intervals.
 
 Local development uses `.next-dev`, production build/start uses `.next`, and browser tests use `.next-e2e`. Use `npm run dev` while editing: a production process must be restarted after its build files are replaced.
 
@@ -169,7 +169,7 @@ See [deploy/README.md](deploy/README.md) for server configuration, certificates,
 ## Current limitations
 
 - Cloud storage integration supports Yandex Disk; Google Drive is not connected yet.
-- An email-verification queue and Resend delivery are implemented. Verification is disabled by default and requires a configured sender, domain and API key. Telegram notifications for new registrations are not implemented yet.
+- An email-verification queue and Resend delivery are implemented. Verification is disabled by default and requires a configured sender, domain and API key. Follow [email setup](docs/EMAIL-SETUP.md) before enabling it. Telegram notifications for new registrations are not implemented yet.
 - Video playback depends on browser format and codec support; there is no server-side transcoding. EXIF extraction is bounded by data size and format support; locations can be set manually.
 - Revoking a guest link cannot revoke files that have already been viewed or downloaded.
 - Password recovery, email changes and account deletion are not implemented yet.
