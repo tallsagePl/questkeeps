@@ -204,18 +204,48 @@ export function MediaTitle({
             <button
               type="button"
               className="primary"
+              aria-label={t('common.save')}
+              title={t('common.save')}
               disabled={busy}
               onClick={() => void save()}
             >
-              {t('common.save')}
+              <span className="media-title-action-label">
+                {t('common.save')}
+              </span>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                aria-hidden="true"
+              >
+                <path d="m5 12 4 4L19 6" />
+              </svg>
             </button>
             <button
               type="button"
               className="secondary"
+              aria-label={t('common.cancel')}
+              title={t('common.cancel')}
               disabled={busy}
               onClick={finish}
             >
-              {t('common.cancel')}
+              <span className="media-title-action-label">
+                {t('common.cancel')}
+              </span>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                aria-hidden="true"
+              >
+                <path d="m6 6 12 12M18 6 6 18" />
+              </svg>
             </button>
           </span>
           {error && (
@@ -226,7 +256,7 @@ export function MediaTitle({
         </>
       ) : (
         <>
-          <span>{title}</span>
+          <span title={title}>{title}</span>
           {editable && (
             <button
               ref={pencil}

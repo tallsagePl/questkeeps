@@ -333,7 +333,16 @@ test('ограниченная лента сдвигается в обе сто�
     height: el.clientHeight,
     pageHeight: document.documentElement.scrollHeight,
   }));
-  expect(dimensions.height).toBeLessThan(2500);
+  // Only viewport cells are painted; the native scroll track keeps its full height.
+  expect(dimensions.height).toBeGreaterThan(20000);
+  await page.evaluate(() => {
+    const native = window.scrollBy.bind(window);
+    (window as any).__scrollWrites = 0;
+    window.scrollBy = ((...args: any[]) => {
+      (window as any).__scrollWrites++;
+      return (native as any)(...args);
+    }) as typeof window.scrollBy;
+  });
   for (let row = 0; row < 36; row++) {
     const anchor = await grid.evaluate((el) => {
       const cell = [
@@ -365,6 +374,7 @@ test('ограниченная лента сдвигается в обе сто�
       await page.evaluate(() => document.documentElement.scrollHeight),
     ).toBe(dimensions.pageHeight);
   }
+  expect(await page.evaluate(() => (window as any).__scrollWrites)).toBe(36);
   await expect(page.locator('[data-media-index="0"]')).toBeHidden();
   await expect(page.locator('[data-media-index="0"]')).toHaveCount(1);
   await expect
@@ -405,26 +415,12 @@ test('ограниченная лента сдвигается в обе сто�
   });
   expect(windowRows.first).toBe(windowRows.visible - windowRows.columns);
   expect(windowRows.last).toBe(windowRows.visibleLast + windowRows.columns);
-  // While the scrollbar thumb is held at the top, the browser can reject the
-  // list's compensating scrollBy. Keep that native-drag condition deterministic.
-  const stopDragging = await page.evaluateHandle(() => {
-    const scrollBy = window.scrollBy;
-    window.scrollBy = () => {};
-    window.scrollTo({ top: 0, behavior: 'instant' });
-    return () => {
-      window.scrollBy = scrollBy;
-    };
-  });
-  await expect(page.locator('header.topbar')).toBeInViewport();
-  await expect
-    .poll(async () => Number(await grid.getAttribute('data-base-row')))
-    .toBeGreaterThan(0);
-  await page.waitForTimeout(200);
+  // Native thumb dragging to the top must not be fought by compensating writes.
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  await expect(grid).toHaveAttribute('data-base-row', '0');
   await expect(
     page.getByRole('button', { name: 'Наверх', exact: true }),
-  ).toBeVisible();
-  await stopDragging.evaluate((release) => release());
-  await stopDragging.dispose();
+  ).toHaveCount(0);
   await page.evaluate(() => window.scrollBy(0, 400));
 
   for (let row = 0; row < 45; row++) {

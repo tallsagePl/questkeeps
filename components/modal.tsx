@@ -9,6 +9,7 @@ export default function Modal({
   children,
   onClose,
   wide = false,
+  fullscreen = false,
   doubleBackdropClick = false,
   onKeyDown,
   headerActions,
@@ -18,6 +19,7 @@ export default function Modal({
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  fullscreen?: boolean;
   doubleBackdropClick?: boolean;
   onKeyDown?: import('react').KeyboardEventHandler<HTMLDialogElement>;
 }) {
@@ -52,7 +54,9 @@ export default function Modal({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className={'modal ' + (wide ? 'wide' : '')}
+      className={
+        'modal ' + (wide ? 'wide ' : '') + (fullscreen ? 'fullscreen' : '')
+      }
       onCancel={(event) => {
         event.preventDefault();
         onClose();

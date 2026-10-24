@@ -69,11 +69,9 @@ export default function VirtualGallery<T>({
       const rows = Math.ceil(items.length / columns);
       if (!width || !pitch) return;
 
-      // Recycle a bounded scroll surface instead of reserving space for history.
-      // Compensate scroll position by exactly the removed/inserted row height.
-      const windowRows = Math.min(rows, Math.ceil(innerHeight / pitch) + 3);
-      let previousBase = baseRow.current;
-      let offset = -rect.top;
+      // Keep one stable native scroll surface. Never compensate ordinary scrolling:
+      // scrollBy during touch momentum/scrollbar dragging causes jumps and flashes.
+      let offset = Math.max(0, -rect.top);
       const previousGeometry = geometry.current;
       if (
         previousGeometry &&
@@ -81,52 +79,30 @@ export default function VirtualGallery<T>({
         (previousGeometry.columns !== columns ||
           previousGeometry.pitch !== pitch)
       ) {
-        // Keep the same photo near the top when rotation changes the grid density.
-        const { anchor, fraction } = previousGeometry;
-        const row = Math.floor(anchor / columns);
-        baseRow.current = Math.max(0, Math.min(rows - windowRows, row - 1));
-        const adjusted = (row - baseRow.current + fraction) * pitch;
+        const row = Math.floor(previousGeometry.anchor / columns);
+        const adjusted = (row + previousGeometry.fraction) * pitch;
         pendingScroll.current += adjusted - offset;
         offset = adjusted;
-        previousBase = baseRow.current;
       }
-      const localRow = Math.floor(offset / pitch);
-      baseRow.current = Math.max(
-        0,
-        Math.min(rows - windowRows, previousBase + localRow - 1),
+      let visibleFirst = Math.max(0, Math.floor(offset / pitch));
+      if (visibleFirst * pitch + height <= offset) visibleFirst++;
+      const visibleLast = Math.min(
+        rows,
+        Math.max(visibleFirst + 1, Math.ceil((offset + innerHeight) / pitch)),
       );
-      const shift = baseRow.current - previousBase;
-      const localTop = offset - shift * pitch;
-      const anchorRow = Math.max(0, Math.floor(localTop / pitch));
+      const first = Math.max(0, visibleFirst - 1);
+      const last = Math.min(rows, visibleLast + 1);
+      baseRow.current = first;
       geometry.current = {
         columns,
         pitch,
-        anchor: (baseRow.current + anchorRow) * columns,
-        fraction: Math.max(0, localTop / pitch - anchorRow),
+        anchor: visibleFirst * columns,
+        fraction: Math.max(0, offset / pitch - Math.floor(offset / pitch)),
       };
-      pendingScroll.current -= shift * pitch;
-      let visibleFirst = Math.max(0, Math.floor(localTop / pitch));
-      if (visibleFirst * pitch + height <= localTop) visibleFirst++;
-      const visibleLast = Math.max(
-        visibleFirst + 1,
-        Math.ceil((localTop + innerHeight) / pitch),
-      );
-      const first = Math.max(
-        baseRow.current,
-        baseRow.current + visibleFirst - 1,
-      );
-      const last = Math.min(
-        rows,
-        baseRow.current + windowRows,
-        baseRow.current + visibleLast + 1,
-      );
-      const totalHeight = Math.max(0, windowRows * pitch - gap);
+      const totalHeight = Math.max(0, rows * pitch - gap);
       const next = {
-        visibleFirst: (baseRow.current + visibleFirst) * columns,
-        visibleLast: Math.min(
-          items.length,
-          (baseRow.current + visibleLast) * columns,
-        ),
+        visibleFirst: visibleFirst * columns,
+        visibleLast: Math.min(items.length, visibleLast * columns),
         baseRow: baseRow.current,
         columns,
         width,
@@ -175,13 +151,10 @@ export default function VirtualGallery<T>({
     pendingFocus.current = target;
     const pitch = layout.height + layout.gap;
     const rows = Math.ceil(items.length / layout.columns);
-    const windowRows = Math.min(rows, Math.ceil(innerHeight / pitch) + 3);
     const row = Math.floor(target / layout.columns);
-    baseRow.current = Math.max(0, Math.min(rows - windowRows, row - 1));
+    baseRow.current = Math.max(0, row - 1);
     const top =
-      root.current!.getBoundingClientRect().top +
-      window.scrollY +
-      (row - baseRow.current) * pitch;
+      root.current.getBoundingClientRect().top + window.scrollY + row * pitch;
     pendingScroll.current = 0;
     setLayout({
       ...layout,
@@ -194,9 +167,9 @@ export default function VirtualGallery<T>({
       first: baseRow.current * layout.columns,
       last: Math.min(
         items.length,
-        (baseRow.current + windowRows) * layout.columns,
+        (row + Math.ceil(innerHeight / pitch) + 1) * layout.columns,
       ),
-      totalHeight: windowRows * pitch - layout.gap,
+      totalHeight: rows * pitch - layout.gap,
     });
     window.scrollTo({ top: Math.max(0, top - 24), behavior: 'instant' });
   }
@@ -300,7 +273,7 @@ export default function VirtualGallery<T>({
                     left:
                       (index % layout.columns) * (layout.width + layout.gap),
                     top:
-                      (Math.floor(index / layout.columns) - layout.baseRow) *
+                      Math.floor(index / layout.columns) *
                       (layout.height + layout.gap),
                   }
                 : undefined

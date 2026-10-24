@@ -274,6 +274,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
         <Modal
           title={fileTitle(selected)}
           wide
+          fullscreen
           headerActions={<MediaReloadButton onClick={reload.reload} />}
           doubleBackdropClick
           onClose={() => setSelected(null)}
