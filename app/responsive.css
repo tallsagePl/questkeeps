@@ -418,3 +418,189 @@
     scroll-padding-bottom: max(24px, env(safe-area-inset-bottom));
   }
 }
+
+/* Header popovers are anchored, non-modal and never dim or lock the page. */
+.mobile-header-menu {
+  display: none;
+}
+.header-dropdown-panel {
+  position: fixed;
+  inset: auto;
+  top: var(--dropdown-top, 76px);
+  margin: 0;
+  width: min(380px, calc(100vw - 24px));
+  max-height: calc(100dvh - var(--dropdown-top, 76px) - 12px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  box-sizing: border-box;
+}
+.header-dropdown-panel::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
+.header-dropdown-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.header-dropdown-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+.header-dropdown-heading .icon-button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+.header-dropdown-panel .invitation-inbox {
+  gap: 12px;
+}
+.header-dropdown-panel .invitation-inbox > p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+.header-dropdown-panel .invitation-item h3 {
+  margin-bottom: 8px;
+}
+.header-dropdown-panel .invitation-actions > button {
+  min-height: 44px;
+  padding: 10px 14px;
+  flex: 1;
+}
+.header-menu-links {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.header-menu-links a,
+.header-menu-links .page-back {
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+}
+.header-menu-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.header-menu-settings .header-logout {
+  min-height: 44px;
+}
+@media (max-width: 700px) {
+  .topbar.site-header {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr) 88px;
+    align-items: center;
+    height: 64px;
+    min-height: 64px;
+    padding: 8px 12px;
+    gap: 0;
+    box-sizing: border-box;
+  }
+  .site-header > .mobile-header-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    grid-column: 1;
+    grid-row: 1;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    color: var(--ink);
+    background: transparent;
+  }
+  .site-header > .header-brand {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    min-width: 0;
+  }
+  .site-header .header-brand > .page-back,
+  .site-header > .top-caption,
+  .site-header > .social-nav,
+  .site-header .top-actions > .appearance-controls,
+  .site-header .top-actions > .header-logout,
+  .site-header .top-actions > .about-nav-link,
+  .site-header .top-actions > .trips-nav-link,
+  .site-header .top-actions > .pill,
+  .site-header .top-actions > .muted {
+    display: none;
+  }
+  .site-header .qk-brand {
+    gap: 7px;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+  }
+  .site-header .qk-brand .qk-mark {
+    width: 30px;
+    height: 25px;
+  }
+  .site-header .top-actions {
+    grid-column: 3;
+    grid-row: 1;
+    justify-content: flex-end;
+    width: 88px;
+    gap: 0;
+  }
+  .site-header .top-actions .invitation-notifications,
+  .site-header .top-actions .user-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    padding: 5px;
+    border: 0;
+    background: transparent;
+  }
+  .site-header .top-actions .user-button > .user-avatar {
+    width: 30px;
+    height: 30px;
+  }
+  .site-header .top-actions .user-button > span:last-child {
+    display: none;
+  }
+  .site-header .invitation-notifications svg {
+    width: 23px;
+    height: 23px;
+  }
+  .site-header .invitation-count {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 10px;
+    line-height: 16px;
+  }
+}
+@media (max-width: 359px) {
+  .topbar.site-header {
+    grid-template-columns: 76px minmax(0, 1fr) 76px;
+    padding-inline: 8px;
+  }
+  .site-header .top-actions {
+    width: 88px;
+    justify-self: end;
+  }
+  .site-header .qk-brand {
+    font-size: 15px;
+    gap: 5px;
+  }
+  .site-header .qk-brand .qk-mark {
+    width: 25px;
+  }
+}

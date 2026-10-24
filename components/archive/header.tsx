@@ -1,5 +1,6 @@
 'use client';
 
+import HeaderMenu from '../header-menu';
 import TripInvitations from '../trip-invitations';
 import { useLocale } from '@/components/appearance';
 import { AppearanceControls } from '../appearance';
@@ -16,7 +17,21 @@ export default function Header({ archive }: { archive: ArchiveController }) {
 
   return (
     <>
-      <header className="topbar" tabIndex={-1}>
+      <header className="topbar site-header" tabIndex={-1}>
+        <HeaderMenu
+          back={!!(selected || share || invite)}
+          guest={guest}
+          logout={
+            user && !guest ? (
+              <FeedbackButton
+                className="text-button header-logout"
+                onClick={() => void action(signOut)}
+              >
+                {t('auth.signOut')}
+              </FeedbackButton>
+            ) : undefined
+          }
+        />
         <HeaderBrand back={!!(selected || share || invite)} />
         <span className="top-caption">{t('trip.yourTravelCollection')}</span>
         <div className="top-actions">

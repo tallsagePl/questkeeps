@@ -131,12 +131,14 @@ test('friend links survive registration and login, add both people, and can be r
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+  await page.getByRole('button', { name: 'Меню', exact: true }).click();
   await page
     .getByRole('button', { name: 'Переключить на английский', exact: true })
     .click();
   await page
     .getByRole('button', { name: 'Switch to dark theme', exact: true })
     .click();
+  await page.keyboard.press('Escape');
   await expect(
     page.getByRole('heading', { name: 'Invite with a link', exact: true }),
   ).toBeVisible();

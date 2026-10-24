@@ -40,9 +40,12 @@ for (const width of [390, 1440]) {
         fullPage: false,
       });
     }
+    if (width <= 700)
+      await page.getByRole('button', { name: 'Меню', exact: true }).click();
     await page
       .getByRole('button', { name: 'Переключить на английский' })
       .click();
+    if (width <= 700) await page.keyboard.press('Escape');
     await expect(page.locator('footer a[href="/privacy"]')).toHaveText(
       'Privacy',
     );

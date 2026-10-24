@@ -67,7 +67,10 @@ test('owner invites by email, recipient accepts from notifications, participatio
     await member.goto(base + '/about');
     await expect(member.locator('.invitation-count')).toHaveText('1');
     await member.getByRole('button', { name: /Приглашения в поездки/ }).click();
-    const inbox = member.getByRole('dialog');
+    const inbox = member.getByRole('region', {
+      name: 'Приглашения в поездки',
+      exact: true,
+    });
     await expect(
       inbox.getByRole('heading', { name: 'Shared Istanbul' }),
     ).toBeVisible();
@@ -76,8 +79,11 @@ test('owner invites by email, recipient accepts from notifications, participatio
     ).toBeVisible();
     await member.screenshot({ path: 'data/invite-inbox-mobile.png' });
     expect(
-      (await new AxeBuilder({ page: member }).include('dialog').analyze())
-        .violations,
+      (
+        await new AxeBuilder({ page: member })
+          .include('.header-dropdown-panel:popover-open')
+          .analyze()
+      ).violations,
     ).toEqual([]);
     await inbox.getByRole('button', { name: 'Принять и открыть' }).click();
     await expect(member).toHaveURL(base + '/?trip=' + trip);

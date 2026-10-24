@@ -70,9 +70,11 @@ test('RU/EN, обе темы, сохранение предпочтений и �
     path: 'test-results/welcome-en-light-mobile.png',
     fullPage: true,
   });
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await page
     .getByRole('button', { name: 'Switch to Russian', exact: true })
     .click();
+  await page.keyboard.press('Escape');
   await expect(
     page.getByText('Неверный email, никнейм или пароль', { exact: true }),
   ).toBeVisible();
@@ -234,12 +236,14 @@ test('system theme follows device changes and zoom keeps controls available', as
   await page.evaluate(() => {
     document.documentElement.style.fontSize = '200%';
   });
+  await page.getByRole('button', { name: 'Меню', exact: true }).click();
   await expect(
     page.getByRole('button', {
       name: 'Переключить на английский',
       exact: true,
     }),
   ).toBeVisible();
+  await page.keyboard.press('Escape');
   await expect(page.getByLabel('Пароль', { exact: true })).toBeVisible();
   expect(
     await page.evaluate(

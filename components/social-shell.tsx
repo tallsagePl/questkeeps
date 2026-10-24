@@ -1,5 +1,6 @@
 'use client';
 
+import HeaderMenu from './header-menu';
 import TripInvitations from './trip-invitations';
 import SiteFooter from './site-footer';
 import {
@@ -73,7 +74,27 @@ export function SocialShell({
       <a className="skip-link" href="#main-content">
         {t('common.skipToContent')}
       </a>
-      <header className="topbar social-topbar">
+      <header className="topbar social-topbar site-header">
+        <HeaderMenu
+          back
+          logout={
+            user ? (
+              <button
+                className="text-button header-logout"
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true);
+                  void signOut().catch((e) => {
+                    setError(e.message);
+                    setBusy(false);
+                  });
+                }}
+              >
+                {t('auth.signOut')}
+              </button>
+            ) : undefined
+          }
+        />
         <HeaderBrand />
         <nav className="social-nav" aria-label={t('navigation.mainNavigation')}>
           <a href="/">{t('navigation.trips')}</a>

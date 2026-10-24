@@ -124,9 +124,11 @@ test('friends are consensual and private, profile is a page, About works in both
       path: 'test-results/social-about-mobile-dark.png',
       fullPage: true,
     });
+    await page.getByRole('button', { name: 'Меню', exact: true }).click();
     await page
       .getByRole('button', { name: 'Переключить на английский', exact: true })
       .click();
+    await page.keyboard.press('Escape');
     await expect(
       page.getByRole('heading', { name: 'Your people. Your stories.' }),
     ).toBeVisible();

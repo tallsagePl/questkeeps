@@ -295,8 +295,15 @@ for (const screen of screens) {
       await page.goto('/profile');
       await page.locator('.profile-settings').waitFor();
       await capture('profile');
-      await page.locator('.appearance-button').first().click();
-      await page.locator('.theme-button').click();
+      if (screen.width <= 700)
+        await page.getByRole('button', { name: 'Меню', exact: true }).click();
+      await page
+        .getByRole('button', { name: 'Переключить на английский', exact: true })
+        .click();
+      await page
+        .getByRole('button', { name: 'Switch to dark theme', exact: true })
+        .click();
+      if (screen.width <= 700) await page.keyboard.press('Escape');
       await capture('profile-en-dark');
       await page.goto('/');
       await page.locator('.trip-card').first().waitFor();
