@@ -63,6 +63,8 @@ test('welcome photographs rotate, pause and preserve typed login fields', async 
     animations: 'disabled',
   });
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  // Dispatch the media-query change and its animation frame before observing it.
+  await page.clock.runFor(20);
   await expect(page.locator('.slideshow-toggle')).toHaveCount(0);
   const current = await page
     .locator('.welcome-slide.is-active')

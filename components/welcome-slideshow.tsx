@@ -63,17 +63,21 @@ export default function WelcomeSlideshow() {
   }, []);
   useEffect(() => {
     if (reduced || hovered || !visible || loaded.length < 2) return;
-    const timer = setInterval(
-      () =>
-        setActive((current) => {
-          for (let offset = 1; offset <= photos.length; offset++) {
-            const next = (current + offset) % photos.length;
-            if (loaded.includes(next)) return next;
-          }
-          return current;
-        }),
-      7000,
-    );
+    const timer = setInterval(() => {
+      // The preference can change before React cleans up the current timer.
+      if (
+        document.hidden ||
+        matchMedia('(prefers-reduced-motion: reduce)').matches
+      )
+        return;
+      setActive((current) => {
+        for (let offset = 1; offset <= photos.length; offset++) {
+          const next = (current + offset) % photos.length;
+          if (loaded.includes(next)) return next;
+        }
+        return current;
+      });
+    }, 7000);
     return () => clearInterval(timer);
   }, [reduced, hovered, visible, loaded]);
   return (
