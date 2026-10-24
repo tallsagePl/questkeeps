@@ -114,6 +114,7 @@ test('trip tabs restore back, forward and after reload; main has no back button'
     nav.getByRole('button', { name: 'Дневник', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Меню', exact: true }).click();
   await expect(back).toBeVisible();
   expect(
     await page.evaluate(
@@ -125,6 +126,9 @@ test('trip tabs restore back, forward and after reload; main has no back button'
     fullPage: true,
   });
   await back.click();
+  await expect(
+    page.getByRole('region', { name: 'Меню', exact: true }),
+  ).toBeHidden();
   await expect(
     page.getByRole('heading', { name: 'Ваши путешествия.' }),
   ).toBeVisible();

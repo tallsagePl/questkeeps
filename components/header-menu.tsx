@@ -37,6 +37,15 @@ export default function HeaderMenu({
       <nav
         className="header-menu-links"
         aria-label={t('navigation.mainNavigation')}
+        onClick={(event) => {
+          if (
+            event.target instanceof Element &&
+            event.target.closest('a, .page-back')
+          )
+            event.currentTarget
+              .closest<HTMLElement>('[popover]')
+              ?.hidePopover();
+        }}
       >
         {back && <BackButton />}
         <a href="/">{t('navigation.trips')}</a>
