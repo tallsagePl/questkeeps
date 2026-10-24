@@ -35,3 +35,18 @@ Sources checked:
 - https://rdap.db.ripe.net/ip/222.167.230.214
 - https://dns.google/resolve?name=questkeeps.ru&type=A
 - https://dns.google/resolve?name=questkeeps.ru&type=AAAA
+
+## Independent public measurements
+
+At approximately 14:09–14:13 UTC, Globalping performed 20 anonymous HTTPS GET requests:
+
+- API and image from eight points each: four Russian data-center networks, two German points, two Dutch points. All reported HTTP 200 and an authorized TLS certificate. Russian API timings were 173–197 ms; image timings were 452–484 ms.
+- Additional image requests in AS8359 (MTS, Novosibirsk), AS3216 (Vimpelcom, Moscow), AS12389 (Rostelecom, Nizhniy Novgorod), AS25513 (MGTS, Moscow): all HTTP 200, authorized TLS, 312–670 ms, response Content-Length 67,332. An ASN name does not establish a mobile/LTE access link or the user's route. Globalping truncates captured bodies; the on-device check independently verifies the exact downloaded byte count.
+- Measurements: `2ccAJLgDDzGphVyxr00021NNB` (API), `2VloH5BKRz4Jtn8xg00021NNB` (image), `2NuCfRRZHze2x1yi700021NND` (Russian operator ASNs). Results are available at `https://api.globalping.io/v1/measurements/<id>` while retained by that service.
+- After applying Nginx text compression, the same 229,820-byte public JavaScript chunk transferred in 72,591 bytes with gzip: approximately 68% less. Both requests returned 200. This improves transfer cost; it does not prove a VPN routing problem has been fixed.
+
+These measurements weaken the hypothesis of a universal Russian-origin block at that moment. They do not rule out selective mobile filtering, regional outages or one VPN exit failing.
+
+## Build capacity finding
+
+The first 1.20.3 Docker build exhausted the 16 GB disk while copying runtime dependencies. The serving 1.20.1 container remained healthy with zero restarts at inspection. Unused build cache, an unserved intermediate image, and node_modules/.next build artifacts from two obsolete native releases were removed. Current shared data, backups, the active image, source files and the latest native release were preserved. Before future builds, check free disk space and obsolete build artifacts; blue/green containers alone do not solve disk capacity.
