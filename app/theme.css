@@ -1222,17 +1222,18 @@ a:any-link:focus-visible,
 }
 .confirmed-photo-places {
   border-top: 1px solid var(--line);
-  padding-top: 20px;
-  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+  padding-block: 20px;
+  margin-bottom: 0;
+}
+.confirmed-photo-places + .place-tools {
+  border-top: 0;
 }
 .confirmed-photo-place {
   display: grid;
   gap: 8px;
   padding: 14px 0;
   border-top: 1px solid var(--line);
-}
-.confirmed-photo-place:last-child {
-  border-bottom: 1px solid var(--line);
 }
 .confirmed-photo-place details {
   font-size: 15px;
