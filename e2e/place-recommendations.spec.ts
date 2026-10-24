@@ -485,8 +485,23 @@ test('не больше 20 карточек, фон прогревает пои�
   await checkArrowLayout();
   const railBounds = await rail.boundingBox();
   const stripBounds = await strip.boundingBox();
-  expect(Math.abs(railBounds!.x - stripBounds!.x)).toBeLessThan(1);
-  expect(Math.abs(railBounds!.width - stripBounds!.width)).toBeLessThan(1);
+  // Arrows now live inside the rail because archive side gutters are minimal.
+  expect(stripBounds!.x).toBeGreaterThan(railBounds!.x);
+  expect(stripBounds!.x + stripBounds!.width).toBeLessThan(
+    railBounds!.x + railBounds!.width,
+  );
+  for (const arrow of [previous, next]) {
+    const bounds = (await arrow.boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(railBounds!.x);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(
+      railBounds!.x + railBounds!.width,
+    );
+  }
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
   await page.screenshot({
     path: 'test-results/carousel-wide.png',
     fullPage: true,
