@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useId } from 'react';
+import VideoViewer from './video-viewer';
+import { useMediaReload, MediaReloadButton } from './media-reload';
 import MediaVisibilityControls from './media-visibility-controls';
 import { api } from './api';
 import { useLocale } from './appearance';
@@ -90,6 +92,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const reload = useMediaReload(selected?.id || '');
   const panel = useId();
   const scroll = useRef<HTMLDivElement>(null);
   const controller = useRef<AbortController | null>(null);
@@ -271,6 +274,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
         <Modal
           title={fileTitle(selected)}
           wide
+          headerActions={<MediaReloadButton onClick={reload.reload} />}
           doubleBackdropClick
           onClose={() => setSelected(null)}
         >
@@ -278,17 +282,15 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
             {selected.missing ? (
               <p>{t('profileFiles.fileUnavailable')}</p>
             ) : selected.kind === 'video' ? (
-              <video
-                className="viewer"
-                controls
-                autoPlay
-                playsInline
-                src={url(selected, 'original')}
+              <VideoViewer
+                key={reload.key}
+                src={reload.source(url(selected, 'original'))}
               />
             ) : (
               <PhotoViewer
-                preview={url(selected, 'preview')}
-                original={url(selected, 'original')}
+                key={reload.key}
+                preview={reload.source(url(selected, 'preview'))}
+                original={reload.source(url(selected, 'original'))}
                 scope={scope}
                 title={fileTitle(selected)}
               />

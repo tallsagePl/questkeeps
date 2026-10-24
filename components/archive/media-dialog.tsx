@@ -1,5 +1,7 @@
 'use client';
 
+import VideoViewer from '../video-viewer';
+import { useMediaReload, MediaReloadButton } from '../media-reload';
 import MediaVisibilityControls from '../media-visibility-controls';
 import { Collapse } from '../smooth-details';
 import { useLocale } from '@/components/appearance';
@@ -58,6 +60,7 @@ export default function MediaDialog({
   } = archive;
   const data = archive.data!;
   const activeMedia = archive.activeMedia!;
+  const reload = useMediaReload(activeMedia.id);
   return (
     <>
       <Modal
@@ -85,6 +88,7 @@ export default function MediaDialog({
           />
         }
         wide
+        headerActions={<MediaReloadButton onClick={reload.reload} />}
         onKeyDown={(event) => {
           if (
             !hasPlaceNavigation ||
@@ -135,31 +139,20 @@ export default function MediaDialog({
                 <p>{t('trip.thisFileIsHiddenFromTheTrip')}</p>
               </div>
             ) : activeMedia.kind === 'video' ? (
-              ['video/mp4', 'video/webm', 'video/ogg'].includes(
-                activeMedia.mime,
-              ) ? (
-                <video
-                  controls
-                  playsInline
-                  preload="metadata"
-                  src={mediaPath(activeMedia, 'original')}
-                />
-              ) : (
-                <div className="empty">
-                  <Icon name="photo" size={48} />
-                  <p>{t('trip.youCanDownloadThisFormatAndOpen')}</p>
-                </div>
-              )
+              <VideoViewer
+                key={reload.key}
+                src={reload.source(mediaPath(activeMedia, 'original'))}
+              />
             ) : (
               <PhotoViewer
-                key={activeMedia.id}
+                key={reload.key}
                 title={activeMedia.title || activeMedia.name}
-                preview={
+                preview={reload.source(
                   mediaPath(activeMedia, 'preview') +
-                  (share ? '&' : '?') +
-                  'revision=' +
-                  encodeURIComponent(activeMedia.revision || '1')
-                }
+                    (share ? '&' : '?') +
+                    'revision=' +
+                    encodeURIComponent(activeMedia.revision || '1'),
+                )}
                 scope={share ? 'guest:' + share : 'user:' + user?.id}
                 original={
                   [
@@ -170,7 +163,7 @@ export default function MediaDialog({
                     'image/avif',
                     'image/bmp',
                   ].includes(activeMedia.mime)
-                    ? mediaPath(activeMedia, 'original')
+                    ? reload.source(mediaPath(activeMedia, 'original'))
                     : undefined
                 }
               />

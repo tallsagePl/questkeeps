@@ -2453,3 +2453,7 @@ footer > span:last-child {
   overflow-wrap: break-word;
   word-break: normal;
 }
+
+.modal-head-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.video-viewer { width: 100%; }
+.video-playback-error { padding: 12px 16px; color: var(--muted); }

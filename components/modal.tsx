@@ -11,8 +11,10 @@ export default function Modal({
   wide = false,
   doubleBackdropClick = false,
   onKeyDown,
+  headerActions,
 }: {
   title: ReactNode;
+  headerActions?: ReactNode;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
@@ -99,24 +101,27 @@ export default function Modal({
     >
       <div className="modal-head">
         <h2 id={titleId}>{title}</h2>
-        <FeedbackButton
-          className="icon-button"
-          aria-label={t('messages.close')}
-          onClick={onClose}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            aria-hidden="true"
+        <div className="modal-head-actions">
+          {headerActions}
+          <FeedbackButton
+            className="icon-button"
+            aria-label={t('messages.close')}
+            onClick={onClose}
           >
-            <path d="m6 6 12 12M18 6 6 18" />
-          </svg>
-        </FeedbackButton>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </FeedbackButton>
+        </div>
       </div>
       <div className="modal-body">{children}</div>
     </dialog>

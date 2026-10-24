@@ -867,5 +867,7 @@
   "invitations.viewPeriod": "Access limited to your participation dates.",
   "invitations.expires": "Accept by {date}",
   "invitations.accept": "Accept and open",
-  "invitations.decline": "Decline"
+  "invitations.decline": "Decline",
+  "media.reload": "Reload photo or video",
+  "media.videoPlaybackFailed": "The video could not be played. Try reloading the file. If your browser does not support its codec, download the original and open it on your device."
 }

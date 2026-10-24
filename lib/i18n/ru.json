@@ -867,5 +867,7 @@
   "invitations.viewPeriod": "Доступ только за даты участия.",
   "invitations.expires": "Можно принять до {date}",
   "invitations.accept": "Принять и открыть",
-  "invitations.decline": "Отклонить"
+  "invitations.decline": "Отклонить",
+  "media.reload": "Перезагрузить фото или видео",
+  "media.videoPlaybackFailed": "Видео не удалось воспроизвести. Попробуйте перезагрузить файл. Если браузер не поддерживает его кодек, скачайте оригинал и откройте на устройстве."
 }
