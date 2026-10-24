@@ -79,6 +79,7 @@ docker run -d --init --name "$web" --label app=questkeeps --label role=web --res
 ready=false
 for attempt in $(seq 1 30); do
   if [ "$(docker inspect --format '{{.State.Running}}' "$web")" != true ]; then break; fi
+  if [ "$(docker inspect --format '{{.RestartCount}}' "$web")" != 0 ]; then break; fi
   if HEALTH_URL="http://127.0.0.1:$port" /usr/local/bin/node "$root/docker-tools/container-health.mjs"; then ready=true; break; fi
   sleep 2
 done
@@ -86,10 +87,11 @@ done
 echo 'Candidate responds to page and database checks; previous web is still running.'
 assets=$(mktemp -d "$state/assets.XXXXXX")
 docker cp "$web:/app/.next/static/." "$assets"
-mkdir -p "$root/static-assets"
-cp -r "$assets/." "$root/static-assets/"
-chmod -R a+rX "$root/static-assets"
+mkdir -p "/var/www/questkeeps-assets"
+cp -r "$assets/." "/var/www/questkeeps-assets/"
+chmod -R a+rX "/var/www/questkeeps-assets"
 case "$assets" in "$state"/assets.*) rm -rf "$assets" ;; esac
+HEALTH_URL="http://127.0.0.1:$port" HEALTH_ASSET_BASE=https://questkeeps.ru /usr/local/bin/node "$root/docker-tools/container-health.mjs"
 printf 'upstream questkeeps_backend {\n    server 127.0.0.1:%s;\n    keepalive 16;\n}\n' "$port" > "$state/upstream.next"
 cp "$state/upstream.next" "$upstream.next"
 mv -Tf "$upstream.next" "$upstream"
@@ -115,7 +117,7 @@ if [ "$legacy" = true ]; then systemctl disable questkeeps
 else docker stop --time 60 "$previous_web" >/dev/null; fi
 printf '%s\n' "$slot" > "$state/active-slot.next"
 printf '%s\n' "$image_id" > "$state/active-image.next"
-mv -Tf "$state/active-slot.next" "$state/active-slot"
 mv -Tf "$state/active-image.next" "$state/active-image"
+mv -Tf "$state/active-slot.next" "$state/active-slot"
 trap - ERR INT TERM
 echo "Active: $web ($image). Previous image/container retained."

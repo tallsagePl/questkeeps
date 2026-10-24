@@ -18,7 +18,7 @@ bash /opt/questkeeps/docker-tools/docker-release.sh questkeeps:VERSION-COMMIT
 The release script takes a deployment lock, checks image/database schema versions,
 makes an online SQLite snapshot, and starts the inactive blue/green web slot.
 The candidate must serve both the home page and database-backed /api/me before
-Nginx reloads its upstream configuration. Failed preparation leaves the old web
+Nginx reloads its upstream configuration. Candidate JavaScript/CSS/font assets are also checked through public Nginx before that switch. Failed preparation leaves the old web
 running. Failure during handover restores the previous upstream and worker.
 An old worker is stopped before its replacement starts; Telegram polling, mail
 and synchronization never intentionally run in both slots at once.
@@ -34,7 +34,7 @@ image tag through the same script. Never delete the only verified rollback image
 2. Build and validate the image against an isolated fixture database first.
 3. Install docker-release.sh, docker-backup.sh and scripts/container-health.mjs
    in /opt/questkeeps/docker-tools (root-owned). Shell scripts are invoked with bash.
-4. Copy the current .next/static contents into /opt/questkeeps/static-assets.
+4. Copy the current .next/static contents into /var/www/questkeeps-assets.
    This directory is public and contains client assets only, never .next/server.
 5. Install deploy/nginx-upstream.conf as
    /etc/nginx/conf.d/questkeeps-upstream.conf, initially pointing at host port 3000.
@@ -52,7 +52,7 @@ image tag through the same script. Never delete the only verified rollback image
 - /opt/questkeeps/shared/data -> /app/data, writable by UID 997.
 - /opt/questkeeps/shared/.env.local -> /run/questkeeps.env, read-only.
   Node parses this file with --env-file, including quoted values.
-- /opt/questkeeps/static-assets contains hashed public client files from releases.
+- /var/www/questkeeps-assets contains hashed public client files from releases.
   Old files are retained so an already-open browser tab can load its original
   chunks. Do not blindly clear this directory or prune active assets by age.
 - /opt/questkeeps/docker-state contains the lock and active slot/image records.
@@ -93,3 +93,11 @@ restarts exited processes; it does not automatically restart a container solely
 because its health status is unhealthy. Investigate the logs before manual
 recovery. Nginx logs include request/upstream durations without query strings or
 guest tokens.
+
+## Verified production conversion: 24 October 2026
+
+- Application image: questkeeps:1.19.0-46d33d3, database schema 8. The legacy systemd web unit is disabled and retained; Docker runs one active web and one worker. The other web/worker slot is stopped and retained for rollback.
+- A broken web candidate was rejected before traffic switched. A separate worker-start failure after switching restored the preceding upstream and worker. Subsequent successful blue/green switches passed readiness, including public assets.
+- Two sets of 240 HTTP probes against the home page returned only 200 responses during the tested handovers. Final browser checks loaded login, About and Privacy without script errors; all 15 referenced client assets and a retained previous-release asset returned 200.
+- The daily backup timer uses Docker; a new backup passed SQLite integrity checking and had mode 0600. Working database integrity and foreign-key checks passed.
+- Validation includes 156 unit/API/readiness tests, map browser scenarios that preserve map/layer identity and zoom, and desktop/mobile member-action layout checks. These checks do not guarantee unlimited capacity or compatibility of future schema changes.
