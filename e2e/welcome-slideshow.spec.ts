@@ -31,20 +31,13 @@ test('welcome photographs rotate, pause and preserve typed login fields', async 
     /pyramids/,
   );
   await expect(email).toHaveValue('demo_username');
-  await page
-    .getByRole('button', {
-      name: 'Приостановить смену фотографий',
-      exact: true,
-    })
-    .click();
+  await expect(page.locator('.slideshow-toggle')).toHaveCount(0);
+  await page.locator('.welcome-slideshow').hover();
   await page.clock.runFor(15000);
   await expect(page.locator('.welcome-slide.is-active')).toHaveAttribute(
     'src',
     /pyramids/,
   );
-  await page
-    .getByRole('button', { name: 'Продолжить смену фотографий', exact: true })
-    .click();
   await email.focus();
   await page.mouse.move(1, 1);
   await page.clock.runFor(7100);

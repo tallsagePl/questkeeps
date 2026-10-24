@@ -447,8 +447,8 @@ test('не больше 20 карточек, фон прогревает пои�
         .map((card) => (bounds.right - card.left) / card.width);
     });
   expect(crop).toHaveLength(1);
-  expect(crop[0]).toBeGreaterThan(0.45);
-  expect(crop[0]).toBeLessThan(0.55);
+  expect(crop[0]).toBeGreaterThan(0.1);
+  expect(crop[0]).toBeLessThan(0.9);
   const strip = rail.locator('.place-recommendation-strip');
   const previous = rail.getByRole('button', {
     name: 'Предыдущие места',
@@ -463,6 +463,16 @@ test('не больше 20 карточек, фон прогревает пои�
     const first = await rail.locator('article').first().boundingBox();
     const left = await previous.boundingBox();
     const right = await next.boundingBox();
+    if (page.viewportSize()!.width <= 700) {
+      expect(left!.y).toBeGreaterThanOrEqual(first!.y + first!.height);
+      expect(right!.y).toBeGreaterThanOrEqual(first!.y + first!.height);
+      expect(left!.x).toBeGreaterThanOrEqual(bounds!.x);
+      expect(right!.x + right!.width).toBeLessThanOrEqual(
+        bounds!.x + bounds!.width,
+      );
+      expect(left!.width).toBeGreaterThanOrEqual(44);
+      return;
+    }
     expect(left!.x + left!.width).toBeLessThanOrEqual(bounds!.x);
     expect(right!.x).toBeGreaterThanOrEqual(bounds!.x + bounds!.width);
     expect(

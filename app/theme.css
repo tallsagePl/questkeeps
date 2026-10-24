@@ -4109,43 +4109,14 @@ a:any-link:focus-visible,
   background: linear-gradient(transparent 35%, rgb(9 16 32 / 0.88));
 }
 .welcome-slideshow .landscape-label {
-  max-width: calc(100% - 90px);
+  max-width: calc(100% - 32px);
   font-size: 0.8rem;
   line-height: 1.5;
   letter-spacing: 0.2px;
 }
-.slideshow-toggle {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 1px solid rgb(255 255 255 / 0.5);
-  border-radius: 9px;
-  background: rgb(12 22 39 / 0.8);
-  color: #fff;
-}
-.slideshow-toggle::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-}
-@media (hover: hover) {
-  .slideshow-toggle:hover {
-    background: #172238;
-    color: #fff;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .welcome-slide {
     transition: none;
-  }
-  .slideshow-toggle {
-    display: none;
   }
 }
 

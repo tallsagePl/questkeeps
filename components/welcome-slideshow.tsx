@@ -45,7 +45,6 @@ export default function WelcomeSlideshow() {
   }, []);
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState<number[]>([]);
-  const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [visible, setVisible] = useState(true);
@@ -63,7 +62,7 @@ export default function WelcomeSlideshow() {
     };
   }, []);
   useEffect(() => {
-    if (paused || reduced || hovered || !visible || loaded.length < 2) return;
+    if (reduced || hovered || !visible || loaded.length < 2) return;
     const timer = setInterval(
       () =>
         setActive((current) => {
@@ -76,7 +75,7 @@ export default function WelcomeSlideshow() {
       7000,
     );
     return () => clearInterval(timer);
-  }, [paused, reduced, hovered, visible, loaded]);
+  }, [reduced, hovered, visible, loaded]);
   return (
     <section
       ref={container}
@@ -127,33 +126,6 @@ export default function WelcomeSlideshow() {
       <div className="landscape-label">
         {t('welcome.saveThePlacesReliveTheFeeling')}
       </div>
-      {!reduced && (
-        <button
-          type="button"
-          className="slideshow-toggle"
-          aria-label={t(
-            paused ? 'welcome.resumeSlideshow' : 'welcome.pauseSlideshow',
-          )}
-          title={t(
-            paused ? 'welcome.resumeSlideshow' : 'welcome.pauseSlideshow',
-          )}
-          onClick={() => setPaused((value) => !value)}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            {paused ? (
-              <path d="m8 5 11 7-11 7Z" />
-            ) : (
-              <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-            )}
-          </svg>
-        </button>
-      )}
     </section>
   );
 }

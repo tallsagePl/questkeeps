@@ -126,3 +126,50 @@ test('header retains active travel link, matches About highlight, and trip count
     ),
   ).toBeTruthy();
 });
+
+for (const restriction of ['send', 'open', 'uuid'] as const) {
+  test(
+    'successful login survives browser restriction: ' + restriction,
+    async ({ page }) => {
+      await page.setViewportSize({ width: 393, height: 852 });
+      const user = await register(page);
+      await page.context().clearCookies();
+      await page.addInitScript((restriction) => {
+        if (restriction === 'uuid')
+          Object.defineProperty(crypto, 'randomUUID', {
+            value: undefined,
+            configurable: true,
+          });
+        class RestrictedChannel {
+          onmessage = null;
+          constructor() {
+            if (restriction === 'open')
+              throw new DOMException('Channel blocked', 'SecurityError');
+          }
+          postMessage() {
+            if (restriction === 'send')
+              throw new DOMException('Messaging blocked', 'SecurityError');
+          }
+          close() {}
+        }
+        Object.defineProperty(globalThis, 'BroadcastChannel', {
+          value: RestrictedChannel,
+          configurable: true,
+        });
+      }, restriction);
+      await page.goto('/');
+      await page
+        .getByLabel('Электронная почта или никнейм', { exact: true })
+        .fill(user.email);
+      await page.getByLabel('Пароль', { exact: true }).fill('Abc123');
+      await page.getByRole('button', { name: 'Войти', exact: true }).click();
+      await expect(
+        page.getByRole('heading', { name: 'Ваши путешествия.' }),
+      ).toBeVisible();
+      await page.reload();
+      await expect(
+        page.getByRole('heading', { name: 'Ваши путешествия.' }),
+      ).toBeVisible();
+    },
+  );
+}

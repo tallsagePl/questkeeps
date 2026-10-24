@@ -16,7 +16,7 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
     sharing: false,
     description: '',
   };
-  const media = Array.from({ length: 12 }, (_, i) => ({
+  const media = Array.from({ length: 24 }, (_, i) => ({
     id: 'warm-' + i,
     name: 'Photo ' + i,
     kind: 'photo',
@@ -141,15 +141,15 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
   await page.waitForTimeout(1000);
   expect(areas).toBe(0);
   expect(geometries).toBe(0);
-  expect(previews.get('warm-11') || 0).toBe(0);
+  expect(previews.get('warm-23') || 0).toBe(0);
   release();
   await expect
-    .poll(() => previews.get('warm-11') || 0, { timeout: 25000 })
+    .poll(() => previews.get('warm-23') || 0, { timeout: 25000 })
     .toBe(1);
   await expect.poll(() => areas).toBe(1);
   await expect.poll(() => geometries, { timeout: 15000 }).toBe(1);
   await expect.poll(() => texts).toBe(1);
-  await expect.poll(() => lookups, { timeout: 25000 }).toBe(12);
+  await expect.poll(() => lookups, { timeout: 25000 }).toBe(media.length);
   await page
     .getByRole('button', { name: 'Открытые места', exact: true })
     .click();
@@ -161,7 +161,7 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
     .click();
   await expect(page.locator('.place-recommendations')).toBeVisible();
   await page.waitForTimeout(700);
-  expect(lookups).toBe(12);
+  expect(lookups).toBe(media.length);
   const map = () =>
     page
       .locator('.tabbar nav')
@@ -183,7 +183,7 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
   await expect(page.locator('.leaflet-visitedPlaces-pane path')).toHaveCount(1);
   expect(areas).toBe(1);
   expect(geometries).toBe(1);
-  expect(previews.get('warm-11')).toBe(1);
+  expect(previews.get('warm-23')).toBe(1);
   providersFail = true;
   geometryGate = new Promise<void>((resolve) => {
     releaseGeometry = resolve;
