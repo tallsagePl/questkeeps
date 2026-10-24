@@ -143,7 +143,12 @@ export function useArchive({
   }, []);
   const loadTrips = useCallback(async () => {
     const generation = identityGeneration.current;
-    const r = await api<{ trips: TripSummary[] }>('trips');
+    const r = await api<{ trips: TripSummary[] }>(
+      'trips',
+      'GET',
+      undefined,
+      AbortSignal.timeout(20000),
+    );
     if (generation !== identityGeneration.current) return;
     setTrips(r.trips);
   }, []);
@@ -152,7 +157,12 @@ export function useArchive({
     const navigation = navigationGeneration.current;
     let r;
     try {
-      r = await api<TripData>('trips/' + tid);
+      r = await api<TripData>(
+        'trips/' + tid,
+        'GET',
+        undefined,
+        AbortSignal.timeout(20000),
+      );
     } catch (error) {
       if (
         generation !== identityGeneration.current ||
@@ -218,25 +228,42 @@ export function useArchive({
           undefined,
           AbortSignal.timeout(10000),
         );
+        setUser(me.user);
+        setYandex(me.yandexEnabled);
+        if (share)
+          setData(
+            await api(
+              'share/' + share,
+              'GET',
+              undefined,
+              AbortSignal.timeout(20000),
+            ),
+          );
+        else if (invite)
+          setInvitation(
+            await api<TripInvitation>(
+              'invites/' + invite,
+              'GET',
+              undefined,
+              AbortSignal.timeout(20000),
+            ),
+          );
+        else if (me.user) {
+          await loadTrips();
+          const tid = new URLSearchParams(window.location.search).get('trip');
+          if (tid) await loadTrip(tid);
+          if (
+            new URLSearchParams(window.location.search).get('create') === '1'
+          ) {
+            setModal('create');
+            window.history.replaceState(null, '', '/');
+          }
+        }
+        setReady(true);
       } catch (error) {
         setBootFailed(true);
         throw error;
       }
-      setUser(me.user);
-      setYandex(me.yandexEnabled);
-      if (share) setData(await api('share/' + share));
-      else if (invite)
-        setInvitation(await api<TripInvitation>('invites/' + invite));
-      else if (me.user) {
-        await loadTrips();
-        const tid = new URLSearchParams(window.location.search).get('trip');
-        if (tid) await loadTrip(tid);
-        if (new URLSearchParams(window.location.search).get('create') === '1') {
-          setModal('create');
-          window.history.replaceState(null, '', '/');
-        }
-      }
-      setReady(true);
     }).finally(() => setReady(true));
     return () => {
       mounted.current = false;
@@ -316,6 +343,7 @@ export function useArchive({
         'auth/' + (register ? 'register' : 'login'),
         'POST',
         input,
+        AbortSignal.timeout(15000),
       );
       if (r.verificationRequired) {
         setVerificationEmail(r.verificationEmail);
@@ -325,7 +353,14 @@ export function useArchive({
       announceSessionChange();
       setUser(r.user);
       setModal('');
-      await loadTrips();
+      try {
+        await loadTrips();
+      } catch (error) {
+        // Keep the authenticated session when the following read fails.
+        setBootFailed(true);
+        feedbackRef.current.report(error, 'page');
+        return;
+      }
       if (!invite) window.history.replaceState(null, '', '/');
     });
   };

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>QuestKeeps — проверка связи</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font:
+          16px/1.55 system-ui,
+          sans-serif;
+      }
+      body {
+        max-width: 42rem;
+        margin: auto;
+        padding: 24px 20px;
+        overflow-wrap: anywhere;
+      }
+      a {
+        color: inherit;
+      }
+      h1 {
+        font-size: 1.7rem;
+        line-height: 1.2;
+      }
+      button {
+        font: inherit;
+        padding: 12px 18px;
+        border: 1px solid currentColor;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      pre {
+        white-space: pre-wrap;
+        font:
+          0.9rem/1.6 ui-monospace,
+          monospace;
+        border: 1px solid #888;
+        padding: 16px;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="/">← QuestKeeps</a>
+    <h1>Проверка связи с сайтом</h1>
+    <p>
+      Запустите проверку сначала без VPN, затем с VPN. Скопируйте оба результата
+      и укажите оператора и страну VPN.
+    </p>
+    <p>
+      Проверка не входит в аккаунт, не читает фотографии или почту и не
+      отправляет отчёт автоматически. Загружается публичная картинка размером
+      около 66 КБ.
+    </p>
+    <button id="run" type="button">Проверить соединение</button>
+    <pre id="result" role="status" aria-live="polite">Готово к проверке.</pre>
+    <button id="copy" type="button" hidden>Скопировать результат</button>
+    <noscript
+      >Для проверки включите JavaScript. Сама эта страница загрузилась:
+      соединение с сайтом установлено.</noscript
+    >
+    <script>
+      const run = document.getElementById('run');
+      const result = document.getElementById('result');
+      const copy = document.getElementById('copy');
+      run.addEventListener('click', async () => {
+        run.disabled = true;
+        copy.hidden = true;
+        const lines = [
+          'QuestKeeps connection check v1',
+          new Date().toISOString(),
+          'Browser online: ' + navigator.onLine,
+        ];
+        const nav = performance.getEntriesByType('navigation')[0];
+        if (nav)
+          lines.push('Page load: ' + Math.round(nav.responseEnd) + ' ms');
+        result.textContent = lines.join('\n');
+        try {
+          for (const [label, path] of [
+            ['API', '/api/me'],
+            ['Public image', '/welcome/santorini.webp'],
+          ]) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 15000);
+            const start = performance.now();
+            try {
+              const response = await fetch(
+                path + '?connection-check=' + Date.now(),
+                {
+                  credentials: 'omit',
+                  cache: 'no-store',
+                  signal: controller.signal,
+                },
+              );
+              const bytes = (await response.arrayBuffer()).byteLength;
+              const valid =
+                label === 'API'
+                  ? response.headers
+                      .get('content-type')
+                      ?.includes('application/json')
+                  : response.headers
+                      .get('content-type')
+                      ?.includes('image/webp') && bytes === 67332;
+              lines.push(
+                label +
+                  ': HTTP ' +
+                  response.status +
+                  ', ' +
+                  bytes +
+                  ' bytes, ' +
+                  Math.round(performance.now() - start) +
+                  ' ms, ' +
+                  (response.ok && valid ? 'OK' : 'UNEXPECTED RESPONSE'),
+              );
+            } catch (error) {
+              lines.push(
+                label +
+                  ': ' +
+                  (controller.signal.aborted
+                    ? 'TIMEOUT (15s)'
+                    : 'NETWORK ERROR') +
+                  ', ' +
+                  Math.round(performance.now() - start) +
+                  ' ms',
+              );
+            } finally {
+              clearTimeout(timer);
+            }
+            result.textContent = lines.join('\n');
+          }
+          lines.push(
+            'Если эта страница не открывается, сбой возникает до запуска приложения. Успешная проверка сейчас не исключает кратковременный обрыв ранее.',
+          );
+          result.textContent = lines.join('\n');
+          copy.hidden = false;
+        } finally {
+          run.disabled = false;
+        }
+      });
+      copy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(result.textContent);
+          copy.textContent = 'Скопировано';
+        } catch {
+          const range = document.createRange();
+          range.selectNodeContents(result);
+          const selection = getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          copy.textContent = 'Выделено — скопируйте текст';
+        }
+      });
+    </script>
+  </body>
+</html>

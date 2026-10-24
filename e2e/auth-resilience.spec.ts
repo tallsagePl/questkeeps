@@ -173,3 +173,54 @@ for (const restriction of ['send', 'open', 'uuid'] as const) {
     },
   );
 }
+
+for (const stage of ['login', 'trips'] as const) {
+  test(
+    'a stalled ' + stage + ' request releases the login flow and can recover',
+    async ({ page }) => {
+      const user = await register(page);
+      await page.context().clearCookies();
+      await page.addInitScript(() => {
+        const timeout = AbortSignal.timeout.bind(AbortSignal);
+        // Exercise the real browser abort and UI recovery without a 20-second test wait.
+        AbortSignal.timeout = (ms) =>
+          timeout(ms === 15000 || ms === 20000 ? 400 : ms);
+      });
+      const path = stage === 'login' ? '**/api/auth/login' : '**/api/trips';
+      await page.route(path, () => {});
+      await page.goto('/');
+      const identity = page.getByLabel('Электронная почта или никнейм', {
+        exact: true,
+      });
+      await identity.fill(user.email);
+      await page.getByLabel('Пароль', { exact: true }).fill('Abc123');
+      await page.getByRole('button', { name: 'Войти', exact: true }).click();
+      if (stage === 'login') {
+        await expect(
+          page.getByRole('button', { name: 'Войти', exact: true }),
+        ).toBeEnabled();
+        await expect(page.locator('form [role="alert"]')).toContainText(
+          'Сервер отвечает слишком долго',
+        );
+        await expect(identity).toHaveValue(user.email);
+        await expect(page.getByLabel('Пароль', { exact: true })).toHaveValue(
+          'Abc123',
+        );
+        await page.unroute(path);
+        await page.getByRole('button', { name: 'Войти', exact: true }).click();
+      } else {
+        await expect(
+          page.getByRole('heading', { name: 'Не удалось открыть архив' }),
+        ).toBeVisible();
+        await expect(page.locator('input[name="password"]')).toHaveCount(0);
+        await page.unroute(path);
+        await page
+          .getByRole('button', { name: 'Повторить', exact: true })
+          .click();
+      }
+      await expect(
+        page.getByRole('heading', { name: 'Ваши путешествия.' }),
+      ).toBeVisible();
+    },
+  );
+}
