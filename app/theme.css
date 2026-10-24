@@ -2680,7 +2680,7 @@ a:any-link:focus-visible,
 
 .virtual-places {
   position: relative;
-  overflow-anchor: none;
+  overflow-anchor: auto;
 }
 .virtual-places-cell {
   width: 100%;

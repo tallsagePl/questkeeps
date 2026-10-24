@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
 
-test('place feed keeps a bounded window, retained images and offscreen targets', async ({
+test('place feed keeps equal native gaps, lazy retained images, smooth top navigation and offscreen targets', async ({
   page,
 }) => {
   const image = await sharp({
@@ -24,7 +24,10 @@ test('place feed keeps a bounded window, retained images and offscreen targets',
   const places = Array.from({ length: 80 }, (_, i) => ({
     id: 'p' + i,
     media_id: 'photo',
-    title: 'Место ' + i,
+    title:
+      (i % 3 === 0
+        ? 'Очень длинное название достопримечательности в историческом центре города '
+        : 'Место ') + i,
     summary: 'Краткая история места.',
     url: 'https://ru.wikipedia.org/?curid=' + (i + 1),
     day: '2026-10-11',
@@ -97,7 +100,7 @@ test('place feed keeps a bounded window, retained images and offscreen targets',
     }),
   );
   await expect
-    .poll(() => feed.locator('.virtual-places-cell:not([hidden])').count())
+    .poll(() => feed.locator('.virtual-places-cell[data-near=true]').count())
     .toBeGreaterThan(2);
   const initialHeight = await feed.evaluate(
     (el) => el.getBoundingClientRect().height,
@@ -110,6 +113,14 @@ test('place feed keeps a bounded window, retained images and offscreen targets',
   const firstNode = await first
     .locator('.place-wiki-image img')
     .elementHandle();
+  await page.evaluate(() => {
+    const native = window.scrollBy.bind(window);
+    (window as any).__scrollWrites = 0;
+    window.scrollBy = ((...args: any[]) => {
+      (window as any).__scrollWrites++;
+      return (native as any)(...args);
+    }) as typeof window.scrollBy;
+  });
   for (let i = 0; i < 9; i++) {
     await page.evaluate(() =>
       window.scrollBy({ top: 500, behavior: 'instant' }),
@@ -118,19 +129,42 @@ test('place feed keeps a bounded window, retained images and offscreen targets',
       await expect.poll(() => feed.getAttribute('data-base-row')).not.toBe('0');
     await page.waitForTimeout(60);
   }
-  expect(Number(await feed.getAttribute('data-base-row'))).toBeGreaterThan(10);
+  expect(Number(await feed.getAttribute('data-base-row'))).toBeGreaterThan(5);
   expect(
-    await feed.locator('.virtual-places-cell:not([hidden])').count(),
-  ).toBeLessThanOrEqual(8);
+    await feed.locator('.virtual-places-cell[data-near=true]').count(),
+  ).toBeLessThanOrEqual(12);
   expect(
     await feed.evaluate((el) => el.getBoundingClientRect().height),
   ).toBeLessThanOrEqual(initialHeight + 350);
   expect(await firstNode!.evaluate((el) => el.isConnected)).toBe(true);
-  expect(await first.getAttribute('hidden')).not.toBeNull();
+  await expect(first).not.toBeInViewport();
+  expect(await page.evaluate(() => (window as any).__scrollWrites)).toBe(9);
+  const gaps = await feed
+    .locator('article')
+    .evaluateAll((nodes) =>
+      nodes
+        .slice(1)
+        .map(
+          (node, index) =>
+            node.getBoundingClientRect().top -
+            nodes[index].getBoundingClientRect().bottom,
+        ),
+    );
+  for (const gap of gaps) expect(Math.abs(gap - 16)).toBeLessThan(1);
   expect(requests.size).toBeLessThan(40);
-  await page.evaluate(() =>
-    window.dispatchEvent(new Event('questkeeps:gallery-start')),
-  );
+  const desktop = page.viewportSize()!;
+  await page.setViewportSize({ width: 393, height: 852 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const top = page.getByRole('button', { name: 'Наверх', exact: true });
+  await expect(top).toBeVisible();
+  expect((await top.boundingBox())!.width).toBe(64);
+  await top.click();
+  expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
+  await expect
+    .poll(() => page.evaluate(() => scrollY), { timeout: 5000 })
+    .toBe(0);
+  await expect(top).toHaveCount(0);
+  await page.setViewportSize(desktop);
   await expect(feed).toHaveAttribute('data-base-row', '0');
   await first.scrollIntoViewIfNeeded();
   expect(
@@ -159,6 +193,9 @@ test('place feed keeps a bounded window, retained images and offscreen targets',
     .toBe(true);
   await expect(feed.locator('[data-place-index="79"]')).toBeInViewport();
   await page.screenshot({ path: 'test-results/virtual-places-mobile.png' });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('button', { name: 'Наверх', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
 });
 
 test('failed public images recover automatically during an idle second pass', async ({

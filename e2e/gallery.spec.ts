@@ -437,7 +437,7 @@ test('ограниченная лента сдвигается в обе сто�
   ).toBeVisible();
   await page.getByRole('button', { name: 'Наверх', exact: true }).click();
   await expect(grid).toHaveAttribute('data-base-row', '0');
-  expect(await page.evaluate(() => scrollY)).toBe(0);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
   await expect(
     page.getByRole('button', { name: 'Наверх', exact: true }),
   ).toHaveCount(0);

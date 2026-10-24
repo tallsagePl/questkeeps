@@ -11,16 +11,7 @@ export function BackToTop() {
     let frame = 0;
     const update = () => {
       frame = 0;
-      const header = document.querySelector('header.topbar');
-      const headerAbove = header
-        ? header.getBoundingClientRect().bottom <= 0
-        : window.scrollY > 0;
-      const recycledRows = [
-        ...document.querySelectorAll<HTMLElement>(
-          '.virtual-gallery[data-base-row], .virtual-places[data-base-row]',
-        ),
-      ].some((element) => Number(element.dataset.baseRow) > 0);
-      setVisible(headerAbove || recycledRows);
+      setVisible(window.scrollY > 8);
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -41,11 +32,16 @@ export function BackToTop() {
     <button
       type="button"
       className="back-to-top"
+      style={{ touchAction: 'manipulation' }}
       aria-label={t('messages.backToTop')}
       title={t('messages.backToTop')}
       onClick={() => {
-        window.dispatchEvent(new Event('questkeeps:gallery-start'));
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        window.scrollTo({
+          top: 0,
+          behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+            ? 'instant'
+            : 'smooth',
+        });
         const header = document.querySelector<HTMLElement>('header.topbar');
         header?.focus({ preventScroll: true });
       }}

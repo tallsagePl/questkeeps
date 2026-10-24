@@ -758,3 +758,12 @@ dialog.modal.fullscreen[open] {
   }
   .place-carousel::after { right: 52px; }
 }
+
+@media (max-width: 700px) {
+  .back-to-top {
+    width: 64px;
+    height: 64px;
+    right: max(16px, env(safe-area-inset-right));
+  }
+  .back-to-top svg { width: 30px; height: 30px; }
+}

@@ -42,12 +42,17 @@ export function PlaceImage({
   const { t, language } = useLocale();
   const sizing = usePlacePhotoSizing();
   const eligible = useContext(PreviewPriority) !== null;
+  const [activated, setActivated] = useState(false);
+  useEffect(() => {
+    if (eligible) setActivated(true);
+  }, [eligible]);
   const [attempt, setAttempt] = useState(0);
   const [retry, setRetry] = useState(0);
   const [image, setImage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    if (!activated) return;
     let disposed = false;
     let objectUrl: string | undefined;
     setLoading(true);
@@ -73,7 +78,7 @@ export function PlaceImage({
       disposed = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [endpoint, scope, language, attempt, retry]);
+  }, [endpoint, scope, language, attempt, retry, activated]);
   useEffect(() => {
     if (!eligible || !failed || attempt >= 4) return;
     return retryPlaceWhenIdle(
