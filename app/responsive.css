@@ -605,6 +605,9 @@
   }
 }
 
+/* Keep stale absolute cell widths inside the track during viewport resizing. */
+.virtual-gallery { overflow-x: clip; }
+
 /* Media owns the viewport; details remain available beneath the full-size frame. */
 .media-title-actions svg { display: none; }
 dialog.modal.fullscreen[open] {
