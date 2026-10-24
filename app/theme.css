@@ -2061,7 +2061,7 @@ a:any-link:focus-visible,
   grid-row: 3;
 }
 .confirmed-photo-place > details {
-  grid-column: 1;
+  grid-column: 1 / -1;
   grid-row: 4;
   min-width: 0;
 }
@@ -2090,7 +2090,7 @@ a:any-link:focus-visible,
 }
 .confirmed-place-picture {
   grid-column: 2;
-  grid-row: 1 / span 4;
+  grid-row: 1 / span 3;
   min-width: 0;
   overflow: hidden;
   border-radius: 12px;
