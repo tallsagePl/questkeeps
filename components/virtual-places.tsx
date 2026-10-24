@@ -1,5 +1,6 @@
 'use client';
 
+import { useTopScroll } from './use-top-scroll';
 import { PreviewPriority } from './preview-priority';
 import {
   memo,
@@ -25,6 +26,7 @@ export default function VirtualPlaces<T>({
   initialItemKey?: string | null;
   onTargetReached?: () => void;
 }) {
+  const returning = useTopScroll();
   const root = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState<Set<number>>(() => new Set());
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
@@ -119,7 +121,7 @@ export default function VirtualPlaces<T>({
           key={itemKey(item)}
           item={item}
           index={index}
-          near={near.has(index)}
+          near={!returning && near.has(index)}
           highlighted={itemKey(item) === highlightedKey}
           renderItem={renderItem}
         />

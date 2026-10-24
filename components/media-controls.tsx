@@ -36,12 +36,10 @@ export function BackToTop() {
       aria-label={t('messages.backToTop')}
       title={t('messages.backToTop')}
       onClick={() => {
-        window.scrollTo({
-          top: 0,
-          behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
-            ? 'instant'
-            : 'smooth',
-        });
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!reduced)
+          window.dispatchEvent(new Event('questkeeps:scroll-to-top'));
+        window.scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' });
         const header = document.querySelector<HTMLElement>('header.topbar');
         header?.focus({ preventScroll: true });
       }}

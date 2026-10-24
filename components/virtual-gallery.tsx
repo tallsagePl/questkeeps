@@ -1,5 +1,6 @@
 'use client';
 
+import { useTopScroll } from './use-top-scroll';
 import { useVirtualScrollPosition } from './use-virtual-scroll-position';
 import { PreviewPriority } from './preview-priority';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
@@ -32,6 +33,7 @@ export default function VirtualGallery<T>({
   initialItemKey?: string | null;
   onTargetReached?: () => void;
 }) {
+  const returning = useTopScroll();
   const root = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<Layout | null>(null);
   useVirtualScrollPosition(layout?.baseRow || 0);
@@ -281,7 +283,7 @@ export default function VirtualGallery<T>({
           >
             <PreviewPriority.Provider
               value={
-                !active
+                returning || !active
                   ? null
                   : !layout ||
                       (index >= layout.visibleFirst &&

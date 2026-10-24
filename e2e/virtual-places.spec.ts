@@ -193,6 +193,18 @@ test('place feed keeps equal native gaps, lazy retained images, smooth top navig
     .toBe(true);
   await expect(feed.locator('[data-place-index="79"]')).toBeInViewport();
   await page.screenshot({ path: 'test-results/virtual-places-mobile.png' });
+  // Jumping back over unseen cards should animate without downloading all of them.
+  await page.waitForTimeout(300);
+  const beforeReturn = requests.size;
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.getByRole('button', { name: 'Наверх', exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => scrollY), { timeout: 5000 })
+    .toBe(0);
+  expect(requests.size).toBeLessThanOrEqual(beforeReturn + 2);
+  await page.evaluate(() =>
+    window.scrollTo({ top: 2000, behavior: 'instant' }),
+  );
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'Наверх', exact: true }).click();
   await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
