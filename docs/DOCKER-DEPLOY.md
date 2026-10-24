@@ -1,0 +1,95 @@
+# Docker deployment on the QuestKeeps VPS
+
+The production web server and the background worker are separate containers.
+Nginx stays on the host. SQLite, uploads, cached source data, private configuration
+and backups remain on the host; they are never part of an image.
+
+## Build and release
+
+Use a unique immutable tag for each release. On this VPS the service UID/GID is 997.
+Build while the current service continues accepting traffic:
+
+```sh
+docker build --build-arg APP_UID=997 --build-arg APP_GID=997 \
+  --build-arg SOURCE_REVISION=COMMIT -t questkeeps:VERSION-COMMIT .
+bash /opt/questkeeps/docker-tools/docker-release.sh questkeeps:VERSION-COMMIT
+```
+
+The release script takes a deployment lock, checks image/database schema versions,
+makes an online SQLite snapshot, and starts the inactive blue/green web slot.
+The candidate must serve both the home page and database-backed /api/me before
+Nginx reloads its upstream configuration. Failed preparation leaves the old web
+running. Failure during handover restores the previous upstream and worker.
+An old worker is stopped before its replacement starts; Telegram polling, mail
+and synchronization never intentionally run in both slots at once.
+
+The former web container is stopped gracefully only after the new web and worker
+have passed their checks. Its image and stopped container remain available until
+that inactive slot is reused by a later release. To roll back, deploy the previous
+image tag through the same script. Never delete the only verified rollback image.
+
+## First conversion from systemd
+
+1. Install Docker Engine from the official Ubuntu repository.
+2. Build and validate the image against an isolated fixture database first.
+3. Install docker-release.sh, docker-backup.sh and scripts/container-health.mjs
+   in /opt/questkeeps/docker-tools (root-owned). Shell scripts are invoked with bash.
+4. Copy the current .next/static contents into /opt/questkeeps/static-assets.
+   This directory is public and contains client assets only, never .next/server.
+5. Install deploy/nginx-upstream.conf as
+   /etc/nginx/conf.d/questkeeps-upstream.conf, initially pointing at host port 3000.
+   Install deploy/nginx-https.conf, validate nginx -t, then reload Nginx.
+   These steps continue routing to the existing systemd process.
+6. Run the release script. It switches to port 3101 after readiness, stops the
+   legacy supervisor, starts one Docker worker, and disables the old web unit.
+   Do not mask or delete the former systemd unit or its source during conversion.
+7. Install deploy/questkeeps-docker-backup.service as the existing
+   questkeeps-backup.service, reload systemd and test the service.
+   Keep the existing questkeeps-backup.timer enabled.
+
+## Persistent paths and ports
+
+- /opt/questkeeps/shared/data -> /app/data, writable by UID 997.
+- /opt/questkeeps/shared/.env.local -> /run/questkeeps.env, read-only.
+  Node parses this file with --env-file, including quoted values.
+- /opt/questkeeps/static-assets contains hashed public client files from releases.
+  Old files are retained so an already-open browser tab can load its original
+  chunks. Do not blindly clear this directory or prune active assets by age.
+- /opt/questkeeps/docker-state contains the lock and active slot/image records.
+- Web blue: 127.0.0.1:3101; web green: 127.0.0.1:3102.
+  Docker publishes only to loopback, not to the public network.
+- qk-worker-blue or qk-worker-green: no inbound port.
+
+Only Nginx HTTP/HTTPS and SSH remain public. Docker port publishing can bypass
+UFW, so loopback binding is required, as described in the
+[official installation guide](https://docs.docker.com/engine/install/ubuntu/).
+
+## Database migrations and capacity
+
+Online rollout intentionally requires the image schema to match the live schema.
+Docker does not make incompatible database changes safe for two versions.
+A schema-changing release must first have a reviewed backward-compatible
+migration plan; the script refuses it before touching live traffic.
+Never restore an old database snapshot after the new release has accepted writes
+without explicitly reconciling those writes.
+
+On this 1 GB RAM VPS, two web versions overlap briefly and may use swap.
+Web containers have a 640 MB memory limit and a 384 MB V8 heap; the worker has a
+256 MB memory limit. These are operating limits, not a capacity guarantee.
+Preserve at least one rollback image and monitor disk use before future builds.
+
+## Diagnosis
+
+```sh
+docker ps -a --filter label=app=questkeeps
+docker inspect --format '{{json .State.Health}}' qk-web-blue
+docker logs --tail 100 qk-web-blue
+docker logs --tail 100 qk-worker-blue
+systemctl status questkeeps-backup.timer
+```
+
+Docker health checks detect an unresponsive page or API. The restart policy
+restarts exited processes; it does not automatically restart a container solely
+because its health status is unhealthy. Investigate the logs before manual
+recovery. Nginx logs include request/upstream durations without query strings or
+guest tokens.

@@ -259,7 +259,16 @@ test('area discovery and atomic batch attachment enforce author, dates, visibili
     'member',
   );
   assert.equal(member.status, 200);
-  assert.equal((await member.json()).added, 1);
+  const memberResult = await member.json();
+  assert.equal(memberResult.added, 1);
+  assert.deepEqual(
+    memberResult.places.map((place: { media_id: string }) => place.media_id),
+    ['member-photo'],
+  );
+  assert.deepEqual(
+    memberResult.mediaTitles.map((photo: { id: string }) => photo.id),
+    ['member-photo'],
+  );
   assert.deepEqual(
     all('SELECT media_id FROM confirmed_places').map((p) => p.media_id),
     ['member-photo'],

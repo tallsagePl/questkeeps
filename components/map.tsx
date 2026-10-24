@@ -44,7 +44,9 @@ export default function TravelMap({
   suggestionPath,
   resourceScope,
   onAddArea,
+  confirmedAreaUrls = [],
 }: {
+  confirmedAreaUrls?: string[];
   suggestionPath?: string;
   resourceScope?: string;
   onAddArea?: (areaId: string) => Promise<void>;
@@ -62,6 +64,15 @@ export default function TravelMap({
     [points, language],
   );
   const mapScope = resourceScope || previewScope;
+  const pointKey = JSON.stringify(
+    points.map((point) => [point.id, point.lat, point.lon]),
+  );
+  const regionViewKey = JSON.stringify(
+    regions.map((region) => [
+      region.key,
+      region.points.map((point) => [point.id, point.lat, point.lon]),
+    ]),
+  );
   const viewKey =
     'questkeeps:map-view:v2:' +
     previewScope +
@@ -247,7 +258,19 @@ export default function TravelMap({
       resizeObserver?.disconnect();
       removeLeafletMap(map);
     };
-  }, [points, t, compact, retry]);
+  }, [pointKey, t, compact, retry]);
+  useEffect(() => {
+    for (const point of points) {
+      const marker = markers.current.get(point.id);
+      const label =
+        marker?.getTooltip()?.getContent() || marker?.getPopup()?.getContent();
+      if (label instanceof HTMLElement)
+        label.textContent =
+          (point.title || point.name) +
+          ' · ' +
+          mapDateTime(point.taken, point.capture_time, language);
+    }
+  }, [points, language, mapReady]);
   const [geometryMissing, setGeometryMissing] = useState(false);
   const [geometryLoading, setGeometryLoading] = useState(false);
   const [geometryTitles, setGeometryTitles] = useState<string[]>([]);
@@ -257,17 +280,49 @@ export default function TravelMap({
   });
   const [geometryRetry, setGeometryRetry] = useState(0);
   const geometryKey = (geometryPaths || []).join('|');
+  const geometryStore = useRef<{
+    map: LeafletMap | null;
+    scope: string;
+    language: string;
+    entries: Map<
+      string,
+      {
+        layer: import('leaflet').GeoJSON;
+        paint: () => void;
+        street: boolean;
+        district: boolean;
+      }
+    >;
+  }>({ map: null, scope: '', language: '', entries: new Map() });
   useEffect(() => {
     let cancelled = false;
     const layers: import('leaflet').GeoJSON[] = [];
-    const groups = new Map<string, { paint: () => void }>();
+    const store = geometryStore.current;
+    const groups = store.entries;
     setGeometryMissing(false);
     setGeometryTitles([]);
     setGeometryKinds({ street: false, district: false });
     setGeometryLoading(false);
     const map = mapHandle.current;
+    if (
+      store.map !== map ||
+      store.scope !== mapScope ||
+      store.language !== language
+    ) {
+      groups.forEach((entry) => entry.layer.remove());
+      groups.clear();
+      store.map = map;
+      store.scope = mapScope;
+      store.language = language;
+    }
+    const desired = new Set(geometryKey ? geometryKey.split('|') : []);
+    for (const [endpoint, entry] of groups)
+      if (!desired.has(endpoint)) {
+        entry.layer.remove();
+        groups.delete(endpoint);
+      }
     if (!map || !geometryKey) return;
-    setGeometryLoading(true);
+    setGeometryLoading([...desired].some((endpoint) => !groups.has(endpoint)));
     void (async () => {
       const L = await import('leaflet');
       let missing = false;
@@ -275,6 +330,14 @@ export default function TravelMap({
       const kinds = { street: false, district: false };
       for (const endpoint of geometryKey.split('|')) {
         if (cancelled) break;
+        const existing = groups.get(endpoint);
+        if (existing) {
+          layers.push(existing.layer);
+          kinds.street ||= existing.street;
+          kinds.district ||= existing.district;
+          setGeometryKinds({ ...kinds });
+          continue;
+        }
         try {
           const collection = await cachedMapGeometry(endpoint, mapScope);
           if (cancelled) break;
@@ -383,7 +446,16 @@ export default function TravelMap({
               });
             },
           }).addTo(map);
-          groups.set(endpoint, { paint });
+          groups.set(endpoint, {
+            paint,
+            layer,
+            street: collection.features.some(
+              (feature: any) => feature.properties?.kind !== 'district',
+            ),
+            district: collection.features.some(
+              (feature: any) => feature.properties?.kind === 'district',
+            ),
+          });
           paint();
           layers.push(layer);
         } catch {
@@ -404,7 +476,6 @@ export default function TravelMap({
     })();
     return () => {
       cancelled = true;
-      layers.forEach((layer) => layer.remove());
     };
   }, [
     geometryKey,
@@ -442,23 +513,35 @@ export default function TravelMap({
         if (!controller.signal.aborted) setSuggestionsLoading(false);
       });
     return () => controller.abort();
-  }, [suggestionPath, geometryKey, suggestionRetry, mapScope]);
+  }, [suggestionPath, suggestionRetry, mapScope]);
   useEffect(() => {
     const changed = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (detail?.scope !== mapScope + ':map-v1') return;
       if (detail.endpoint === suggestionPath) setSuggestionRetry((n) => n + 1);
-      else if (geometryKey.split('|').includes(detail.endpoint))
+      else if (geometryKey.split('|').includes(detail.endpoint)) {
+        const entry = geometryStore.current.entries.get(detail.endpoint);
+        entry?.layer.remove();
+        geometryStore.current.entries.delete(detail.endpoint);
         setGeometryRetry((n) => n + 1);
+      }
     };
     window.addEventListener('questkeeps:map-resource-updated', changed);
     return () =>
       window.removeEventListener('questkeeps:map-resource-updated', changed);
   }, [mapScope, suggestionPath, geometryKey]);
+  const confirmedKey = confirmedAreaUrls.join('|');
+  const availableSuggestions = useMemo(
+    () =>
+      suggestions.filter(
+        (candidate) => !confirmedAreaUrls.includes(candidate.url),
+      ),
+    [suggestions, confirmedKey],
+  );
   const shownIds = shownPoints.map((p) => p.id).join('|');
   useEffect(() => {
     const map = mapHandle.current;
-    if (!map || !suggestions.length || !onAddArea) return;
+    if (!map || !availableSuggestions.length || !onAddArea) return;
     let dispose: (() => void) | undefined;
     let cancelled = false;
     void import('leaflet').then((L) => {
@@ -467,7 +550,9 @@ export default function TravelMap({
       dispose = suggestedMapAreas(
         L,
         map,
-        suggestions.filter((s) => s.photoIds.some((id) => ids.has(id))),
+        availableSuggestions.filter((s) =>
+          s.photoIds.some((id) => ids.has(id)),
+        ),
         async (id) => {
           await addCallback.current?.(id);
           setSuggestions((old) => old.filter((s) => s.id !== id));
@@ -484,7 +569,7 @@ export default function TravelMap({
     };
   }, [
     mapReady,
-    suggestions,
+    availableSuggestions,
     shownIds,
     t,
     !!onAddArea,
@@ -542,7 +627,7 @@ export default function TravelMap({
       ],
       { padding: [40, 40], maxZoom: compact ? 16 : 13, animate: false },
     );
-  }, [selectedRegion, regions, mapReady]);
+  }, [selectedRegion, regionViewKey, mapReady]);
   return (
     <>
       {!compact && regions.length > 0 && (
@@ -598,7 +683,7 @@ export default function TravelMap({
           )}
         </div>
       )}
-      {suggestions.length > 0 && (
+      {availableSuggestions.length > 0 && (
         <div className="map-geometry-legend">
           <span>
             <i className="map-suggestion-key" aria-hidden="true" />

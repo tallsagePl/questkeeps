@@ -207,3 +207,5 @@ npm start
 [Telegram feedback bot setup](docs/TELEGRAM-SETUP.md)
 
 [Политика конфиденциальности (RU + EN)](https://questkeeps.ru/privacy) · [Фирменный стиль: все поверхности](docs/BRAND-SURFACES.md)
+
+Docker-деплой с двумя слотами: [инструкция](docs/DOCKER-DEPLOY.md). Действующая версия продолжает работать, пока новая собирается и проходит проверку готовности.

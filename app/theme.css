@@ -4348,3 +4348,13 @@ a:any-link:focus-visible,
 .invitation-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .trip-calendar-days button[data-participation="true"] { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 5px; }
 .calendar-participation-legend { color: var(--accent); }
+
+/* Keep the participant action intact while the description wraps. */
+.member > .avatar { flex: 0 0 auto; }
+.member > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.member > .text-button { flex: 0 0 auto; white-space: nowrap; }
+@media (max-width: 440px) {
+  .member { flex-wrap: wrap; }
+  .member > div { flex-basis: calc(100% - 60px); }
+  .member > .text-button { margin-left: 48px; }
+}

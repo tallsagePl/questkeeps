@@ -399,5 +399,17 @@ export function addAreaToPhotos(
       }
     }
   })();
-  return { added, matched: matches.length, title };
+  const visibleIds = new Set(matches.map((photo) => photo.id));
+  const places = all(
+    'SELECT p.*,m.lat photo_lat,m.lon photo_lon FROM confirmed_places p JOIN media m ON m.id=p.media_id WHERE p.trip_id=? AND p.url=?',
+    tripId,
+    area.url,
+  ).filter((place) => visibleIds.has(place.media_id));
+  const mediaTitles = matches.map((photo) => ({
+    id: photo.id,
+    title:
+      one('SELECT title FROM media_titles WHERE media_id=?', photo.id)?.title ||
+      null,
+  }));
+  return { added, matched: matches.length, title, places, mediaTitles };
 }

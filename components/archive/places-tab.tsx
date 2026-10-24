@@ -1,6 +1,7 @@
 'use client';
 
 import { useLocale } from '@/components/appearance';
+import { invalidateMapResource } from '../../lib/place-client-cache';
 import TripDayCalendar from '../trip-day-calendar';
 import DiscoveredPlaces from '../discovered-places';
 import PlaceRecommendations from '../place-recommendations';
@@ -103,7 +104,11 @@ export default function PlacesTab({ archive }: { archive: ArchiveController }) {
             places={discoveredPlaces}
             tripId={trip.id}
             canDelete={isOwner && !guest}
-            onDeleted={(place) =>
+            onDeleted={(place) => {
+              void invalidateMapResource(
+                '/api/trips/' + trip.id + '/area-suggestions',
+                archive.mapResourceScope,
+              );
               setData((old) =>
                 old
                   ? {
@@ -113,8 +118,8 @@ export default function PlacesTab({ archive }: { archive: ArchiveController }) {
                       ),
                     }
                   : old,
-              )
-            }
+              );
+            }}
             geometryPath={(place) =>
               mediaPath(
                 { id: place.media_id },

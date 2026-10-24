@@ -1,5 +1,6 @@
 'use client';
 
+import type { ConfirmedPlace } from '../../lib/contracts';
 import { isAreaPlace } from '../../lib/place-kind';
 import { useLocale } from '@/components/appearance';
 import { api } from '../api';
@@ -82,6 +83,7 @@ export default function GalleryTab({
             <>
               <TravelMap
                 resourceScope={mapResourceScope}
+                confirmedAreaUrls={data!.places.map((place) => place.url)}
                 suggestionPath={
                   !guest
                     ? '/api/trips/' + trip.id + '/area-suggestions'
@@ -90,12 +92,50 @@ export default function GalleryTab({
                 onAddArea={
                   !guest
                     ? async (areaId) => {
-                        await api(
-                          'trips/' + trip.id + '/area-suggestions',
-                          'POST',
-                          { areaId },
-                        );
-                        await loadTrip(trip.id);
+                        const result = await api<{
+                          places?: ConfirmedPlace[];
+                          mediaTitles?: { id: string; title: string | null }[];
+                        }>('trips/' + trip.id + '/area-suggestions', 'POST', {
+                          areaId,
+                        });
+                        if (!result.places) {
+                          await loadTrip(trip.id);
+                          return;
+                        }
+                        setData((current) => {
+                          if (
+                            !current ||
+                            current.trip.id !== trip.id ||
+                            current.trip.role !== trip.role ||
+                            current.trip.from !== trip.from ||
+                            current.trip.to !== trip.to
+                          )
+                            return current;
+                          const places = new Map(
+                            current.places.map((place) => [place.id, place]),
+                          );
+                          const visibleIds = new Set(
+                            current.media.map((photo) => photo.id),
+                          );
+                          for (const place of result.places!)
+                            if (visibleIds.has(place.media_id))
+                              places.set(place.id, place);
+                          const titles = new Map(
+                            (result.mediaTitles || []).map((photo) => [
+                              photo.id,
+                              photo.title,
+                            ]),
+                          );
+                          return {
+                            ...current,
+                            places: [...places.values()],
+                            media: current.media.map((photo) =>
+                              titles.has(photo.id)
+                                ? { ...photo, title: titles.get(photo.id) }
+                                : photo,
+                            ),
+                          };
+                        });
                       }
                     : undefined
                 }

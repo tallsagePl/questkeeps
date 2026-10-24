@@ -208,3 +208,5 @@ Documentation and screenshots reflect the current interface. The proposed design
 [Telegram feedback bot setup](docs/TELEGRAM-SETUP.md)
 
 [Privacy policy (RU + EN)](https://questkeeps.ru/privacy) · [Brand surfaces and redesign checklist](docs/BRAND-SURFACES.md)
+
+Docker blue/green deployment: [Docker deployment guide](docs/DOCKER-DEPLOY.md). The running release stays online while the candidate builds and passes readiness checks.

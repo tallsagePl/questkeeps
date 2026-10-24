@@ -114,6 +114,28 @@ test('owner invites by email, recipient accepts from notifications, participatio
           .analyze()
       ).violations,
     ).toEqual([]);
+    await page.goto(base + '/?trip=' + trip);
+    await page.getByRole('button', { name: 'Участники и Диски' }).click();
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    const row = page.locator('.member').filter({ hasText: 'Invite Person' });
+    const edit = row.getByRole('button', { name: 'Изменить', exact: true });
+    await expect(edit).toBeVisible();
+    expect(
+      await edit.evaluate((node) => getComputedStyle(node).whiteSpace),
+    ).toBe('nowrap');
+    expect(
+      await edit.evaluate((node) => node.scrollWidth <= node.clientWidth),
+    ).toBeTruthy();
+    await row.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: 'data/member-action-desktop.png' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await row.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: 'data/member-action-mobile.png' });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBeTruthy();
   } finally {
     await owner.close();
     await recipient.close();

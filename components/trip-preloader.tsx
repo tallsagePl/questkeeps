@@ -23,7 +23,7 @@ import { queuePlaceDescription } from '../lib/place-description-queue';
 type Row = Record<string, any>;
 
 export function tripMapScope(data: Row, scope: string) {
-  // Include current access and resource revisions so stale membership cannot supply a new view.
+  // Access and photo revisions delimit private resources. Adding a place does not invalidate other map data.
   const text = JSON.stringify([
     data.trip.id,
     data.trip.role,
@@ -36,7 +36,6 @@ export function tripMapScope(data: Row, scope: string) {
       m.lat,
       m.lon,
     ]),
-    (data.places || []).map((p: Row) => [p.id, p.url]),
   ]);
   let hash = 2166136261;
   for (let i = 0; i < text.length; i++)

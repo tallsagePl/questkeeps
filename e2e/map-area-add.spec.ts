@@ -92,6 +92,7 @@ test('grey district and street proposals add all matched photos and become visit
   ];
   const places: any[] = [];
   let posts = 0;
+  let tripRequests = 0;
   let wikiRequests = 0;
   await page.route('**/api/trips/area-add/area-suggestions/*/wiki?*', (r) => {
     wikiRequests++;
@@ -115,9 +116,10 @@ test('grey district and street proposals add all matched photos and become visit
   await page.route('**/api/trips', (r) =>
     r.fulfill({ json: { trips: [trip] } }),
   );
-  await page.route('**/api/trips/area-add', (r) =>
-    r.fulfill({ json: { trip, media, places, notes: [], sources: [] } }),
-  );
+  await page.route('**/api/trips/area-add', (r) => {
+    tripRequests++;
+    return r.fulfill({ json: { trip, media, places, notes: [], sources: [] } });
+  });
   await page.route('**/api/trips/area-add/area-suggestions', (r) => {
     if (r.request().method() === 'GET')
       return r.fulfill({
@@ -146,7 +148,15 @@ test('grey district and street proposals add all matched photos and become visit
         lon: photo.lon,
         distance: 0,
       });
-    return r.fulfill({ json: { added: 2, matched: 2, title: c.title } });
+    return r.fulfill({
+      json: {
+        added: 2,
+        matched: 2,
+        title: c.title,
+        places: places.filter((p) => p.url === c.url),
+        mediaTitles: media.map((photo) => ({ id: photo.id, title: c.title })),
+      },
+    });
   });
   await page.route('**/api/media/*/places/*/geometry', (r) =>
     r.fulfill({
@@ -233,6 +243,11 @@ test('grey district and street proposals add all matched photos and become visit
     name: 'Добавить место к фотографиям',
     exact: true,
   });
+  const pane = await page.locator('.leaflet-map-pane').elementHandle();
+  const requestsBefore = tripRequests;
+  const zoomBefore = await page
+    .locator('.travel-map')
+    .getAttribute('data-zoom');
   await add.click();
   await expect(popup.getByRole('alert')).toHaveText('Временный сбой');
   await expect(add).toBeEnabled();
@@ -246,6 +261,15 @@ test('grey district and street proposals add all matched photos and become visit
   await expect(
     visited.getByRole('button', { name: 'Новый район', exact: true }),
   ).toBeVisible();
+  expect(await pane!.evaluate((node) => node.isConnected)).toBe(true);
+  expect(tripRequests).toBe(requestsBefore);
+  await expect(page.locator('.travel-map')).toHaveAttribute(
+    'data-zoom',
+    zoomBefore!,
+  );
+  const districtPath = await visited
+    .getByRole('button', { name: 'Новый район', exact: true })
+    .elementHandle();
   await visited
     .getByRole('button', { name: 'Новый район', exact: true })
     .press('Enter');
@@ -262,6 +286,9 @@ test('grey district and street proposals add all matched photos and become visit
     .getByRole('button', { name: 'Добавить место к фотографиям', exact: true })
     .click();
   await expect(grey.locator('path')).toHaveCount(0);
+  expect(await districtPath!.evaluate((node) => node.isConnected)).toBe(true);
+  expect(await pane!.evaluate((node) => node.isConnected)).toBe(true);
+  expect(tripRequests).toBe(requestsBefore);
   await expect(
     visited.getByRole('button', { name: 'Новая улица', exact: true }),
   ).toHaveAttribute('stroke', '#3448f5');

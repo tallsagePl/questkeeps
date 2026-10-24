@@ -1,0 +1,9 @@
+[Unit]
+Description=QuestKeeps Docker SQLite online backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/questkeeps/docker-tools/docker-backup.sh
+UMask=0077

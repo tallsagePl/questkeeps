@@ -1,3 +1,5 @@
+For Docker deployments from 1.19.0 onward, use [DOCKER-DEPLOY.md](../docs/DOCKER-DEPLOY.md). The systemd instructions below describe the original deployment and first-conversion fallback.
+
 # QuestKeeps on a single Ubuntu VPS
 
 ## Verified deployment: 23 October 2026
