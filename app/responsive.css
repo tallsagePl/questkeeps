@@ -278,10 +278,10 @@
     height: 150px;
   }
   .discovered-place {
-    grid-template-columns: minmax(0, 1fr) 112px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .discovered-place-content {
-    padding: 16px;
+    padding: 12px;
   }
   .discovered-place-content h2 {
     font-size: 1.0625rem;
@@ -306,6 +306,13 @@
   .discovered-place .place-wiki-image {
     min-height: 0;
     height: 100%;
+  }
+  /* Show the complete public or personal photo within its half of the card. */
+  .discovered-place .place-wiki-image img,
+  .discovered-place .place-own-photo .media-preview img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
   }
   .discovered-place .place-photo-reference {
     gap: 8px;
