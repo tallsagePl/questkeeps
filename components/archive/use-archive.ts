@@ -261,7 +261,12 @@ export function useArchive({
         }
         setReady(true);
       } catch (error) {
-        setBootFailed(true);
+        // Expired/revoked public links have their own unavailable-link screen.
+        const unavailableLink =
+          (share || invite) &&
+          error instanceof ApiError &&
+          (error.status === 404 || error.status === 410);
+        if (!unavailableLink) setBootFailed(true);
         throw error;
       }
     }).finally(() => setReady(true));

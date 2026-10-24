@@ -184,7 +184,7 @@ for (const stage of ['login', 'trips'] as const) {
         const timeout = AbortSignal.timeout.bind(AbortSignal);
         // Exercise the real browser abort and UI recovery without a 20-second test wait.
         AbortSignal.timeout = (ms) =>
-          timeout(ms === 15000 || ms === 20000 ? 400 : ms);
+          timeout(ms === 15000 || ms === 20000 ? 2000 : ms);
       });
       const path = stage === 'login' ? '**/api/auth/login' : '**/api/trips';
       await page.route(path, () => {});
