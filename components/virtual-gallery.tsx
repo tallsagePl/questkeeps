@@ -36,6 +36,12 @@ export default function VirtualGallery<T>({
   const [layout, setLayout] = useState<Layout | null>(null);
   useVirtualScrollPosition(layout?.baseRow || 0);
   const baseRow = useRef(0);
+  const geometry = useRef<{
+    columns: number;
+    pitch: number;
+    anchor: number;
+    fraction: number;
+  } | null>(null);
   const pendingScroll = useRef(0);
   const retainedKeys = useRef(new Set<string>());
   const pendingFocus = useRef<number | null>(null);
@@ -66,14 +72,38 @@ export default function VirtualGallery<T>({
       // Recycle a bounded scroll surface instead of reserving space for history.
       // Compensate scroll position by exactly the removed/inserted row height.
       const windowRows = Math.min(rows, Math.ceil(innerHeight / pitch) + 3);
-      const previousBase = baseRow.current;
-      const localRow = Math.floor(-rect.top / pitch);
+      let previousBase = baseRow.current;
+      let offset = -rect.top;
+      const previousGeometry = geometry.current;
+      if (
+        previousGeometry &&
+        offset > 0 &&
+        (previousGeometry.columns !== columns ||
+          previousGeometry.pitch !== pitch)
+      ) {
+        // Keep the same photo near the top when rotation changes the grid density.
+        const { anchor, fraction } = previousGeometry;
+        const row = Math.floor(anchor / columns);
+        baseRow.current = Math.max(0, Math.min(rows - windowRows, row - 1));
+        const adjusted = (row - baseRow.current + fraction) * pitch;
+        pendingScroll.current += adjusted - offset;
+        offset = adjusted;
+        previousBase = baseRow.current;
+      }
+      const localRow = Math.floor(offset / pitch);
       baseRow.current = Math.max(
         0,
         Math.min(rows - windowRows, previousBase + localRow - 1),
       );
       const shift = baseRow.current - previousBase;
-      const localTop = -rect.top - shift * pitch;
+      const localTop = offset - shift * pitch;
+      const anchorRow = Math.max(0, Math.floor(localTop / pitch));
+      geometry.current = {
+        columns,
+        pitch,
+        anchor: (baseRow.current + anchorRow) * columns,
+        fraction: Math.max(0, localTop / pitch - anchorRow),
+      };
       pendingScroll.current -= shift * pitch;
       let visibleFirst = Math.max(0, Math.floor(localTop / pitch));
       if (visibleFirst * pitch + height <= localTop) visibleFirst++;

@@ -1,0 +1,420 @@
+/* Three density tiers: phone, tablet, laptop. Geometry is also read by virtual feeds. */
+.photo-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.photo-card {
+  aspect-ratio: 4 / 3;
+}
+.photo-overlay .photo-caption {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.place-carousel .place-recommendation {
+  flex-basis: clamp(240px, calc((100% - 32px) / 3), 320px);
+}
+.place-recommendation-info h3 {
+  overflow-wrap: anywhere;
+}
+.place-recommendation .place-brief p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+.virtual-places {
+  --place-row-min-height: 240px;
+  row-gap: 16px;
+}
+.virtual-places-cell > .discovered-place {
+  min-height: var(--place-row-min-height);
+}
+.discovered-place-content {
+  padding: 22px 24px;
+}
+.discovered-place-content h2 {
+  font-size: clamp(1.125rem, 1.7vw, 1.375rem);
+  line-height: 1.35;
+  margin: 10px 0;
+}
+.discovered-place .place-wiki-image {
+  min-height: 240px;
+}
+.video-viewer video {
+  display: block;
+  width: 100%;
+  max-height: 60dvh;
+  object-fit: contain;
+}
+@media (min-width: 701px) and (max-width: 1099px) {
+  .photo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .trip-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dashboard,
+  .trip-page {
+    padding-inline: 32px;
+  }
+  .topbar {
+    padding-inline: 24px;
+    gap: 16px;
+  }
+  .top-actions {
+    gap: 8px;
+  }
+  .topbar .user-button {
+    max-width: 170px;
+  }
+  .top-caption {
+    display: none;
+  }
+  .tabbar {
+    gap: 8px;
+  }
+  .tabbar nav {
+    gap: 4px;
+  }
+  .tabbar nav button {
+    padding-inline: 12px;
+  }
+  .settings-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+  }
+  .profile-columns {
+    grid-template-columns: minmax(260px, 310px) minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .topbar .top-actions {
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+  .topbar .top-actions .user-button {
+    max-width: 160px;
+  }
+  .trip-heading h1 {
+    font-size: 2.75rem;
+    line-height: 1.15;
+  }
+}
+@media (max-width: 700px) {
+  .topbar {
+    height: auto;
+    min-height: 0;
+    padding: 12px 16px;
+    gap: 8px;
+  }
+  .topbar .top-actions {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+    margin: 0;
+  }
+  .topbar .top-actions .trips-nav-link {
+    display: none;
+  }
+  .topbar .top-actions .appearance-controls {
+    margin: 0;
+  }
+  .topbar .top-actions .user-button {
+    padding: 4px;
+    min-width: 44px;
+    width: 44px;
+    min-height: 44px;
+  }
+  .topbar .top-actions .user-button > span:last-child {
+    display: none;
+  }
+  .social-topbar .social-nav {
+    padding: 0;
+    gap: 20px;
+    justify-content: flex-start;
+  }
+  .social-topbar .social-nav a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .dashboard,
+  .trip-page {
+    padding: 24px 16px 40px;
+  }
+  .trip-heading {
+    margin-bottom: 20px;
+    gap: 16px;
+  }
+  .trip-heading h1 {
+    font-size: clamp(1.875rem, 7.5vw, 2.25rem);
+    line-height: 1.15;
+  }
+  .trip-heading p {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+  .trip-heading .eyebrow {
+    font-size: 0.75rem;
+    line-height: 1.6;
+    letter-spacing: 0.04em;
+  }
+  .tabbar {
+    gap: 4px;
+    margin-block: 16px;
+  }
+  .tabbar nav {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+  }
+  .tabbar nav button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 12px;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  .tabbar > .text-button {
+    min-height: 44px;
+    padding: 8px 0;
+    font-size: 0.875rem;
+  }
+  .gallery-toolbar {
+    gap: 12px 8px;
+    margin-block: 16px;
+  }
+  .segmented {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .segmented button {
+    min-height: 44px;
+    padding-inline: 10px;
+    white-space: nowrap;
+  }
+  .photo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .photo-card {
+    aspect-ratio: 1;
+  }
+  .photo-overlay {
+    padding: 30px 10px 10px;
+  }
+  .photo-overlay .photo-caption {
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+  .trip-art {
+    height: 160px;
+  }
+  .trip-card-body {
+    padding: 20px;
+  }
+  .trip-card-body h2 {
+    font-size: 1.25rem;
+    line-height: 1.35;
+  }
+  .trip-meta {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .place-recommendations {
+    margin-block: 24px;
+  }
+  .places-section-heading {
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .places-section-heading h2 {
+    font-size: 1.25rem;
+    line-height: 1.35;
+  }
+  .place-carousel {
+    grid-template-columns: minmax(0, 1fr) 44px 44px;
+    gap: 8px;
+  }
+  .place-carousel .place-recommendation-strip {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    scroll-padding-inline: 0;
+  }
+  .place-carousel .place-recommendation {
+    flex-basis: min(300px, calc(100% - 28px));
+  }
+  .place-carousel .place-carousel-arrow {
+    grid-row: 2;
+    margin: 0;
+  }
+  .place-carousel .place-carousel-arrow.previous {
+    grid-column: 2;
+    left: auto;
+  }
+  .place-carousel .place-carousel-arrow.next {
+    grid-column: 3;
+    right: auto;
+  }
+  .place-carousel::after {
+    top: 0;
+    right: 0;
+    bottom: 60px;
+    width: 20px;
+  }
+  .place-recommendation .map-photo-thumb {
+    height: 150px;
+  }
+  .discovered-place {
+    grid-template-columns: minmax(0, 1fr) 112px;
+  }
+  .discovered-place-content {
+    padding: 16px;
+  }
+  .discovered-place-content h2 {
+    font-size: 1.0625rem;
+    line-height: 1.35;
+  }
+  .discovered-place-content p {
+    font-size: 0.875rem;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    margin-bottom: 12px;
+  }
+  .discovered-place-content > .eyebrow {
+    font-size: 0.6875rem;
+    letter-spacing: 0.03em;
+  }
+  .discovered-place-content > a {
+    font-size: 0.8125rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .discovered-place .place-wiki-image {
+    min-height: 0;
+    height: 100%;
+  }
+  .discovered-place .place-photo-reference {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .discovered-place .place-photo-reference .text-button {
+    min-height: 44px;
+  }
+  .settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .panel {
+    padding: 20px;
+  }
+  .discovered-place {
+    padding: 0;
+  }
+  .member {
+    gap: 12px;
+  }
+  .social-page {
+    width: calc(100% - 32px);
+    padding-block: 28px 48px;
+  }
+  .profile-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .profile-settings-panel {
+    padding: 20px;
+  }
+  .modal {
+    width: calc(100% - 16px);
+    max-width: calc(100% - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .modal-head {
+    gap: 12px;
+  }
+  .modal-head h2 {
+    min-width: 0;
+    font-size: 1.25rem;
+  }
+  .photo-viewer-image {
+    height: min(52dvh, 480px);
+  }
+  .media-viewer {
+    min-height: 0;
+  }
+  .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .trip-calendar-popover {
+    max-width: calc(100vw - 32px);
+  }
+  .source > div:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .footer-links {
+    flex-wrap: wrap;
+    gap: 12px 20px;
+  }
+
+  .trip-heading-side:not(:has(.trip-follow-control)) {
+    display: none;
+  }
+
+  .photo-overlay .photo-caption {
+    font-size: 0.8125rem;
+  }
+  .topbar {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  footer {
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+}
+@media (pointer: coarse) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+  .icon-button,
+  .appearance-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .photo-card:hover img {
+    transform: none;
+  }
+
+  .photo-card:hover:not(:focus-visible) {
+    transform: none;
+    box-shadow: none;
+  }
+}
+@supports (padding: env(safe-area-inset-bottom)) {
+  .back-to-top {
+    bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  .modal {
+    scroll-padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+}

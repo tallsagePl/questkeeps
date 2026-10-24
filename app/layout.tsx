@@ -2,6 +2,7 @@ import { translate } from '@/lib/i18n/translate';
 import type { Metadata } from 'next';
 import './globals.css';
 import './theme.css';
+import './responsive.css';
 import '@fontsource-variable/onest';
 import { AppearanceProvider } from '@/components/appearance';
 import 'leaflet/dist/leaflet.css';

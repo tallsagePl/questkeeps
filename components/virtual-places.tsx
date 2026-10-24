@@ -56,6 +56,7 @@ export default function VirtualPlaces<T>({
   const baseRow = useRef(0);
   const pendingScroll = useRef(0);
   const measuredHeight = useRef(0);
+  const measuredWidth = useRef(0);
   const retainedKeys = useRef(new Set<string>());
   const pendingFocus = useRef<number | null>(null);
   const requestedJump = useRef<string | null>(null);
@@ -68,17 +69,29 @@ export default function VirtualPlaces<T>({
       frame = 0;
       const rect = element.getBoundingClientRect();
       const columns = 1;
-      const gap = 20;
+      const style = getComputedStyle(element);
+      const gap = parseFloat(style.rowGap) || 20;
+      const minimumHeight =
+        parseFloat(style.getPropertyValue('--place-row-min-height')) || 260;
       const width = rect.width;
       const samples = [
         ...element.querySelectorAll<HTMLElement>(
           '.virtual-places-cell:not([hidden]) .discovered-place',
         ),
       ];
-      const height = Math.max(
-        260,
-        ...samples.map((card) => card.getBoundingClientRect().height),
+      const sampleHeight = Math.ceil(
+        Math.max(
+          minimumHeight,
+          ...samples.map((card) => card.getBoundingClientRect().height),
+        ),
       );
+      // Shorter recycled cards must not shrink the row and send the window
+      // back and forth between two ranges. Re-measure on a real width change.
+      const height =
+        measuredWidth.current === width
+          ? Math.max(measuredHeight.current, sampleHeight)
+          : sampleHeight;
+      measuredWidth.current = width;
       const pitch = height + gap;
       const rows = items.length;
       if (!width || !pitch) return;
@@ -163,7 +176,8 @@ export default function VirtualPlaces<T>({
       observer.observe(card);
     window.addEventListener('scroll', scroll, { passive: true });
     window.addEventListener('resize', schedule);
-    measure();
+    if (!layout) measure();
+    else schedule();
     return () => {
       window.removeEventListener('questkeeps:gallery-start', start);
       observer.disconnect();

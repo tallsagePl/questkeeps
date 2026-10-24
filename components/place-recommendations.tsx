@@ -75,7 +75,6 @@ export default function PlaceRecommendations({
   const { t, m } = useLocale();
   const feedback = useFeedback();
   const strip = useRef<HTMLDivElement>(null);
-  const [carouselWidth, setCarouselWidth] = useState(0);
   const [canPrevious, setCanPrevious] = useState(false);
   const [canNext, setCanNext] = useState(false);
   const scrollCards = (direction: number, animate = true) => {
@@ -159,8 +158,7 @@ export default function PlaceRecommendations({
       setCanPrevious(root.scrollLeft > 2);
       setCanNext(root.scrollLeft < root.scrollWidth - root.clientWidth - 2);
     };
-    const observer = new ResizeObserver(([entry]) => {
-      setCarouselWidth(entry.contentRect.width);
+    const observer = new ResizeObserver(() => {
       update();
     });
     observer.observe(root);
@@ -432,16 +430,6 @@ export default function PlaceRecommendations({
             tabIndex={0}
             role="group"
             aria-label={t('placeSearch.suggestedPlaces')}
-            style={
-              carouselWidth
-                ? ({
-                    '--suggestion-width':
-                      (carouselWidth - 16 * Math.floor(carouselWidth / 260)) /
-                        (Math.max(1, Math.floor(carouselWidth / 260)) + 0.5) +
-                      'px',
-                  } as React.CSSProperties)
-                : undefined
-            }
             onKeyDown={(event) => {
               if (event.target !== event.currentTarget) return;
               if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {

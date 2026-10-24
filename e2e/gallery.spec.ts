@@ -1,8 +1,34 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
 import sharp from 'sharp';
 import AxeBuilder from '@axe-core/playwright';
 
+// The mounted budget follows viewport rows and the responsive column count.
+async function galleryWindowLimit(grid: Locator) {
+  return grid.evaluate((el) => {
+    const style = getComputedStyle(el);
+    const columns = style.gridTemplateColumns.split(' ').length;
+    const card = el.querySelector('.photo-card')!.getBoundingClientRect();
+    return (
+      columns *
+      (Math.ceil(innerHeight / (card.height + (parseFloat(style.gap) || 0))) +
+        3)
+    );
+  });
+}
+
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/follows/accept', (r) =>
+    r.fulfill({ json: { accepted: false } }),
+  );
+  await page.route('**/api/invitations', (r) =>
+    r.fulfill({ json: { invitations: [], count: 0 } }),
+  );
+  await page.route('**/api/trips/*/area-suggestions*', (r) =>
+    r.fulfill({ json: { suggestions: [], areas: [] } }),
+  );
+  await page.route('**/api/accounts', (r) =>
+    r.fulfill({ json: { accounts: [] } }),
+  );
   await page.route('**/api/trips/*/sync', (route) =>
     route.fulfill({ json: { synced: 0, failed: 0 } }),
   );
@@ -292,8 +318,8 @@ test('ограниченная лента сдвигается в обе сто�
     await page
       .locator('.virtual-gallery-cell:not([hidden]) .photo-card')
       .count(),
-  ).toBeLessThan(20);
-  expect(total).toBeLessThan(20);
+  ).toBeLessThanOrEqual(await galleryWindowLimit(grid));
+  expect(total).toBeLessThanOrEqual(await galleryWindowLimit(grid));
   const first = await page.locator('.photo-card').first().boundingBox();
   expect(first!.width).toBeGreaterThan(100);
   const originalCard = await page
@@ -355,7 +381,7 @@ test('ограниченная лента сдвигается в обе сто�
     await page
       .locator('.virtual-gallery-cell:not([hidden]) .photo-card')
       .count(),
-  ).toBeLessThan(20);
+  ).toBeLessThanOrEqual(await galleryWindowLimit(grid));
   expect(await grid.evaluate((el) => el.clientHeight)).toBe(dimensions.height);
   // Both neighbors must be mounted, including the row above when scrolling down.
   const windowRows = await grid.evaluate((el) => {
@@ -370,14 +396,15 @@ test('ограниченная лента сдвигается в обе сто�
         c.getBoundingClientRect().top < innerHeight,
     );
     return {
+      columns: getComputedStyle(el).gridTemplateColumns.split(' ').length,
       first: Number(cells[0].dataset.mediaIndex),
       visible: Number(visible[0].dataset.mediaIndex),
       last: Number(cells.at(-1)!.dataset.mediaIndex),
       visibleLast: Number(visible.at(-1)!.dataset.mediaIndex),
     };
   });
-  expect(windowRows.first).toBe(windowRows.visible - 3);
-  expect(windowRows.last).toBe(windowRows.visibleLast + 3);
+  expect(windowRows.first).toBe(windowRows.visible - windowRows.columns);
+  expect(windowRows.last).toBe(windowRows.visibleLast + windowRows.columns);
   // While the scrollbar thumb is held at the top, the browser can reject the
   // list's compensating scrollBy. Keep that native-drag condition deterministic.
   const stopDragging = await page.evaluateHandle(() => {
@@ -452,7 +479,7 @@ test('ограниченная лента сдвигается в обе сто�
     .poll(async () =>
       page.locator('.virtual-gallery-cell:not([hidden]) .photo-card').count(),
     )
-    .toBeLessThan(20);
+    .toBeLessThanOrEqual(await galleryWindowLimit(grid));
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
