@@ -81,6 +81,17 @@ test('дневник: ответы лесенкой, сворачивание, �
     await thread
       .getByRole('button', { name: 'Показать ответы (1)', exact: true })
       .click();
+    const repliesPanel = thread.locator('.smooth-collapse');
+    await expect(repliesPanel).toHaveAttribute('data-open', 'true');
+    // Finish the expanding/clipping transition before clicking its moving child.
+    await repliesPanel.evaluate(async (element) => {
+      element.getBoundingClientRect();
+      await Promise.all(
+        element
+          .getAnimations({ subtree: true })
+          .map((animation) => animation.finished.catch(() => {})),
+      );
+    });
     await thread
       .locator('.note-reply')
       .first()
