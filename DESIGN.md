@@ -15,3 +15,5 @@ Photo galleries use a stable native scroll track with virtualized cells and reta
 Place feeds use natural document flow with a consistent 16px gap between cards of different heights. Viewport proximity controls image and description loading, never card coordinates or scroll position. The phone back-to-top control is 64px and uses native smooth scrolling; reduced-motion users return immediately.
 
 Sparse desktop dashboards (zero trips or one three-card row) use a compact vertical composition: inline empty friends, a horizontal empty archive, height-aware travel artwork and smaller section spacing. The content, header and footer fit standard laptop/desktop heights down to 720px without clipping or disabling scrolling; additional content and zoom can grow naturally. Mobile composition and the future trip carousel are separate concerns.
+
+The fullscreen photo toolbar keeps title/pencil on the left, 90-degree rotation controls centered, and reload/close on the right. Gallery navigation overlays the frame without reducing image width. The red outlined archive-removal action appears in metadata, with explicit confirmation that the original remains on Disk.

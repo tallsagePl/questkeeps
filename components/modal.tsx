@@ -13,9 +13,11 @@ export default function Modal({
   doubleBackdropClick = false,
   onKeyDown,
   headerActions,
+  headerCenter,
 }: {
   title: ReactNode;
   headerActions?: ReactNode;
+  headerCenter?: ReactNode;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
@@ -103,8 +105,11 @@ export default function Modal({
         } else lastBackdropClick.current = now;
       }}
     >
-      <div className="modal-head">
+      <div className={headerCenter ? 'modal-head has-center' : 'modal-head'}>
         <h2 id={titleId}>{title}</h2>
+        {headerCenter && (
+          <div className="modal-head-center">{headerCenter}</div>
+        )}
         <div className="modal-head-actions">
           {headerActions}
           <FeedbackButton

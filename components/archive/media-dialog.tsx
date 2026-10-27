@@ -1,5 +1,9 @@
 'use client';
 
+import {
+  MediaRotationControls,
+  MediaArchiveDelete,
+} from '../media-archive-controls';
 import VideoViewer from '../video-viewer';
 import { useMediaReload, MediaReloadButton } from '../media-reload';
 import MediaVisibilityControls from '../media-visibility-controls';
@@ -89,6 +93,37 @@ export default function MediaDialog({
         }
         wide
         fullscreen
+        headerCenter={
+          !guest &&
+          activeMedia.user_id === user?.id &&
+          activeMedia.kind === 'photo' ? (
+            <MediaRotationControls
+              disabled={busy}
+              onRotate={(step) =>
+                void action(async () => {
+                  const rotation =
+                    ((activeMedia.rotation || 0) + step + 360) % 360;
+                  await api('media/' + activeMedia.id, 'PATCH', { rotation });
+                  setActiveMedia((old) =>
+                    old?.id === activeMedia.id ? { ...old, rotation } : old,
+                  );
+                  setData((old) =>
+                    old
+                      ? {
+                          ...old,
+                          media: old.media.map((item) =>
+                            item.id === activeMedia.id
+                              ? { ...item, rotation }
+                              : item,
+                          ),
+                        }
+                      : old,
+                  );
+                })
+              }
+            />
+          ) : undefined
+        }
         headerActions={<MediaReloadButton onClick={reload.reload} />}
         onKeyDown={(event) => {
           if (
@@ -128,7 +163,11 @@ export default function MediaDialog({
               ref={placePrevious}
               type="button"
               className="icon-button place-photo-previous"
-              aria-label={t('trip.previousPhotoOfThisPlace')}
+              aria-label={t(
+                archive.mediaPlaceUrl
+                  ? 'trip.previousPhotoOfThisPlace'
+                  : 'mediaArchive.previous',
+              )}
               onClick={() => navigatePlacePhoto(-1)}
             >
               <Icon name="chevron-left" />
@@ -147,6 +186,7 @@ export default function MediaDialog({
             ) : (
               <PhotoViewer
                 key={reload.key}
+                rotation={activeMedia.rotation}
                 title={activeMedia.title || activeMedia.name}
                 preview={reload.source(
                   mediaPath(activeMedia, 'preview') +
@@ -176,7 +216,11 @@ export default function MediaDialog({
                 ref={placeNext}
                 type="button"
                 className="icon-button place-photo-next"
-                aria-label={t('trip.nextPhotoOfThisPlace')}
+                aria-label={t(
+                  archive.mediaPlaceUrl
+                    ? 'trip.nextPhotoOfThisPlace'
+                    : 'mediaArchive.next',
+                )}
                 onClick={() => navigatePlacePhoto(1)}
               >
                 <Icon name="chevron-right" />
@@ -251,6 +295,21 @@ export default function MediaDialog({
                         ? { hidden_from_guests: change.hiddenFromGuests }
                         : {}),
                     });
+                    await refresh();
+                  })
+                }
+              />
+            )}
+            {!guest && activeMedia.user_id === user?.id && (
+              <MediaArchiveDelete
+                key={activeMedia.id}
+                disabled={busy}
+                onDelete={() =>
+                  void action(async () => {
+                    await api('media/' + activeMedia.id, 'DELETE');
+                    setActiveMedia(null);
+                    setMediaPlaceUrl(null);
+                    setMediaFocusPlaceUrl(null);
                     await refresh();
                   })
                 }

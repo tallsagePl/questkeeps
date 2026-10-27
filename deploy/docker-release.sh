@@ -14,7 +14,10 @@ test -f "$upstream"
 image_id=$(docker image inspect --format '{{.Id}}' "$image")
 target_schema=$(docker run --rm --network none --read-only "$image_id" node -p "require('./deployment.json').schema")
 current_schema=$(python3 -c "import sqlite3; print(sqlite3.connect('file:/opt/questkeeps/shared/data/travel.sqlite?mode=ro',uri=True).execute('pragma user_version').fetchone()[0])")
-if [ "$target_schema" != "$current_schema" ]; then
+schema_transition="$current_schema:$target_schema"
+schema_changed=false
+schema_tool="$(dirname "$0")/media-archive-schema.py"
+if [ "$target_schema" != "$current_schema" ] && [ "$schema_transition" != '8:9' ] && [ "$schema_transition" != '9:8' ]; then
   echo "Schema $current_schema -> $target_schema requires a reviewed compatible migration before an online rollout."
   exit 1
 fi
@@ -41,6 +44,13 @@ rollback() {
   trap - ERR INT TERM
   set +e
   docker rm -f "$worker" >/dev/null 2>&1
+  docker rm -f "$web" >/dev/null 2>&1
+  if [ "$schema_changed" = true ]; then
+    if ! python3 "$schema_tool" "$root/shared/data/travel.sqlite" "$current_schema"; then
+      echo 'Schema marker rollback failed; previous containers were not restarted.'
+      exit 1
+    fi
+  fi
   if [ "$worker_stopped" = true ]; then
     if [ "$legacy" = true ]; then systemctl start questkeeps
     else docker start "$previous_worker" >/dev/null; fi
@@ -56,7 +66,7 @@ rollback() {
   exit 1
 }
 trap rollback ERR INT TERM
-# Online snapshot; no application stop and no schema changes are performed here.
+# Online snapshot before the candidate or the reviewed additive migration.
 python3 - <<'PY'
 import sqlite3, os, time
 folder='/opt/questkeeps/backups'
@@ -70,6 +80,21 @@ target.close()
 source.close()
 os.chmod(path,0o600)
 PY
+# The 8 -> 9 change adds one defaulted column and an independent table. Old
+# application SQL remains compatible. A rollback retains both and restores only
+# the compatibility marker, without restoring a stale database snapshot.
+if [ "$schema_transition" = '8:9' ]; then
+  test -f "$schema_tool"
+  docker run --rm --network none --security-opt no-new-privileges --cap-drop ALL \
+    --mount "type=bind,src=$root/shared/data,dst=/app/data" \
+    --mount "type=bind,src=$root/shared/.env.local,dst=/run/questkeeps.env,readonly" "$image_id" \
+    node --env-file=/run/questkeeps.env --import tsx scripts/migrate.ts
+  schema_changed=true
+elif [ "$schema_transition" = '9:8' ]; then
+  python3 "$schema_tool" "$root/shared/data/travel.sqlite" 8
+  schema_changed=true
+fi
+
 docker run -d --init --name "$web" --label app=questkeeps --label role=web --restart unless-stopped \
   --memory 640m --memory-swap 1280m --pids-limit 160 --security-opt no-new-privileges --cap-drop ALL \
   --log-opt max-size=10m --log-opt max-file=3 \

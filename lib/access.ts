@@ -179,7 +179,7 @@ export function tripData(req: Request, tripId: string) {
   const t = viewAccess(req, tripId);
   const user = currentUser(req);
   const media = all(
-    'SELECT m.id,m.name,m.kind,m.mime,m.revision,s.account_id _account_id,m.resource_id _resource_id,COALESCE((SELECT title FROM media_titles WHERE media_id=m.id),(SELECT substr(title,1,160) FROM confirmed_places WHERE media_id=m.id ORDER BY rowid DESC LIMIT 1)) title,EXISTS(SELECT 1 FROM media_favorites WHERE media_id=m.id AND user_id=?) favorite,m.taken,m.date_basis,m.lat,m.lon,m.user_id,m.hidden,m.hidden_from_guests,u.name author FROM media m JOIN sources s ON s.id=m.source_id JOIN users u ON u.id=m.user_id WHERE m.trip_id=? AND s.approved=1 AND m.missing=0 AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (m.hidden=0 OR m.user_id=?) AND (?=0 OR m.hidden_from_guests=0) ORDER BY m.taken',
+    'SELECT m.id,m.name,m.kind,m.mime,m.revision,m.rotation,s.account_id _account_id,m.resource_id _resource_id,COALESCE((SELECT title FROM media_titles WHERE media_id=m.id),(SELECT substr(title,1,160) FROM confirmed_places WHERE media_id=m.id ORDER BY rowid DESC LIMIT 1)) title,EXISTS(SELECT 1 FROM media_favorites WHERE media_id=m.id AND user_id=?) favorite,m.taken,m.date_basis,m.lat,m.lon,m.user_id,m.hidden,m.hidden_from_guests,u.name author FROM media m JOIN sources s ON s.id=m.source_id JOIN users u ON u.id=m.user_id WHERE m.trip_id=? AND s.approved=1 AND m.missing=0 AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (m.hidden=0 OR m.user_id=?) AND (?=0 OR m.hidden_from_guests=0) ORDER BY m.taken',
     t.role === 'guest' ? '' : user?.id || '',
     tripId,
     t.from,

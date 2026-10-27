@@ -195,5 +195,5 @@ test('guest-only hiding protects listings, places and direct files while partici
     (await (await api('share/fixture-share')).json()).places.length,
     1,
   );
-  assert.equal(db.pragma('user_version', { simple: true }), 8);
+  assert.equal(db.pragma('user_version', { simple: true }), 9);
 });

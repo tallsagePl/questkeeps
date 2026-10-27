@@ -8,7 +8,7 @@
 
 QuestKeeps brings photos, routes, discovered places and journal entries together into a travel story, shared with the people who were there. Original photos and videos stay on Yandex Disk; the application connects them to dates, places and memories.
 
-A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.17.0**.
+A full-stack personal project built with **Next.js, React and TypeScript**, featuring SQLite, background indexing, OAuth and server-side access control. Current version: **1.25.0**.
 
 ## Screenshots
 
@@ -37,12 +37,15 @@ Light and dark themes, English and Russian interfaces, and responsive layouts. T
 
 ## Features
 
+- Browse the gallery with arrow buttons or the keyboard, save 90° photo rotations, and remove your frames from a trip without deleting the originals from Yandex Disk. Removed frames stay excluded from future syncs.
+
 - **Follow shared trips.** Star a guest trip above its photo count and return to it from a private Followed trips section. Sign-in preserves the action; following respects guest visibility and link revocation.
 
 - **Telegram feedback.** Text and attachments, private admin review, recent registration emails and queued notifications. See [bot setup](docs/TELEGRAM-SETUP.md).
 
 - **Trips and shared stories.** Destinations, dates, descriptions with friend mentions, and participants with required participation dates and a choice of viewing that period or the whole trip. Invitations work by link or in-app, with username/email search and an invitation inbox.
 - **Photos and videos from Yandex Disk.** Connect a selected folder, index it recursively, and synchronize manually or periodically without duplicating files.
+- **Photo controls.** Browse the current gallery with arrow buttons or the keyboard, save 90° rotations, and remove your frames from a trip without deleting the originals from Yandex Disk. Excluded frames stay out of future syncs.
 - **Gallery.** Filter by day and media type, save favorites, rename photos within the application, view and download originals. Authors can hide their own publications from everyone or only from guests with a shared link, including after leaving a trip.
 - **Maps and discoveries.** Coordinates from available EXIF metadata, manual location selection, Wikipedia landmark suggestions, and confirmed places near photos.
 - **Journal.** Entries organized by trip day, with replies from participants.

@@ -167,7 +167,11 @@ export async function syncSource(sourceId: string) {
       const statement = db.prepare(
         'INSERT INTO media (id,source_id,trip_id,user_id,resource_id,path,name,mime,kind,taken,date_basis,lat,lon,revision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id,resource_id) DO UPDATE SET path=excluded.path,name=excluded.name,mime=excluded.mime,kind=excluded.kind,taken=excluded.taken,date_basis=excluded.date_basis,lat=excluded.lat,lon=excluded.lon,revision=excluded.revision,missing=0',
       );
-      for (const m of items)
+      const excluded = db.prepare(
+        'SELECT 1 FROM media_exclusions WHERE trip_id=? AND user_id=? AND resource_id=?',
+      );
+      for (const m of items) {
+        if (excluded.get(s.trip_id, s.user_id, m.rid)) continue;
         statement.run(
           id(),
           s.id,
@@ -184,13 +188,15 @@ export async function syncSource(sourceId: string) {
           m.lon,
           m.revision,
         );
+        count++;
+      }
       run(
         'UPDATE sources SET last_sync=?,error=NULL WHERE id=?',
         Date.now(),
         s.id,
       );
     })();
-    count = items.length;
+
     return { count };
   } catch (error) {
     run(

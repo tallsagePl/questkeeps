@@ -435,7 +435,7 @@ export function useArchive({
   const placeNext = useRef<HTMLButtonElement>(null);
   const viewerPlacePhotos = mediaPlaceUrl
     ? placePhotoGroups.get(mediaPlaceUrl) || []
-    : [];
+    : visible;
   const viewerPlaceIndex = viewerPlacePhotos.findIndex(
     (photo) => photo.id === activeMedia?.id,
   );
@@ -599,6 +599,7 @@ export function useArchive({
     setGenerated,
     activeMedia,
     setActiveMedia,
+    mediaPlaceUrl,
     setMediaPlaceUrl,
     mediaFocusPlaceUrl,
     setMediaFocusPlaceUrl,

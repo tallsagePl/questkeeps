@@ -37,6 +37,7 @@ export type TripView = Omit<TripSummary, 'media_count'> & {
 };
 
 export type MediaItem = {
+  rotation?: number;
   id: string;
   user_id: string;
   name: string;

@@ -172,10 +172,49 @@ export async function mediaRoutes({
         );
       return json({ favorite: input.favorite });
     }
-    if (method === 'PATCH') {
+    if (method === 'DELETE' && !p[2]) {
+      if (m.user_id !== u.id) fail(403, 'messages.youCanOnlyEditYourOwnPhotos');
+      assertDay(m.taken.slice(0, 10), membership(m.trip_id, u.id));
+      // Keep the exclusion independent of a source, so reconnecting a folder
+      // cannot import this resource again. No request is sent to Yandex Disk.
+      db.transaction(() => {
+        run(
+          'INSERT OR IGNORE INTO media_exclusions VALUES (?,?,?,?)',
+          m.trip_id,
+          u.id,
+          m.resource_id,
+          Date.now(),
+        );
+        const copies = db
+          .prepare(
+            'SELECT id FROM media WHERE trip_id=? AND user_id=? AND resource_id=?',
+          )
+          .all(m.trip_id, u.id, m.resource_id) as { id: string }[];
+        for (const copy of copies) {
+          for (const table of [
+            'confirmed_places',
+            'places',
+            'media_titles',
+            'media_favorites',
+          ])
+            run('DELETE FROM ' + table + ' WHERE media_id=?', copy.id);
+          run('DELETE FROM media WHERE id=?', copy.id);
+        }
+      }).immediate();
+      return json({ ok: true });
+    }
+    if (method === 'PATCH' && !p[2]) {
       if (m.user_id !== u.id) fail(403, 'messages.youCanOnlyEditYourOwnPhotos');
       const input = z
         .object({
+          rotation: z
+            .union([
+              z.literal(0),
+              z.literal(90),
+              z.literal(180),
+              z.literal(270),
+            ])
+            .optional(),
           title: z.string().trim().min(1).max(160).optional(),
           hidden: z.boolean().optional(),
           hiddenFromGuests: z.boolean().optional(),
@@ -183,6 +222,17 @@ export async function mediaRoutes({
           lon: z.number().min(-180).max(180).optional(),
         })
         .parse(await body(req));
+      if (input.rotation !== undefined) {
+        assertDay(m.taken.slice(0, 10), membership(m.trip_id, u.id));
+        if (m.kind !== 'photo') fail(400, 'mediaArchive.photosOnly');
+        run(
+          'UPDATE media SET rotation=? WHERE trip_id=? AND user_id=? AND resource_id=?',
+          input.rotation,
+          m.trip_id,
+          u.id,
+          m.resource_id,
+        );
+      }
       if (input.title !== undefined) {
         assertDay(m.taken.slice(0, 10), membership(m.trip_id, u.id));
         mediaFor(req, m.id);

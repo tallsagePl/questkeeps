@@ -1,5 +1,6 @@
 'use client';
 
+import RotatedFrame from './rotated-frame';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { useLocale } from './appearance';
 import { previewBlob, discardPreview } from '../lib/preview-cache';
@@ -12,14 +13,18 @@ export default function MediaPreview({
   src,
   kind,
   scope,
+  rotation = 0,
 }: {
   src: string;
   kind: string;
   scope: string;
+  rotation?: number;
 }) {
-  return (
+  const image = (
     <RetryingPreview key={scope + src} src={src} kind={kind} scope={scope} />
   );
+  if (rotation) return <RotatedFrame rotation={rotation}>{image}</RotatedFrame>;
+  return image;
 }
 
 function RetryingPreview({

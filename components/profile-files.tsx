@@ -1,5 +1,9 @@
 'use client';
 
+import {
+  MediaRotationControls,
+  MediaArchiveDelete,
+} from './media-archive-controls';
 import { useEffect, useRef, useState, useId } from 'react';
 import VideoViewer from './video-viewer';
 import { useMediaReload, MediaReloadButton } from './media-reload';
@@ -19,6 +23,7 @@ type File = {
   name: string;
   title?: string | null;
   kind: string;
+  rotation?: number;
   taken: string;
   hidden: number;
   hidden_from_guests?: number;
@@ -74,13 +79,26 @@ export default function ProfileFiles({ userId }: { userId: string }) {
         <p className="fine">{t('profileFiles.noPhotosYet')}</p>
       )}
       {groups.map((g) => (
-        <FileGroup key={g.id} group={g} userId={userId} />
+        <FileGroup
+          key={g.id}
+          group={g}
+          userId={userId}
+          onRemoved={() => setRevision((n) => n + 1)}
+        />
       ))}
     </section>
   );
 }
 
-function FileGroup({ group, userId }: { group: Group; userId: string }) {
+function FileGroup({
+  group,
+  userId,
+  onRemoved,
+}: {
+  group: Group;
+  userId: string;
+  onRemoved: () => void;
+}) {
   const { t, m, language } = useLocale();
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState(false);
@@ -241,6 +259,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                               src={url(m, 'preview')}
                               scope={scope}
                               kind={m.kind}
+                              rotation={m.rotation}
                             />
                           )}
                         </PreviewPriority.Provider>
@@ -275,6 +294,33 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
           title={fileTitle(selected)}
           wide
           fullscreen
+          headerCenter={
+            selected.kind === 'photo' ? (
+              <MediaRotationControls
+                disabled={saving}
+                onRotate={async (step) => {
+                  setSaving(true);
+                  try {
+                    const rotation =
+                      ((selected.rotation || 0) + step + 360) % 360;
+                    await api('media/' + selected.id, 'PATCH', { rotation });
+                    setFiles((old) =>
+                      old.map((file) =>
+                        file.id === selected.id ? { ...file, rotation } : file,
+                      ),
+                    );
+                    setSelected((old) =>
+                      old?.id === selected.id ? { ...old, rotation } : old,
+                    );
+                  } catch (e) {
+                    setError((e as Error).message);
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              />
+            ) : undefined
+          }
           headerActions={<MediaReloadButton onClick={reload.reload} />}
           doubleBackdropClick
           onClose={() => setSelected(null)}
@@ -293,6 +339,7 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                 preview={reload.source(url(selected, 'preview'))}
                 original={reload.source(url(selected, 'original'))}
                 scope={scope}
+                rotation={selected.rotation}
                 title={fileTitle(selected)}
               />
             )}
@@ -324,6 +371,27 @@ function FileGroup({ group, userId }: { group: Group; userId: string }) {
                   );
                   setSelected((current) =>
                     current?.id === updated.id ? updated : current,
+                  );
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+            <MediaArchiveDelete
+              key={selected.id}
+              disabled={saving}
+              onDelete={async () => {
+                setSaving(true);
+                try {
+                  await api('media/' + selected.id, 'DELETE');
+                  controller.current?.abort();
+                  pending.current = false;
+                  onRemoved();
+                  setSelected(null);
+                  setFiles((old) =>
+                    old.filter((file) => file.id !== selected.id),
                   );
                 } catch (e) {
                   setError((e as Error).message);

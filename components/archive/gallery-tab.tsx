@@ -223,6 +223,7 @@ export default function GalleryTab({
                         }
                         scope={share ? 'guest:' + share : 'user:' + user?.id}
                         kind={m.kind}
+                        rotation={m.rotation}
                       />
                     )}
                     {m.kind === 'video' && (

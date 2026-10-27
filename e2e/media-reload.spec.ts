@@ -103,7 +103,7 @@ test('MOV is attempted in the player; individual photo and video reload preserve
   await close.click();
   await page.locator('.photo-card').nth(1).click();
   await expect(dialog.locator('video')).toBeVisible();
-  await expect(dialog.getByRole('status')).toContainText(
+  await expect(dialog.locator('.video-playback-error')).toContainText(
     'Видео не удалось воспроизвести',
   );
   clip = Buffer.from(

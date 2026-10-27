@@ -870,5 +870,14 @@
   "invitations.accept": "Accept and open",
   "invitations.decline": "Decline",
   "media.reload": "Reload photo or video",
-  "media.videoPlaybackFailed": "The video could not be played. Try reloading the file. If your browser does not support its codec, download the original and open it on your device."
+  "media.videoPlaybackFailed": "The video could not be played. Try reloading the file. If your browser does not support its codec, download the original and open it on your device.",
+  "mediaArchive.rotateLeft": "Rotate 90° left",
+  "mediaArchive.rotateRight": "Rotate 90° right",
+  "mediaArchive.remove": "Remove photo from archive",
+  "mediaArchive.confirm": "Remove from archive?",
+  "mediaArchive.explanation": "The original stays on Yandex Disk. This frame will no longer be imported into this trip.",
+  "mediaArchive.cancel": "Cancel",
+  "mediaArchive.previous": "Previous frame",
+  "mediaArchive.next": "Next frame",
+  "mediaArchive.photosOnly": "Only photos can be rotated."
 }
