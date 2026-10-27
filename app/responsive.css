@@ -730,18 +730,27 @@ dialog.modal.fullscreen[open] {
   padding: 20px max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
 }
 
-/* Keep the travel archive close to the viewport edges at every density tier. */
-.dashboard,
-.trip-page {
-  max-width: none;
-  width: 100%;
-  padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px));
-}
+/* Wide screens retain the original centered archive and generous side gutters. */
 .photo-grid { gap: 8px; }
 @media (max-width: 700px) {
   .dashboard,
   .trip-page {
+    max-width: none;
+    width: 100%;
     padding-inline: max(4px, env(safe-area-inset-left, 0px)) max(4px, env(safe-area-inset-right, 0px));
+  }
+  /* Text and standalone actions need breathing room; travel cards stay wide. */
+  .dashboard > .page-intro,
+  .dashboard > .friends-compact,
+  .dashboard .section-line {
+    padding-inline: 12px;
+  }
+  .dashboard > .page-intro {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dashboard > .page-intro > .primary {
+    align-self: center;
   }
   .photo-grid { gap: 4px; }
 }
