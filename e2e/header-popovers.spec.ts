@@ -105,7 +105,8 @@ for (const width of [320, 393, 1024, 1440]) {
       await expect(bell).toBeFocused();
       await bell.click();
       await expect(panel).toBeVisible();
-      await page.getByRole('heading', { name: 'Ваши путешествия.' }).click();
+      // The compact heading can sit beneath the open panel; click the page gutter.
+      await page.locator('.dashboard').click({ position: { x: 4, y: 4 } });
       await expect(panel).toBeHidden();
       if (width < 700) {
         await header.getByRole('button', { name: 'Меню', exact: true }).click();

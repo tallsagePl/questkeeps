@@ -14,7 +14,13 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
 
   return (
     <>
-      <main id="main-content" tabIndex={-1} className="dashboard">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={
+          trips.length <= 3 ? 'dashboard dashboard-compact' : 'dashboard'
+        }
+      >
         <PageFeedback />
         <div className="page-intro">
           <div>
