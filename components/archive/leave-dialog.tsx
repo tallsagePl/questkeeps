@@ -2,7 +2,7 @@
 
 import { useLocale } from '@/components/appearance';
 import Modal from '../modal';
-import { FeedbackButton } from '../feedback';
+import CopyLinkButton from '../copy-link-button';
 import { type ArchiveController } from './use-archive';
 
 export default function LeaveDialog({
@@ -11,7 +11,7 @@ export default function LeaveDialog({
   archive: ArchiveController;
 }) {
   const { t } = useLocale();
-  const { setModal, generated, copy } = archive;
+  const { setModal, generated } = archive;
 
   return (
     <>
@@ -24,12 +24,7 @@ export default function LeaveDialog({
             readOnly
             onFocus={(e) => e.target.select()}
           />
-          <FeedbackButton
-            className="primary"
-            onClick={() => void copy(generated)}
-          >
-            {t('common.copyLink')}
-          </FeedbackButton>
+          <CopyLinkButton value={generated} autoCopy />
           <a
             className="secondary centered"
             href={generated}

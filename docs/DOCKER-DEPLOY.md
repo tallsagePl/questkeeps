@@ -105,3 +105,5 @@ guest tokens.
 ## Reviewed schema 8 ↔ 9 transition
 
 Version 1.25.0 adds a defaulted rotation column, an independent exclusions table and an insertion trigger. Deploy the updated `deploy/docker-release.sh` **and** `deploy/media-archive-schema.py` together in `/opt/questkeeps/docker-tools/`. The release script backs up the database, applies migration 9 before starting the candidate, and restores only the compatibility marker on failure. The running schema-8 application remains SQL compatible. A release of the retained schema-8 image restores marker 8 while preserving rotations, exclusions and the trigger; redeploying schema 9 is idempotent. The trigger also prevents the old worker from reimporting excluded files. Other version transitions still fail closed. Never replace the live database with the pre-release snapshot for this code rollback: that would discard intervening user writes.
+
+Schema 10 adds only `notification_state`, a private per-user notification snapshot. The reviewed online transition and marker rollback also support 9 ↔ 10 and 8 ↔ 10. The same helper preserves the table and its contents during code rollback; migration 10 uses `IF NOT EXISTS`.

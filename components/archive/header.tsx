@@ -22,7 +22,7 @@ export default function Header({ archive }: { archive: ArchiveController }) {
           back={!!(selected || share || invite)}
           guest={guest}
           logout={
-            user && !guest ? (
+            user ? (
               <FeedbackButton
                 className="text-button header-logout"
                 onClick={() => void action(signOut)}
@@ -35,6 +35,12 @@ export default function Header({ archive }: { archive: ArchiveController }) {
         <HeaderBrand back={!!(selected || share || invite)} />
         <span className="top-caption">{t('trip.yourTravelCollection')}</span>
         <div className="top-actions">
+          {guest && (
+            <span className="pill header-guest-badge">
+              <Icon name="link" size={14} />
+              {t('trip.guestView')}
+            </span>
+          )}
           {user && <TripInvitations key={user.id} userId={user.id} />}
           {user && (
             <a
@@ -51,7 +57,7 @@ export default function Header({ archive }: { archive: ArchiveController }) {
           <a className="text-button about-nav-link" href="/about">
             {t('navigation.about')}
           </a>
-          {!guest && user && (
+          {user && (
             <a
               className="text-button user-button"
               href="/profile"
@@ -62,12 +68,7 @@ export default function Header({ archive }: { archive: ArchiveController }) {
             </a>
           )}
           <AppearanceControls />
-          {guest ? (
-            <span className="pill">
-              <Icon name="link" size={14} />
-              {t('trip.guestView')}
-            </span>
-          ) : user ? (
+          {user ? (
             <>
               <FeedbackButton
                 className="icon-button header-logout"

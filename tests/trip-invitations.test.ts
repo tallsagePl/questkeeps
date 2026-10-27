@@ -391,3 +391,159 @@ test('decline and expiry do not create membership; an expired invitation can be 
     200,
   );
 });
+
+test('notification snapshots are private and Drive checks are queued once per authenticated session', async () => {
+  const f = fixture();
+  const source = one('SELECT id FROM sources WHERE trip_id=?', f.trip)!.id;
+  run('UPDATE sources SET last_sync=? WHERE id=?', 100, source);
+  assert.equal(
+    (await request('invitations/check-drive', '', {}, 'POST')).status,
+    401,
+  );
+  assert.equal(
+    (
+      await request(
+        'invitations/check-drive',
+        f.ownerCookie,
+        {},
+        'POST',
+        'https://other.invalid',
+      )
+    ).status,
+    403,
+  );
+  let snapshot = await (await request('invitations', f.ownerCookie)).json();
+  assert.equal(snapshot.drive.find((trip: any) => trip.id === f.trip).count, 3);
+  assert.match(
+    snapshot.drive.find((trip: any) => trip.id === f.trip).stamp,
+    /^[a-f0-9]{64}$/,
+  );
+  const other = await (await request('invitations', f.otherCookie)).json();
+  assert.deepEqual(other.drive, []);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    throw Error('A queued Drive check must not fetch Yandex in the request');
+  }) as typeof fetch;
+  try {
+    assert.equal(
+      (
+        await (
+          await request('invitations/check-drive', f.ownerCookie, {}, 'POST')
+        ).json()
+      ).queued,
+      1,
+    );
+    assert.equal(
+      one('SELECT last_sync FROM sources WHERE id=?', source)!.last_sync,
+      null,
+    );
+    run('UPDATE sources SET last_sync=? WHERE id=?', 200, source);
+    assert.equal(
+      (
+        await (
+          await request('invitations/check-drive', f.ownerCookie, {}, 'POST')
+        ).json()
+      ).queued,
+      0,
+    );
+    assert.equal(
+      one('SELECT last_sync FROM sources WHERE id=?', source)!.last_sync,
+      200,
+    );
+    assert.equal(
+      (
+        await (
+          await request('invitations/check-drive', f.otherCookie, {}, 'POST')
+        ).json()
+      ).queued,
+      0,
+    );
+    assert.equal(
+      one('SELECT last_sync FROM sources WHERE id=?', source)!.last_sync,
+      200,
+    );
+    const newSession = 'ta_session=' + session(f.owner);
+    assert.equal(
+      (
+        await (
+          await request('invitations/check-drive', newSession, {}, 'POST')
+        ).json()
+      ).queued,
+      1,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  await request('friends/' + f.owner, f.personCookie, {}, 'POST');
+  snapshot = await (await request('invitations', f.ownerCookie)).json();
+  assert.equal(
+    snapshot.friends.incoming.some((person: any) => person.id === f.person),
+    true,
+  );
+  assert.equal(
+    JSON.stringify(snapshot.friends).includes('@fixture.invalid'),
+    false,
+  );
+});
+
+test('new media and accepted friendship notifications survive sessions and are acknowledged only by their owner', async () => {
+  const f = fixture();
+  await request('invitations', f.ownerCookie);
+  const source = one('SELECT id FROM sources WHERE trip_id=?', f.trip)!.id;
+  const photo = id();
+  run(
+    'INSERT INTO media(id,source_id,trip_id,user_id,resource_id,path,name,mime,kind,taken,date_basis) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+    photo,
+    source,
+    f.trip,
+    f.owner,
+    photo,
+    'disk:/new.jpg',
+    'new.jpg',
+    'image/jpeg',
+    'photo',
+    '2026-10-13',
+    'created',
+  );
+  let data = await (await request('invitations', f.ownerCookie)).json();
+  assert.equal(data.driveChanges.length, 1);
+  const key = 'drive:' + f.trip + ':' + data.driveChanges[0].stamp;
+  assert.equal(
+    (await request('invitations/read', f.ownerCookie, { keys: [key] })).status,
+    200,
+  );
+  const anotherSession = 'ta_session=' + session(f.owner);
+  data = await (await request('invitations', anotherSession)).json();
+  assert.equal(data.driveChanges.length, 1);
+  assert.ok(data.seen.includes(key));
+  await request('invitations/drive-read', f.otherCookie, { tripId: f.trip });
+  assert.equal(
+    (await (await request('invitations', anotherSession)).json()).driveChanges
+      .length,
+    1,
+  );
+  await request('invitations/drive-read', anotherSession, { tripId: f.trip });
+  assert.equal(
+    (await (await request('invitations', f.ownerCookie)).json()).driveChanges
+      .length,
+    0,
+  );
+  await request('friends/' + f.owner, f.personCookie, {});
+  await request(
+    'friends/' + f.person,
+    f.ownerCookie,
+    { action: 'accept' },
+    'PATCH',
+  );
+  const personSession = 'ta_session=' + session(f.person);
+  data = await (await request('invitations', personSession)).json();
+  assert.equal(
+    data.accepted.some((p: any) => p.id === f.owner),
+    true,
+  );
+  assert.equal(
+    (await (await request('invitations', f.otherCookie)).json()).accepted
+      .length,
+    0,
+  );
+});

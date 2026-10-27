@@ -218,6 +218,17 @@ export function useArchive({
     }
   }, [share, selected, user, loadTrip, loadTrips]);
   useEffect(() => {
+    const updated = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.userId !== user?.id) return;
+      if (selected === detail.tripId && !guest) void action(refresh);
+      else if (!selected && !guest) void loadTrips();
+    };
+    window.addEventListener('questkeeps:archive-refresh', updated);
+    return () =>
+      window.removeEventListener('questkeeps:archive-refresh', updated);
+  }, [user?.id, selected, guest, action, refresh, loadTrips]);
+  useEffect(() => {
     mounted.current = true;
     void action(async () => {
       let me;

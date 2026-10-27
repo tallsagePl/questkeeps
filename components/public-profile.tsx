@@ -10,6 +10,11 @@ export default function PublicProfile({ profile }: { profile: Person }) {
   const { t, m } = useLocale();
   const viewer = useViewer();
   const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(timer);
+  }, [copied]);
   const [copyError, setCopyError] = useState('');
   const [trips, setTrips] = useState<
     { id: string; title: string; start: string; end: string }[]
@@ -54,7 +59,25 @@ export default function PublicProfile({ profile }: { profile: Person }) {
           <PersonAvatar person={profile} />
           <div>
             <h1>{profile.name}</h1>
-            <p className="muted">@{profile.username}</p>
+            <button
+              className="text-button public-profile-handle"
+              data-copied={copied}
+              title={t('common.copyLink')}
+              aria-label={t(copied ? 'common.linkCopied' : 'common.copyLink')}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(
+                    location.origin + '/@' + profile.username,
+                  );
+                  setCopied(true);
+                  setCopyError('');
+                } catch {
+                  setCopyError('publicProfile.couldNotCopyTheLinkCopyThe');
+                }
+              }}
+            >
+              @{profile.username}
+            </button>
           </div>
         </section>
         <div className="public-person-actions">
@@ -69,22 +92,6 @@ export default function PublicProfile({ profile }: { profile: Person }) {
               {t('common.loading')}
             </p>
           )}
-          <button
-            className="text-button"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(
-                  location.origin + '/@' + profile.username,
-                );
-                setCopied(true);
-                setCopyError('');
-              } catch {
-                setCopyError('publicProfile.couldNotCopyTheLinkCopyThe');
-              }
-            }}
-          >
-            {t(copied ? 'common.linkCopied' : 'common.copyLink')}
-          </button>
         </div>
         {copyError && <p role="alert">{m(copyError)}</p>}
         {viewer.error && <p role="alert">{m(viewer.error)}</p>}

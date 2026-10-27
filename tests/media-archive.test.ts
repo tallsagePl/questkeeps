@@ -190,6 +190,12 @@ test('rotation persists through sync; archive removal survives reconnects withou
     );
     assert.equal(one('SELECT count(*) n FROM media')?.n, 0);
     run('UPDATE media_exclusions SET created=123');
+    run(
+      'INSERT INTO notification_state VALUES (?,?,?)',
+      'author',
+      JSON.stringify({ fixture: 'preserved' }),
+      123,
+    );
     for (const target of [8, 9, 8]) {
       const result = spawnSync(
         process.platform === 'win32' ? 'python' : 'python3',
@@ -207,7 +213,12 @@ test('rotation persists through sync; archive removal survives reconnects withou
     const { migrate } = await import('../lib/migrations');
     migrate(db);
     assert.equal(one('SELECT created FROM media_exclusions')?.created, 123);
-    assert.equal(db.pragma('user_version', { simple: true }), 9);
+    assert.equal(db.pragma('user_version', { simple: true }), 10);
+    assert.equal(
+      one('SELECT snapshot FROM notification_state WHERE user_id=?', 'author')
+        ?.snapshot,
+      JSON.stringify({ fixture: 'preserved' }),
+    );
     assert.ok(methods.length > 0);
     assert.ok(methods.every((method) => method === 'GET'));
   } finally {

@@ -65,10 +65,10 @@ test('owner invites by email, recipient accepts from notifications, participatio
     await expect(dialog).toHaveCount(0);
     const member = await recipient.newPage();
     await member.goto(base + '/about');
-    await expect(member.locator('.invitation-count')).toHaveText('1');
-    await member.getByRole('button', { name: /Приглашения в поездки/ }).click();
+    await expect(member.locator('.notification-dot')).toBeVisible();
+    await member.getByRole('button', { name: /Уведомления/ }).click();
     const inbox = member.getByRole('region', {
-      name: 'Приглашения в поездки',
+      name: 'Уведомления',
       exact: true,
     });
     await expect(
@@ -99,8 +99,8 @@ test('owner invites by email, recipient accepts from notifications, participatio
     ).toBeFalsy();
     await member.keyboard.press('Escape');
     await member.reload();
-    await member.getByRole('button', { name: /Приглашения в поездки/ }).click();
-    await expect(member.getByText('Новых приглашений пока нет.')).toBeVisible();
+    await member.getByRole('button', { name: /Уведомления/ }).click();
+    await expect(member.getByText('Новых уведомлений пока нет.')).toBeVisible();
     await member.keyboard.press('Escape');
     await member.evaluate(() => {
       localStorage.setItem('ta-language', 'en');

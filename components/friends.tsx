@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
 import FriendLink from './friend-link';
@@ -49,20 +49,46 @@ export function FriendshipAction({
 }) {
   const { t, m } = useLocale();
   const [status, setStatus] = useState<Status | undefined>(initial);
+  const statusGeneration = useRef(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
+    const generation = ++statusGeneration.current;
     setStatus(initial);
     if (initial) return;
     const c = new AbortController();
     void api('friends/' + person.id, 'GET', undefined, c.signal)
-      .then((r) => setStatus(r.relationship))
+      .then((r) => {
+        if (generation === statusGeneration.current && !c.signal.aborted)
+          setStatus(r.relationship);
+      })
       .catch((e) => {
         if (!c.signal.aborted) setError(e.message);
       });
     return () => c.abort();
   }, [person.id, viewerId, initial]);
+  useEffect(() => {
+    const updated = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.userId !== viewerId || !detail.friends) return;
+      statusGeneration.current++;
+      const lists = detail.friends as Lists;
+      setStatus(
+        lists.friends.some((p) => p.id === person.id)
+          ? 'friends'
+          : lists.incoming.some((p) => p.id === person.id)
+            ? 'incoming'
+            : lists.outgoing.some((p) => p.id === person.id)
+              ? 'outgoing'
+              : 'none',
+      );
+    };
+    window.addEventListener('questkeeps:social-updated', updated);
+    return () =>
+      window.removeEventListener('questkeeps:social-updated', updated);
+  }, [person.id, viewerId]);
   async function change(method: string) {
+    statusGeneration.current++;
     setBusy(true);
     setError('');
     try {
@@ -131,12 +157,23 @@ export function FriendshipAction({
       )}
       {status === 'friends' && (
         <>
-          <span className="fine">{t('friends.youAreFriends')}</span>
           <button
-            className="text-button"
+            className="secondary friend-remove"
             disabled={busy}
             onClick={() => void change('DELETE')}
           >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="7" r="4" />
+              <path d="M2 21v-2a7 7 0 0 1 13-3M16 11l6 6m0-6-6 6" />
+            </svg>
             {t('friends.removeFriend')}
           </button>
         </>
@@ -175,6 +212,7 @@ export default function Friends({
 }) {
   const { t, m } = useLocale();
   const [lists, setLists] = useState<Lists>(empty);
+  const listGeneration = useRef(0);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -184,8 +222,9 @@ export default function Friends({
   const load = useCallback(
     async (signal?: AbortSignal) => {
       try {
+        const generation = ++listGeneration.current;
         const r = await api<Lists>('friends', 'GET', undefined, signal);
-        if (signal?.aborted) return;
+        if (signal?.aborted || generation !== listGeneration.current) return;
         setLists(r);
         setError('');
         setReady(true);
@@ -206,10 +245,21 @@ export default function Friends({
     const changed = (event: Event) => {
       if ((event as CustomEvent).detail === viewerId) void load(c.signal);
     };
+    const updated = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.userId === viewerId && detail.friends) {
+        listGeneration.current++;
+        setLists(detail.friends);
+        setReady(true);
+        setError('');
+      }
+    };
+    window.addEventListener('questkeeps:social-updated', updated);
     window.addEventListener('questkeeps:friends-changed', changed);
     return () => {
       c.abort();
       window.removeEventListener('questkeeps:friends-changed', changed);
+      window.removeEventListener('questkeeps:social-updated', updated);
     };
   }, [viewerId, load]);
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { notificationSnapshot } from '../notifications';
 import {
   friendLinkStatus,
   createFriendLink,
@@ -77,13 +78,17 @@ export async function friendRoutes({
         return json({ relationship: relationship(u.id, targetId) });
       if (method === 'POST') {
         throttle('friend-request:' + u.id, 30, 60000);
-        return json({ relationship: requestFriend(u.id, targetId) });
+        const state = requestFriend(u.id, targetId);
+        notificationSnapshot(u.id);
+        return json({ relationship: state });
       }
       if (method === 'PATCH') {
         z.object({ action: z.literal('accept') })
           .strict()
           .parse(await body(req));
-        return json({ relationship: acceptFriend(u.id, targetId) });
+        const state = acceptFriend(u.id, targetId);
+        notificationSnapshot(targetId);
+        return json({ relationship: state });
       }
       if (method === 'DELETE')
         return json({ relationship: removeFriend(u.id, targetId) });

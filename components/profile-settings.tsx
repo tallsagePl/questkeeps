@@ -166,13 +166,17 @@ export default function ProfileSettings({
               </button>
             </div>
           )}
-          {user.email && <p className="muted">{user.email}</p>}
-          {user.linkedEmails?.map((email) => (
-            <p className="muted" key={email}>
-              {email} <small>({t('profile.yandex')})</small>
-            </p>
-          ))}
         </div>
+        {user.email && (
+          <p className="muted profile-email" title={user.email}>
+            {user.email}
+          </p>
+        )}
+        {user.linkedEmails?.map((email) => (
+          <p className="muted profile-email" title={email} key={email}>
+            {email} <small>({t('profile.yandex')})</small>
+          </p>
+        ))}
       </div>
       {editingAvatar && (
         <div className="avatar-edit-controls">

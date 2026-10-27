@@ -1,3 +1,10 @@
+import {
+  notificationSnapshot,
+  readNotifications,
+  refreshDriveNotification,
+} from '../notifications';
+import { cookie } from '../access';
+import { hash } from '../db';
 import { z } from 'zod';
 import { all, one, run, db } from '../db';
 import { fail } from '../access';
@@ -12,6 +19,53 @@ export async function invitationRoutes({
   u,
 }: AuthenticatedContext): Promise<Response | undefined> {
   if (p[0] !== 'invitations') return;
+  if (p[1] === 'read' && !p[2] && method === 'POST') {
+    const input = z
+      .object({ keys: z.array(z.string().max(200)).max(300) })
+      .strict()
+      .parse(await body(req));
+    readNotifications(u.id, input.keys);
+    return json({ ok: true });
+  }
+  if (p[1] === 'drive-read' && !p[2] && method === 'POST') {
+    const input = z
+      .object({ tripId: z.string().min(1).max(100) })
+      .strict()
+      .parse(await body(req));
+    refreshDriveNotification(u.id, input.tripId);
+    return json({ ok: true });
+  }
+  if (p[1] === 'check-drive' && !p[2] && method === 'POST') {
+    // One check per authenticated session, not per page or browser tab. The
+    // worker scans the selected folders; this request never waits on Yandex.
+    const sessionHash = hash(cookie(req, 'ta_session') || '');
+    const session = one(
+      'SELECT expires FROM sessions WHERE hash=? AND user_id=? AND expires>?',
+      sessionHash,
+      u.id,
+      Date.now(),
+    );
+    if (!session) fail(401, 'messages.accessDenied');
+    const queued = db
+      .transaction(() => {
+        const first = run(
+          'INSERT OR IGNORE INTO throttle(key,count,until) VALUES (?,1,?)',
+          'drive-session:' + sessionHash,
+          session.expires,
+        ).changes;
+        if (!first) return 0;
+        return run(
+          'UPDATE sources SET last_sync=NULL WHERE user_id=? AND approved=1 AND lock_until<? AND account_id IN (SELECT id FROM accounts WHERE user_id=? AND disk_enabled=1) AND (trip_id IN (SELECT id FROM trips WHERE owner_id=?) OR trip_id IN (SELECT trip_id FROM members WHERE user_id=? AND active=1))',
+          u.id,
+          Date.now(),
+          u.id,
+          u.id,
+          u.id,
+        ).changes;
+      })
+      .immediate();
+    return json({ queued });
+  }
   if (!p[1] && method === 'GET') {
     const args = [u.id, Date.now()];
     const invitations = all(
@@ -22,7 +76,7 @@ export async function invitationRoutes({
       'SELECT count(*) n FROM trip_invitations WHERE recipient_id=? AND expires>?',
       ...args,
     )!.n;
-    return json({ invitations, count });
+    return json({ invitations, count, ...notificationSnapshot(u.id) });
   }
   if (p[1] && !p[2] && method === 'POST') {
     const input = z

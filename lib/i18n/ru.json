@@ -879,5 +879,12 @@
   "mediaArchive.cancel": "Отмена",
   "mediaArchive.previous": "Предыдущий кадр",
   "mediaArchive.next": "Следующий кадр",
-  "mediaArchive.photosOnly": "Поворачивать можно только фотографии."
+  "mediaArchive.photosOnly": "Поворачивать можно только фотографии.",
+  "notifications.title": "Уведомления",
+  "notifications.empty": "Новых уведомлений пока нет.",
+  "notifications.friendRequest": "{name} хочет добавить вас в друзья",
+  "notifications.friendAccepted": "Заявка в друзья принята: {name}",
+  "notifications.newPhotos": "С Яндекс Диска загружены новые кадры",
+  "notifications.openTrip": "Открыть поездку",
+  "notifications.refreshTrip": "Обновить поездку"
 }

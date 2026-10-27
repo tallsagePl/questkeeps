@@ -911,3 +911,48 @@ dialog.modal.fullscreen[open] {
   background: var(--paper);
   pointer-events: none;
 }
+
+.profile-identity .profile-email { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.public-profile-handle { color: var(--accent); padding: 4px 0; }
+.friend-actions .friend-remove { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+.copy-link-feedback { transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease; }
+.copy-link-feedback[data-copied='true'] { background: #187346; border-color: #187346; color: #fff; }
+.header-guest-badge { white-space: nowrap; }
+@media (min-width: 701px) {
+  .friend-discovery { align-items: start; grid-template-rows: auto auto auto; row-gap: 12px; }
+  .friend-discovery > .find-people, .friend-discovery > .friend-link-block { display: grid; grid-template-rows: subgrid; grid-row: span 3; gap: 12px; }
+  .friend-discovery h3 { grid-row: 1; margin: 0; }
+  .find-people > .field { display: contents; }
+  .find-people > .field > span { grid-row: 2; align-self: end; }
+  .find-people > .field > input { grid-row: 3; align-self: start; }
+  .friend-link-block > p.fine:first-of-type { grid-row: 2; margin: 0; }
+  .friend-link-block > .friend-link-actions { grid-row: 3; align-self: start; margin: 0; min-height: 44px; }
+  .friend-link-block > .field { grid-row: 4; }
+}
+@media (max-width: 700px) {
+  .site-header:has(.header-guest-badge) { height: auto; min-height: 64px; }
+  .site-header .header-guest-badge { grid-column: 1 / -1; grid-row: 2; justify-self: center; font-size: 11px; padding: 2px 8px; }
+  .site-header:has(.header-guest-badge) .top-actions { display: contents; }
+  .site-header:has(.header-guest-badge) .invitation-notifications { grid-column: 3; grid-row: 1; justify-self: start; }
+  .site-header:has(.header-guest-badge) .user-button { grid-column: 3; grid-row: 1; justify-self: end; }
+  .site-header:has(.header-guest-badge) .top-actions > :not(.header-guest-badge, .invitation-notifications, .user-button) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .copy-link-feedback { transition: none; } }
+
+.invitation-notifications { position: relative; }
+.notification-dot { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); outline: 2px solid var(--paper); }
+.notification-bell { transform-origin: 50% 15%; }
+.notification-bell.is-ringing { animation: notification-ring 480ms ease-in-out; }
+@keyframes notification-ring { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(16deg); } 40% { transform: rotate(-14deg); } 60% { transform: rotate(9deg); } 80% { transform: rotate(-5deg); } }
+@media (prefers-reduced-motion: reduce) { .notification-bell.is-ringing { animation: none; } }
+
+.friend-discovery input, .friend-link-actions > button { min-height: 44px; height: 44px; box-sizing: border-box; }
+@media (max-width: 700px) {
+  .site-header .top-actions > .header-guest-badge { display: inline-flex; }
+  .site-header:has(.header-guest-badge) .top-actions > [popover]:popover-open { display: block; }
+}
+
+.profile-settings-panel .profile-identity { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px 20px; align-items: center; }
+.profile-settings-panel .profile-identity > .profile-email { grid-column: 1 / -1; margin: 0; font-size: 14px; }
+
+.public-profile-handle[data-copied="true"] { color: #187346; }

@@ -1,3 +1,4 @@
+import { notificationState } from './010-notification-state';
 import { mediaArchive } from './009-media-archive';
 import { tripInvitations } from './008-trip-invitations';
 import { telegram } from './006-telegram';
@@ -19,6 +20,7 @@ export const migrations = [
   { version: 7, name: 'trip-follows', up: tripFollows },
   { version: 8, name: 'trip-invitations', up: tripInvitations },
   { version: 9, name: 'media-archive', up: mediaArchive },
+  { version: 10, name: 'notification-state', up: notificationState },
 ];
 
 export function migrate(db: Database.Database) {

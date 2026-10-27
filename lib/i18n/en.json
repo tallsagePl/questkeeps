@@ -879,5 +879,12 @@
   "mediaArchive.cancel": "Cancel",
   "mediaArchive.previous": "Previous frame",
   "mediaArchive.next": "Next frame",
-  "mediaArchive.photosOnly": "Only photos can be rotated."
+  "mediaArchive.photosOnly": "Only photos can be rotated.",
+  "notifications.title": "Notifications",
+  "notifications.empty": "No new notifications yet.",
+  "notifications.friendRequest": "{name} sent you a friend request",
+  "notifications.friendAccepted": "{name} accepted your friend request",
+  "notifications.newPhotos": "New frames imported from Yandex Disk",
+  "notifications.openTrip": "Open trip",
+  "notifications.refreshTrip": "Refresh trip"
 }

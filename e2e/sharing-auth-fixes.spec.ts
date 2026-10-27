@@ -7,6 +7,7 @@ test('guest link is retrievable after reload and owner avatar uses the actual pr
   page,
   context,
 }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const email = 'share-' + Date.now() + '@fixture.invalid';
   await page.request.post('/api/auth/register', {
     headers,
@@ -50,6 +51,21 @@ test('guest link is retrievable after reload and owner avatar uses the actual pr
     .getByLabel('Гостевая ссылка', { exact: true })
     .inputValue();
   expect(link).toContain('/s/v1.');
+  await expect(
+    page.getByRole('button', { name: 'Ссылка скопирована', exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+  await expect(page.locator('.copy-link-feedback')).toHaveAttribute(
+    'data-copied',
+    'false',
+  );
+  await page
+    .getByRole('button', { name: 'Скопировать ссылку', exact: true })
+    .click();
+  await expect(page.locator('.copy-link-feedback')).toHaveAttribute(
+    'data-copied',
+    'true',
+  );
   await expect(
     page.getByRole('link', { name: 'Открыть гостевой просмотр' }),
   ).toHaveAttribute('href', link);

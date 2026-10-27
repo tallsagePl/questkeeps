@@ -78,8 +78,28 @@ test('friends are consensual and private, profile is a page, About works in both
       page.getByRole('heading', { name: bob.name, exact: true }),
     ).toBeVisible();
     await expect(page.getByText(bobEmail, { exact: true })).toHaveCount(0);
-    await expect(page.getByText('Вы друзья', { exact: true })).toBeVisible();
+    await a.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await expect(page.locator('.public-profile-handle')).toHaveText(
+      '@' + bob.username,
+    );
+    await page.locator('.public-profile-handle').click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      base + '/@' + bob.username,
+    );
+    await expect(
+      page
+        .locator('.public-person-actions')
+        .getByRole('button', { name: 'Скопировать ссылку', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Удалить из друзей', exact: true }),
+    ).toBeVisible();
     await page.goto(base + '/profile');
+    await page.getByRole('button', { name: /Уведомления/ }).click();
+    await expect(
+      page.getByRole('region', { name: 'Уведомления', exact: true }),
+    ).toContainText('Заявка в друзья принята: ' + bob.name);
+    await page.keyboard.press('Escape');
     await expect(page.locator('.profile-name-display')).toContainText(
       alice.name,
     );

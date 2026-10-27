@@ -17,7 +17,7 @@ current_schema=$(python3 -c "import sqlite3; print(sqlite3.connect('file:/opt/qu
 schema_transition="$current_schema:$target_schema"
 schema_changed=false
 schema_tool="$(dirname "$0")/media-archive-schema.py"
-if [ "$target_schema" != "$current_schema" ] && [ "$schema_transition" != '8:9' ] && [ "$schema_transition" != '9:8' ]; then
+if [ "$target_schema" != "$current_schema" ] && [ "$schema_transition" != '8:9' ] && [ "$schema_transition" != '9:8' ] && [ "$schema_transition" != '9:10' ] && [ "$schema_transition" != '10:9' ] && [ "$schema_transition" != '8:10' ] && [ "$schema_transition" != '10:8' ]; then
   echo "Schema $current_schema -> $target_schema requires a reviewed compatible migration before an online rollout."
   exit 1
 fi
@@ -80,18 +80,18 @@ target.close()
 source.close()
 os.chmod(path,0o600)
 PY
-# The 8 -> 9 change adds one defaulted column and an independent table. Old
+# Reviewed 8 -> 9 -> 10 changes add defaulted columns and independent tables. Old
 # application SQL remains compatible. A rollback retains both and restores only
 # the compatibility marker, without restoring a stale database snapshot.
-if [ "$schema_transition" = '8:9' ]; then
+if [ "$target_schema" -gt "$current_schema" ]; then
   test -f "$schema_tool"
   docker run --rm --network none --security-opt no-new-privileges --cap-drop ALL \
     --mount "type=bind,src=$root/shared/data,dst=/app/data" \
     --mount "type=bind,src=$root/shared/.env.local,dst=/run/questkeeps.env,readonly" "$image_id" \
     node --env-file=/run/questkeeps.env --import tsx scripts/migrate.ts
   schema_changed=true
-elif [ "$schema_transition" = '9:8' ]; then
-  python3 "$schema_tool" "$root/shared/data/travel.sqlite" 8
+elif [ "$target_schema" -lt "$current_schema" ]; then
+  python3 "$schema_tool" "$root/shared/data/travel.sqlite" "$target_schema"
   schema_changed=true
 fi
 

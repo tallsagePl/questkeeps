@@ -71,11 +71,11 @@ for (const width of [320, 393, 1024, 1440]) {
         }
       }
       const bell = header.getByRole('button', {
-        name: /Приглашения в поездки/,
+        name: /Уведомления/,
       });
       await bell.click();
       const panel = page.getByRole('region', {
-        name: 'Приглашения в поездки',
+        name: 'Уведомления',
         exact: true,
       });
       await expect(
