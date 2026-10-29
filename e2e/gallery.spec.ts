@@ -1161,6 +1161,7 @@ test('открытые места в отдельной вкладке без д
     });
   expect(clamp.height).toBeLessThanOrEqual(clamp.line * 6 + 1);
   expect(clamp.full).toBeGreaterThan(clamp.height);
+  await expect(details.locator('.details-body')).toHaveCSS('opacity', '1');
   const closing = await details.evaluate((element) => {
     const full = element.getBoundingClientRect().height;
     element.querySelector('summary')!.click();

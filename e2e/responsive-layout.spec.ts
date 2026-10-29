@@ -17,6 +17,8 @@ for (const screen of screens) {
     test('archive, long feeds, settings and profile fit the viewport', async ({
       page,
     }) => {
+      // This integration scenario captures several long feeds and viewport resizes.
+      test.setTimeout(90000);
       const errors: string[] = [];
       page.on('pageerror', (e) => {
         errors.push(e.message);

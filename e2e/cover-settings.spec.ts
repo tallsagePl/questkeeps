@@ -143,6 +143,7 @@ for (const width of [393, 1440])
       await expect(tile(0)).toHaveAttribute('aria-pressed', 'false');
       await open(0);
       const vertical = dialog.getByRole('slider', { name: 'По вертикали' });
+      await expect(vertical).toBeEnabled();
       await vertical.focus();
       await vertical.press('End');
       await expect(vertical).toHaveValue('100');

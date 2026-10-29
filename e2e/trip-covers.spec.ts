@@ -70,6 +70,7 @@ for (const width of [393, 1440])
       });
       await page.goto('/');
       const own = page.locator('button.trip-card');
+      await own.scrollIntoViewIfNeeded();
       await expect(own.locator('.trip-cover-current img')).toBeVisible();
       const initial = await own
         .locator('.trip-cover-current img')
