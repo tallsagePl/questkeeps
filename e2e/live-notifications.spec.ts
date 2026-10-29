@@ -192,6 +192,15 @@ for (const width of [393, 1280, 1440])
         await expect(
           header.getByRole('button', { name: 'Выйти', exact: true }),
         ).toBeVisible();
+      if (width >= 1280) {
+        const caption = (await header.locator('.top-caption').boundingBox())!;
+        const badge = (await header
+          .locator('.header-guest-badge')
+          .boundingBox())!;
+        const actions = (await header.locator('.top-actions').boundingBox())!;
+        expect(caption.y + caption.height).toBeLessThanOrEqual(badge.y);
+        expect(caption.x + caption.width).toBeLessThanOrEqual(actions.x);
+      }
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(width);
