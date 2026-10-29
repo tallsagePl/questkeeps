@@ -1040,3 +1040,21 @@ dialog.modal.fullscreen[open] {
   .site-header .top-actions { gap: 4px; }
   .site-header > .top-caption { width: 140px; max-width: 140px; }
 }
+
+@media (min-width: 701px) and (max-width: 1279px) {
+  .site-header > .top-caption { display: none; }
+}
+@media (min-width: 1280px) {
+  .site-header:has(.header-guest-badge) > .top-caption { top: 4px; }
+  .site-header .top-actions > .header-guest-badge {
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    transform: translateX(-50%);
+    height: 24px;
+    box-sizing: border-box;
+    padding: 2px 8px;
+    font-size: 12px;
+    margin: 0;
+  }
+}

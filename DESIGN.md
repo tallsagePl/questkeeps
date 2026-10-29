@@ -23,3 +23,5 @@ The unified notification bell uses a red unread dot and a single short ring on a
 Publication cards are another brand surface: `lib/share-cards.ts` draws the existing QK monogram and Night Quest palette into 1080 × 1350 posts or 1080 × 1920 stories. `components/archive/publish-dialog.tsx` owns selection and previews. Keep these cards in any future logo, typography or palette migration, alongside site, email and Telegram artwork. Exports respect the photo rotation; whole-photo fit is the default, and crop-to-fill is explicit.
 
 Desktop headers use 16px edge gutters independently of the page content. Profile, appearance and sign-out boxes share a 52px height. The collection caption is centered against the entire header, while compact desktop widths constrain the profile label and gaps to prevent overlap. The phone header keeps its existing 64px navigation layout.
+
+On desktop, the guest badge sits beneath the centered collection caption; neither label competes with the notification and account controls.

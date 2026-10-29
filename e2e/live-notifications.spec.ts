@@ -133,7 +133,7 @@ test('friend changes and Drive imports update the profile and bell without reloa
   await page.screenshot({ path: 'data/live-social-profile.png' });
 });
 
-for (const width of [393, 1440])
+for (const width of [393, 1280, 1440])
   test(
     'signed-in guest keeps profile and logout at ' + width,
     async ({ page }) => {
