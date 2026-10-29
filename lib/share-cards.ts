@@ -8,6 +8,7 @@ export function shareablePhotos(media: MediaItem[]) {
   return media.filter(
     (photo) =>
       photo.kind === 'photo' &&
+      !!photo.favorite &&
       !photo.hidden &&
       !photo.hidden_from_guests &&
       !photo.missing,

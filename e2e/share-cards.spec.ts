@@ -2,9 +2,12 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import sharp from 'sharp';
 
-async function fixture(page: import('@playwright/test').Page) {
+async function fixture(
+  page: import('@playwright/test').Page,
+  favorites = true,
+) {
   const image = fs.readFileSync('public/welcome/santorini.webp');
-  const media = Array.from({ length: 6 }, (_, index) => ({
+  const media = Array.from({ length: 7 }, (_, index) => ({
     id: 'frame-' + index,
     name: 'photo-' + index + '.jpg',
     title: index === 0 ? 'На берегу Эгейского моря' : 'Моменты путешествия',
@@ -14,6 +17,7 @@ async function fixture(page: import('@playwright/test').Page) {
     author: 'Fixture',
     taken: '2026-10-11',
     hidden: 0,
+    favorite: favorites && index !== 6 ? 1 : 0,
     hidden_from_guests: index === 5 ? 1 : 0,
     revision: '1',
     rotation: index === 1 ? 90 : 0,
@@ -182,6 +186,9 @@ test('exports a branded post and up to five stories, shares real PNG files and k
     dialog.getByRole('checkbox', { name: 'photo-5.jpg', exact: true }),
   ).toHaveCount(0);
   await expect(dialog.locator('.publish-photo-option')).toHaveCount(5);
+  await expect(
+    dialog.getByRole('checkbox', { name: 'photo-6.jpg', exact: true }),
+  ).toHaveCount(0);
   await page.screenshot({ path: 'data/publication-editor-desktop.png' });
 });
 
@@ -208,4 +215,21 @@ test('publication controls, preview and download fit a phone', async ({
   ).toBeTruthy();
   await dialog.locator('.publish-result').scrollIntoViewIfNeeded();
   await page.screenshot({ path: 'data/publication-editor-mobile.png' });
+});
+
+test('publication requires favorites and explains how to select them', async ({
+  page,
+}) => {
+  await fixture(page, false);
+  await page.goto('/?trip=frame');
+  await page
+    .getByRole('button', { name: 'Поделиться поездкой', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Публикация из поездки' });
+  await expect(
+    dialog.getByText('Добавьте фотографии в избранное', { exact: false }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: 'Создать предпросмотр' }),
+  ).toBeDisabled();
 });

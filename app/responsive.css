@@ -1061,3 +1061,19 @@ dialog.modal.fullscreen[open] {
     margin: 0;
   }
 }
+
+/* Covers preserve the archive artwork until a favorite preview has loaded. */
+.trip-cover-photo { position: absolute; inset: 0; }
+.trip-cover-photo .rotation-frame { width: 100%; height: 100%; }
+.trip-cover-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.trip-cover-current { animation: trip-cover-fade 280ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+@keyframes trip-cover-fade { from { opacity: 0; } to { opacity: 1; } }
+.trip-art.has-cover::before { display: none; }
+.trip-art.has-cover::after { inset: 0; width: auto; height: auto; border: 0; border-radius: 0; transform: none; opacity: 1; background: linear-gradient(180deg, #11131a40, transparent 35%, #11131acc); }
+.trip-art.has-cover .trip-number, .trip-art.has-cover .destination-art { color: #fff; z-index: 1; }
+.trip-art.has-cover > svg { display: none; }
+.followed-card.trip-card { padding: 0; }
+.followed-card > a { height: auto; }
+.followed-card .trip-card-body h3 { margin: 0 0 12px; }
+.followed-card > button { margin: 0 23px 20px; }
+@media (prefers-reduced-motion: reduce) { .trip-cover-current { animation: none; } }

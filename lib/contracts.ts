@@ -13,7 +13,10 @@ export type UserProfile = {
   linkedEmails: string[];
 };
 
+export type TripCover = { id: string; src: string; rotation?: number };
+
 export type TripSummary = {
+  covers?: TripCover[];
   id: string;
   title: string;
   destination: string;

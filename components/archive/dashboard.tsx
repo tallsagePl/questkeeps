@@ -2,6 +2,7 @@
 
 import { useLocale } from '@/components/appearance';
 import Friends from '../friends';
+import TripCover from '../trip-cover';
 import FollowedTrips from '../followed-trips';
 import { LogoMark } from '../brand';
 import { FeedbackButton, PageFeedback } from '../feedback';
@@ -53,13 +54,13 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
                 className="trip-card"
                 onClick={() => openTrip(trip.id)}
               >
-                <div className={'trip-art art-' + (index % 4)}>
-                  <span className="trip-number">
-                    {String(index + 1).padStart(2, '0')} / ARCHIVE
-                  </span>
-                  <Icon name="compass" size={80} />
-                  <span className="destination-art">{trip.destination}</span>
-                </div>
+                <TripCover
+                  key={user?.id + trip.id}
+                  scope={'user:' + user?.id}
+                  covers={trip.covers}
+                  destination={trip.destination}
+                  index={index}
+                />
                 <div className="trip-card-body">
                   <span className="eyebrow">{period(trip)}</span>
                   <h2>{trip.title}</h2>

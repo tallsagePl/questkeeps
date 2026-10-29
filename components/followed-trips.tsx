@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { FollowedTrip } from '../lib/contracts';
 import { api } from './api';
+import TripCover from './trip-cover';
 import { useLocale } from './appearance';
 import { Icon, period } from './archive/shared';
 
@@ -43,16 +44,29 @@ export default function FollowedTrips({ userId }: { userId: string }) {
         </p>
       )}
       <div className="trip-grid">
-        {trips.map((trip) => (
+        {trips.map((trip, index) => (
           <article className="trip-card followed-card" key={trip.id}>
             <a href={trip.url}>
-              <Icon name="star" size={22} />
-              <h3>{trip.title}</h3>
-              <p>{trip.destination}</p>
-              <p>{period(trip)}</p>
-              <p>
-                {trip.media_count} {t('trip.moments')}
-              </p>
+              <TripCover
+                scope={'user:' + userId}
+                covers={trip.covers}
+                destination={trip.destination}
+                index={index}
+              />
+              <div className="trip-card-body">
+                <span className="eyebrow">{period(trip)}</span>
+                <h3>{trip.title}</h3>
+                <div className="trip-meta">
+                  <span>
+                    <Icon name="pin" size={16} />
+                    {trip.destination}
+                  </span>
+                  <span>
+                    {trip.media_count} {t('trip.moments')}{' '}
+                    <Icon name="arrow" size={18} />
+                  </span>
+                </div>
+              </div>
             </a>
             <button
               className="text-button"

@@ -25,3 +25,5 @@ Publication cards are another brand surface: `lib/share-cards.ts` draws the exis
 Desktop headers use 16px edge gutters independently of the page content. Profile, appearance and sign-out boxes share a 52px height. The collection caption is centered against the entire header, while compact desktop widths constrain the profile label and gaps to prevent overlap. The phone header keeps its existing 64px navigation layout.
 
 On desktop, the guest badge sits beneath the centered collection caption; neither label competes with the notification and account controls.
+
+Dashboard covers are a shared brand surface for personal and followed trips. Keep the archive artwork while a preview is unavailable. Personal cards use the viewer's favorite photos within their access window; followed cards use only the owner's guest-visible favorites. Load a bounded deck through the scoped preview queue, start at a random frame, and crossfade every eight seconds over 280ms. Stop cycling offscreen, in hidden tabs and under reduced motion; no playback button. Publication exports accept only favorite, guest-visible still photos and explain the star action when empty.
