@@ -56,6 +56,7 @@ export default function Modal({
     <dialog
       ref={ref}
       aria-labelledby={titleId}
+      aria-label={typeof title === 'string' ? title : undefined}
       className={
         'modal ' + (wide ? 'wide ' : '') + (fullscreen ? 'fullscreen' : '')
       }

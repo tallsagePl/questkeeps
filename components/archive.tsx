@@ -26,6 +26,7 @@ import InviteDialog from './archive/invite-dialog';
 import LeaveDialog from './archive/leave-dialog';
 import ShareDialog from './archive/share-dialog';
 import MediaDialog from './archive/media-dialog';
+import PublishDialog from './archive/publish-dialog';
 import AuthForm from './archive/auth-form';
 
 export default function Archive(props: { share?: string; invite?: string }) {
@@ -224,6 +225,14 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
               )}
             </div>
             <div className="trip-heading-side">
+              <button
+                type="button"
+                className="secondary trip-publish-button"
+                onClick={() => archive.setModal('publish')}
+              >
+                <Icon name="link" />
+                {t('exports.open')}
+              </button>
               {guest && props.share && (
                 <TripFollow
                   key={trip.id + ':' + (user?.id || '')}
@@ -317,6 +326,7 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
       )}
       {modal === 'share' && <LeaveDialog archive={archive} />}
       {modal === 'leave' && <ShareDialog archive={archive} />}
+      {modal === 'publish' && trip && <PublishDialog archive={archive} />}
       {activeMedia && <MediaDialog archive={archive} />}
     </>
   );

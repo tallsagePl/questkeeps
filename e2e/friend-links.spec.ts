@@ -27,8 +27,8 @@ test('friend links survive registration and login, add both people, and can be r
   const field = page.getByLabel('Ссылка для друзей', { exact: true });
   await expect(field).toBeVisible();
   const url = await field.inputValue();
-  const search = await page.locator('#find-people').boundingBox();
-  const link = await page.locator('.friend-link-block').boundingBox();
+  const search = await page.locator('#find-people input').boundingBox();
+  const link = await field.boundingBox();
   expect(search!.x).toBeLessThan(link!.x);
   expect(Math.abs(search!.width - link!.width)).toBeLessThan(2);
   await page.screenshot({

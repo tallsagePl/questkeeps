@@ -214,3 +214,12 @@ test('hidden document URLs retain section skip count after reload', () => {
   assert.equal(delta, -3);
   delete (browser as any).navigation;
 });
+
+test('a restored tab fragment survives replaced router history metadata', () => {
+  reset();
+  href = 'https://fixture.invalid/?trip=fixture#view=notes';
+  initializeNavigation();
+  assert.equal(navigationTab(), 'notes');
+  href = 'https://fixture.invalid/?trip=fixture#view=unknown';
+  assert.equal(navigationTab(), 'gallery');
+});

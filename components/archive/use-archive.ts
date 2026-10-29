@@ -312,7 +312,9 @@ export function useArchive({
   };
   const openTab = (next: string) => {
     const view = guest && next === 'settings' ? 'gallery' : next;
-    pushNavigation(window.location.href, view);
+    const destination = new URL(window.location.href);
+    destination.hash = view === 'gallery' ? '' : 'view=' + view;
+    pushNavigation(destination.href, view);
     setTab(view);
     setError('');
   };

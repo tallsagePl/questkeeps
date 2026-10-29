@@ -42,6 +42,11 @@ export function initializeNavigation() {
 }
 
 export function navigationTab() {
+  // A document restoration can replace router history metadata. The fragment
+  // retains the selected tab across those restores without storing any media.
+  const fragment = new URL(window.location.href).hash.slice(1);
+  const view = fragment.startsWith('view=') ? fragment.slice(5) : '';
+  if (tabs.includes(view)) return view;
   const tab = entry()?.tab;
   return tab && tabs.includes(tab) ? tab : 'gallery';
 }
