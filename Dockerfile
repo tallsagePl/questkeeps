@@ -4,12 +4,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS=--max-old-space-size=384
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci && npm cache clean --force
 COPY . .
 ARG SOURCE_REVISION=local
 ENV APP_URL=https://questkeeps.ru
 ENV DATABASE_PATH=/tmp/questkeeps-build.sqlite
-RUN npm run build && node --import tsx --input-type=module -e "import fs from 'node:fs'; import {migrations} from './lib/migrations/index.ts'; fs.writeFileSync('deployment.json',JSON.stringify({schema:migrations.at(-1).version}));" && npm prune --omit=dev && rm -rf .next/cache
+RUN npm run build && node --import tsx --input-type=module -e "import fs from 'node:fs'; import {migrations} from './lib/migrations/index.ts'; fs.writeFileSync('deployment.json',JSON.stringify({schema:migrations.at(-1).version}));" && npm prune --omit=dev && npm cache clean --force && rm -rf .next/cache
 
 FROM node:24-bookworm-slim AS runtime
 ARG APP_UID=997
