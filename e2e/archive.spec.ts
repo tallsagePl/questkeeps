@@ -59,7 +59,7 @@ test('регистрация, поездка, дневник, гостевая �
     page.getByText('Утром увидели горы.', { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole('button', { name: 'Участники и Диски', exact: true })
+    .getByRole('button', { name: 'Управление поездкой', exact: true })
     .click();
   await page
     .getByRole('button', { name: 'Создать ссылку', exact: true })
@@ -77,7 +77,7 @@ test('регистрация, поездка, дневник, гостевая �
     guest.getByText('Утром увидели горы.', { exact: true }),
   ).toBeVisible();
   await expect(
-    guest.getByRole('button', { name: 'Участники и Диски', exact: true }),
+    guest.getByRole('button', { name: 'Управление поездкой', exact: true }),
   ).toHaveCount(0);
   await page
     .getByRole('button', { name: 'Отозвать доступ', exact: true })

@@ -80,6 +80,8 @@ for (const screen of screens) {
         const path = new URL(r.request().url()).pathname;
         if (path.endsWith('/preview') || path.endsWith('/original'))
           return r.fulfill({ body: photo, contentType: 'image/webp' });
+        if (path.endsWith('/cover'))
+          return r.fulfill({ json: { mode: 'all', photoIds: [] } });
         let json: unknown = {};
         if (path === '/api/me') json = { user, yandexEnabled: true };
         else if (path === '/api/trips')
@@ -279,7 +281,7 @@ for (const screen of screens) {
       await page.locator('.notes-layout').waitFor();
       await capture('journal');
       await page
-        .getByRole('button', { name: 'Участники и Диски', exact: true })
+        .getByRole('button', { name: 'Управление поездкой', exact: true })
         .click();
       await page.locator('.member').last().waitFor();
       await capture('settings');

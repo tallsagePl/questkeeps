@@ -1,11 +1,16 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { NextRequest } from 'next/server';
+import { handle } from '../lib/api';
+import { session } from '../lib/access';
+import { migrate } from '../lib/migrations';
 import { db, run, encrypt } from '../lib/db';
-import { tripCovers } from '../lib/trip-covers';
+import { tripCovers, coverSettings } from '../lib/trip-covers';
 
 after(() => db.close());
 
-test('favorite covers respect guest visibility, membership dates and source approval', () => {
+test('favorite covers respect guest visibility, membership dates and source approval', async () => {
   for (const user of ['owner', 'member', 'stranger'])
     run(
       'INSERT INTO users VALUES (?,?,?,?,?)',
@@ -101,4 +106,87 @@ test('favorite covers respect guest visibility, membership dates and source appr
   );
   run('UPDATE sources SET approved=0 WHERE id=?', 'source');
   assert.deepEqual(tripCovers('trip', 'owner'), []);
+  run('UPDATE sources SET approved=1 WHERE id=?', 'source');
+  const request = (user: string, body?: unknown) =>
+    handle(
+      new NextRequest('http://localhost:3000/api/trips/trip/cover', {
+        method: body ? 'PATCH' : 'GET',
+        headers: {
+          cookie: user ? 'ta_session=' + session(user) : '',
+          origin: 'http://localhost:3000',
+          'content-type': 'application/json',
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      }),
+      ['trips', 'trip', 'cover'],
+    );
+  assert.equal(
+    (await request('member', { mode: 'selected', photoIds: ['public'] }))
+      .status,
+    403,
+  );
+  assert.equal((await request('stranger')).status, 403);
+  assert.equal((await request('')).status, 401);
+  for (const ids of [
+    [],
+    ['ordinary'],
+    ['video'],
+    ['hidden'],
+    ['missing'],
+    ['outside-trip'],
+    ['foreign-photo'],
+  ])
+    assert.equal(
+      (await request('owner', { mode: 'selected', photoIds: ids })).status,
+      400,
+    );
+  assert.equal(
+    (
+      await request('owner', {
+        mode: 'selected',
+        photoIds: ['public', 'private'],
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual((await (await request('owner')).json()).photoIds, [
+    'public',
+    'private',
+  ]);
+  assert.deepEqual(
+    tripCovers('trip', 'owner').map((x) => x.id),
+    ['private', 'public'],
+  );
+  assert.deepEqual(
+    tripCovers('trip', 'owner', 'guest-token').map((x) => x.id),
+    ['public'],
+  );
+  run(
+    'DELETE FROM media_favorites WHERE user_id=? AND media_id=?',
+    'owner',
+    'public',
+  );
+  assert.deepEqual(tripCovers('trip', 'owner', 'guest-token'), []);
+  assert.deepEqual(
+    tripCovers('trip', 'owner').map((x) => x.id),
+    ['private'],
+  );
+  const marker = spawnSync(
+    process.platform === 'win32' ? 'python' : 'python3',
+    ['deploy/media-archive-schema.py', process.env.DATABASE_PATH!, '10'],
+    { encoding: 'utf8', windowsHide: true },
+  );
+  assert.equal(marker.status, 0, marker.stderr);
+  assert.deepEqual(coverSettings('trip').photoIds, ['public', 'private']);
+  migrate(db);
+  assert.equal(db.pragma('user_version', { simple: true }), 11);
+  assert.deepEqual(coverSettings('trip').photoIds, ['public', 'private']);
+  assert.equal(
+    (await request('owner', { mode: 'all', photoIds: [] })).status,
+    200,
+  );
+  assert.deepEqual(
+    tripCovers('trip', 'owner').map((x) => x.id),
+    ['private', 'outside-member'],
+  );
 });

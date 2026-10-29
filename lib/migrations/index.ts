@@ -1,3 +1,4 @@
+import { tripCoverSettings } from './011-trip-covers';
 import { notificationState } from './010-notification-state';
 import { mediaArchive } from './009-media-archive';
 import { tripInvitations } from './008-trip-invitations';
@@ -21,6 +22,7 @@ export const migrations = [
   { version: 8, name: 'trip-invitations', up: tripInvitations },
   { version: 9, name: 'media-archive', up: mediaArchive },
   { version: 10, name: 'notification-state', up: notificationState },
+  { version: 11, name: 'trip-covers', up: tripCoverSettings },
 ];
 
 export function migrate(db: Database.Database) {

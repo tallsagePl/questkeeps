@@ -196,7 +196,7 @@ test('rotation persists through sync; archive removal survives reconnects withou
       JSON.stringify({ fixture: 'preserved' }),
       123,
     );
-    for (const target of [8, 9, 8]) {
+    for (const target of [10, 8, 9, 8]) {
       const result = spawnSync(
         process.platform === 'win32' ? 'python' : 'python3',
         [
@@ -213,7 +213,7 @@ test('rotation persists through sync; archive removal survives reconnects withou
     const { migrate } = await import('../lib/migrations');
     migrate(db);
     assert.equal(one('SELECT created FROM media_exclusions')?.created, 123);
-    assert.equal(db.pragma('user_version', { simple: true }), 10);
+    assert.equal(db.pragma('user_version', { simple: true }), 11);
     assert.equal(
       one('SELECT snapshot FROM notification_state WHERE user_id=?', 'author')
         ?.snapshot,

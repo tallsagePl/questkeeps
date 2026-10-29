@@ -17,7 +17,7 @@ current_schema=$(python3 -c "import sqlite3; print(sqlite3.connect('file:/opt/qu
 schema_transition="$current_schema:$target_schema"
 schema_changed=false
 schema_tool="$(dirname "$0")/media-archive-schema.py"
-if [ "$target_schema" != "$current_schema" ] && [ "$schema_transition" != '8:9' ] && [ "$schema_transition" != '9:8' ] && [ "$schema_transition" != '9:10' ] && [ "$schema_transition" != '10:9' ] && [ "$schema_transition" != '8:10' ] && [ "$schema_transition" != '10:8' ]; then
+if [ "$target_schema" != "$current_schema" ] && [ "$schema_transition" != '8:9' ] && [ "$schema_transition" != '9:8' ] && [ "$schema_transition" != '9:10' ] && [ "$schema_transition" != '10:9' ] && [ "$schema_transition" != '8:10' ] && [ "$schema_transition" != '10:8' ] && [ "$schema_transition" != '10:11' ] && [ "$schema_transition" != '11:10' ]; then
   echo "Schema $current_schema -> $target_schema requires a reviewed compatible migration before an online rollout."
   exit 1
 fi
@@ -80,7 +80,7 @@ target.close()
 source.close()
 os.chmod(path,0o600)
 PY
-# Reviewed 8 -> 9 -> 10 changes add defaulted columns and independent tables. Old
+# Reviewed 8 -> 9 -> 10 -> 11 changes add defaulted columns and independent tables. Old
 # application SQL remains compatible. A rollback retains both and restores only
 # the compatibility marker, without restoring a stale database snapshot.
 if [ "$target_schema" -gt "$current_schema" ]; then

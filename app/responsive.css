@@ -1077,3 +1077,26 @@ dialog.modal.fullscreen[open] {
 .followed-card .trip-card-body h3 { margin: 0 0 12px; }
 .followed-card > button { margin: 0 23px 20px; }
 @media (prefers-reduced-motion: reduce) { .trip-cover-current { animation: none; } }
+
+.trip-management.settings-grid { grid-template-columns: minmax(0, 1fr); }
+.trip-management > .panel { width: 100%; box-sizing: border-box; }
+.cover-settings h3 { margin: 24px 0 10px; }
+.cover-all-option { display: flex; align-items: center; gap: 10px; margin: 20px 0; }
+.cover-all-option input, .cover-photo-option input { width: 20px; height: 20px; min-height: 20px; accent-color: var(--accent); }
+.cover-photo-options { border: 0; padding: 0; margin: 20px 0; min-width: 0; }
+.cover-photo-options legend { margin-bottom: 14px; }
+.cover-photo-options:disabled .cover-photo-grid { opacity: 0.55; }
+.cover-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.cover-photo-option { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; align-items: start; min-width: 0; cursor: pointer; }
+.cover-photo-options:disabled .cover-photo-option { cursor: default; }
+.cover-option-image { position: relative; display: block; grid-column: 1 / -1; grid-row: 1; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 12px; }
+.cover-option-image .media-preview, .cover-option-image .rotation-frame { width: 100%; height: 100%; }
+.cover-option-image img { width: 100%; height: 100%; object-fit: cover; }
+.cover-photo-option > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cover-photo-option:has(input:checked) .cover-option-image { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (max-width: 700px) { .cover-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+
+/* Keep a clear lane for the fixed back-to-top button, including safe areas. */
+footer.site-footer { padding-inline-end: max(104px, calc(env(safe-area-inset-right, 0px) + 80px)); }
+
+.cover-settings .action-status { display: block; margin-top: 12px; }

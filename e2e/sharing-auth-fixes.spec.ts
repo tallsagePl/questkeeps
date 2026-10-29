@@ -38,7 +38,7 @@ test('guest link is retrievable after reload and owner avatar uses the actual pr
   expect(trip).toBeTruthy();
   await page.goto('/?trip=' + trip.id);
   await page
-    .getByRole('button', { name: 'Участники и Диски', exact: true })
+    .getByRole('button', { name: 'Управление поездкой', exact: true })
     .click();
   await expect(page.locator('.member .avatar img').first()).toHaveJSProperty(
     'naturalWidth',
@@ -71,7 +71,7 @@ test('guest link is retrievable after reload and owner avatar uses the actual pr
   ).toHaveAttribute('href', link);
   await page.reload();
   await page
-    .getByRole('button', { name: 'Участники и Диски', exact: true })
+    .getByRole('button', { name: 'Управление поездкой', exact: true })
     .click();
   await page
     .getByRole('button', { name: 'Получить ссылку', exact: true })

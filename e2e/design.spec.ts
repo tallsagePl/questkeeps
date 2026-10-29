@@ -144,9 +144,7 @@ test('English owner screens, keyboard dialogs, journal, invitation and guest', a
     page.getByText('The mountain road.', { exact: true }),
   ).toBeVisible();
   await axe(page, 'English dark journal');
-  await page
-    .getByRole('button', { name: 'Members & Drives', exact: true })
-    .click();
+  await page.getByRole('button', { name: 'Manage trip', exact: true }).click();
   await axe(page, 'English dark settings');
   await page
     .getByRole('button', { name: 'Invite a member', exact: true })
@@ -193,9 +191,7 @@ test('English owner screens, keyboard dialogs, journal, invitation and guest', a
   await expect(
     guest.getByRole('heading', { name: 'Autumn trip.' }),
   ).toBeVisible();
-  await guest
-    .getByRole('button', { name: 'Members & Drives', exact: true })
-    .click();
+  await guest.getByRole('button', { name: 'Manage trip', exact: true }).click();
   await expect(
     guest.getByRole('button', { name: 'Invite a member', exact: true }),
   ).toHaveCount(0);

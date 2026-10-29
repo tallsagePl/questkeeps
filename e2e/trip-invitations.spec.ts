@@ -41,7 +41,7 @@ test('owner invites by email, recipient accepts from notifications, participatio
     const trip = (await response.json()).id;
     const page = await owner.newPage();
     await page.goto(base + '/?trip=' + trip);
-    await page.getByRole('button', { name: 'Участники и Диски' }).click();
+    await page.getByRole('button', { name: 'Управление поездкой' }).click();
     await page.getByRole('button', { name: 'Пригласить участника' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('В QuestKeeps', { exact: true }).check();
@@ -121,7 +121,7 @@ test('owner invites by email, recipient accepts from notifications, participatio
       ).violations,
     ).toEqual([]);
     await page.goto(base + '/?trip=' + trip);
-    await page.getByRole('button', { name: 'Участники и Диски' }).click();
+    await page.getByRole('button', { name: 'Управление поездкой' }).click();
     await page.setViewportSize({ width: 1280, height: 1000 });
     const row = page.locator('.member').filter({ hasText: 'Invite Person' });
     const edit = row.getByRole('button', { name: 'Изменить', exact: true });

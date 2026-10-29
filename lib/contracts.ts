@@ -13,6 +13,11 @@ export type UserProfile = {
   linkedEmails: string[];
 };
 
+export type TripCoverSettings = {
+  mode: 'all' | 'selected';
+  photoIds: string[];
+};
+
 export type TripCover = { id: string; src: string; rotation?: number };
 
 export type TripSummary = {

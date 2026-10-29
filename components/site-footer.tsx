@@ -6,7 +6,7 @@ import { useLocale } from './appearance';
 export default function SiteFooter() {
   const { t } = useLocale();
   return (
-    <footer>
+    <footer className="site-footer">
       <Brand footer />
       <p>{t('common.moreThanWhereYouWentHowIt')}</p>
       <nav className="footer-links" aria-label={t('navigation.footer')}>

@@ -1,4 +1,4 @@
-import { tripCovers } from '../trip-covers';
+import { tripCovers, coverSettings } from '../trip-covers';
 import type { TripSummary } from '../contracts';
 import {
   ensureUsername,
@@ -118,6 +118,46 @@ export async function tripRoutes({
       }
     }
     const tid = p[1];
+
+    if (p[2] === 'cover' && !p[3]) {
+      const trip = owner(tid, u.id);
+      if (method === 'GET') return json(coverSettings(tid));
+      if (method === 'PATCH') {
+        const input = z
+          .object({
+            mode: z.enum(['all', 'selected']),
+            photoIds: z.array(z.string().min(1).max(100)).max(1000),
+          })
+          .strict()
+          .parse(await body(req));
+        const ids = [...new Set(input.photoIds)];
+        if (input.mode === 'selected' && !ids.length)
+          fail(400, 'tripCover.choosePhoto');
+        db.transaction(() => {
+          if (input.mode === 'selected')
+            for (const photoId of ids) {
+              if (
+                !one(
+                  `SELECT 1 FROM media m JOIN sources s ON s.id=m.source_id JOIN media_favorites f ON f.media_id=m.id AND f.user_id=? WHERE m.id=? AND m.trip_id=? AND m.kind='photo' AND m.hidden=0 AND m.missing=0 AND s.approved=1 AND substr(m.taken,1,10) BETWEEN ? AND ?`,
+                  u.id,
+                  photoId,
+                  tid,
+                  trip.start,
+                  trip.end,
+                )
+              )
+                fail(400, 'tripCover.unavailable');
+            }
+          run(
+            'INSERT INTO trip_cover_settings(trip_id,mode,photo_ids) VALUES (?,?,?) ON CONFLICT(trip_id) DO UPDATE SET mode=excluded.mode,photo_ids=excluded.photo_ids',
+            tid,
+            input.mode,
+            JSON.stringify(input.mode === 'all' ? [] : ids),
+          );
+        })();
+        return json(coverSettings(tid));
+      }
+    }
     if (!p[2] && method === 'GET') return json(tripData(req, tid));
     if (!p[2] && method === 'PATCH') {
       owner(tid, u.id);
