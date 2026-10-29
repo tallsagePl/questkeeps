@@ -998,3 +998,45 @@ dialog.modal.fullscreen[open] {
   .trip-heading-side:not(:has(.trip-follow-control)):has(.trip-publish-button) { display: flex; align-items: flex-start; }
   .trip-heading-side .trip-summary { display: none; }
 }
+
+/* Desktop header has its own compact gutters, independent of page content. */
+@media (min-width: 701px) {
+  .topbar.site-header {
+    position: relative;
+    padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+    min-height: 84px;
+    height: auto;
+    box-sizing: border-box;
+  }
+  .site-header .top-actions > .appearance-controls,
+  .site-header .top-actions > .user-button,
+  .site-header .top-actions > .header-logout {
+    height: 52px;
+    min-height: 52px;
+    box-sizing: border-box;
+    margin: 0;
+    align-items: center;
+  }
+  .site-header .top-actions > .appearance-controls { padding: 4px; }
+  .site-header .top-actions .appearance-button { height: 42px; min-height: 42px; }
+  .site-header .top-actions > .user-button { padding: 6px 12px; max-width: 140px; }
+  .site-header .top-actions > .header-logout { padding: 10px 14px; }
+}
+@media (min-width: 1100px) {
+  .site-header .top-actions { flex-wrap: nowrap; gap: 8px; }
+  .site-header > .top-caption {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    max-width: 160px;
+    margin: 0;
+    text-align: center;
+    pointer-events: none;
+  }
+}
+@media (min-width: 1100px) and (max-width: 1399px) {
+  .site-header .top-actions > .user-button { max-width: 100px; }
+  .site-header .top-actions { gap: 4px; }
+  .site-header > .top-caption { width: 140px; max-width: 140px; }
+}

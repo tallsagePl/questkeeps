@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-for (const width of [320, 393, 1024, 1440]) {
+for (const width of [320, 393, 1024, 1280, 1440, 1920]) {
   test(
     'header and non-modal invitations fit ' + width + 'px',
     async ({ page }) => {
@@ -68,6 +68,40 @@ for (const width of [320, 393, 1024, 1440]) {
           const box = await header.locator(control).boundingBox();
           expect(box!.width).toBeGreaterThanOrEqual(44);
           expect(box!.height).toBeGreaterThanOrEqual(44);
+        }
+      }
+      if (width >= 701) {
+        const bounds = (await header.boundingBox())!;
+        const brand = (await header.locator('.header-brand').boundingBox())!;
+        const profile = (await header
+          .locator('.top-actions > .user-button')
+          .boundingBox())!;
+        const appearance = (await header
+          .locator('.top-actions > .appearance-controls')
+          .boundingBox())!;
+        const logout = (await header
+          .locator('.top-actions > .header-logout')
+          .boundingBox())!;
+        expect(Math.abs(brand.x - bounds.x - 16)).toBeLessThan(1);
+        expect(
+          Math.abs(bounds.x + bounds.width - logout.x - logout.width - 16),
+        ).toBeLessThan(1);
+        for (const control of [profile, appearance, logout]) {
+          expect(control.height).toBe(52);
+          expect(Math.abs(control.y - appearance.y)).toBeLessThan(1);
+        }
+        if (width >= 1280) {
+          const caption = (await header.locator('.top-caption').boundingBox())!;
+          expect(
+            Math.abs(
+              caption.x + caption.width / 2 - bounds.x - bounds.width / 2,
+            ),
+          ).toBeLessThan(1);
+          const actions = (await header.locator('.top-actions').boundingBox())!;
+          expect(caption.x + caption.width).toBeLessThanOrEqual(actions.x - 4);
+          await page.screenshot({
+            path: 'data/header-aligned-' + width + '.png',
+          });
         }
       }
       const bell = header.getByRole('button', {
