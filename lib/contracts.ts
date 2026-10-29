@@ -13,12 +13,20 @@ export type UserProfile = {
   linkedEmails: string[];
 };
 
+export type CoverPosition = { x: number; y: number };
+
 export type TripCoverSettings = {
+  positions?: Record<string, CoverPosition>;
   mode: 'all' | 'selected';
   photoIds: string[];
 };
 
-export type TripCover = { id: string; src: string; rotation?: number };
+export type TripCover = {
+  position?: CoverPosition;
+  id: string;
+  src: string;
+  rotation?: number;
+};
 
 export type TripSummary = {
   covers?: TripCover[];

@@ -936,7 +936,7 @@
   "tripCover.title": "Trip cover",
   "tripCover.hint": "These photos appear on the trip card in your collection. Multiple photos fade into one another.",
   "tripCover.all": "All favorites",
-  "tripCover.select": "Choose one or more favorite photos.",
+  "tripCover.select": "Click a photo to adjust its framing. Choose up to five photos.",
   "tripCover.empty": "Star photos in the gallery to see them here.",
   "tripCover.save": "Save cover",
   "tripCover.saved": "Trip cover saved.",
@@ -945,5 +945,18 @@
   "tripCover.privacy": "Guests only see photos they can access. Hidden, removed or unstarred photos stop appearing on the cover.",
   "tripCover.more": "Show more favorites",
   "tripCover.loading": "Loading cover settings…",
-  "tripCover.drives": "Connected drives"
+  "tripCover.drives": "Connected drives",
+  "tripCover.mode": "Cover source",
+  "tripCover.custom": "Selected photos",
+  "tripCover.count": "{count} of 5 selected",
+  "tripCover.editPhoto": "Adjust framing: {name}",
+  "tripCover.cropTitle": "Frame your cover",
+  "tripCover.cropHint": "Drag the photo within the frame or use the sliders to adjust its position.",
+  "tripCover.screenPreview": "The frame matches the cover on this screen. Other devices keep your chosen position but may use different cover proportions.",
+  "tripCover.horizontal": "Horizontal position",
+  "tripCover.vertical": "Vertical position",
+  "tripCover.center": "Center photo",
+  "tripCover.remove": "Remove from cover",
+  "tripCover.apply": "Apply framing",
+  "tripCover.invalidCrop": "Check your selected photos and framing."
 }

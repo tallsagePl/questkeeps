@@ -1,18 +1,29 @@
 #!/usr/bin/env python3
-"""Switch only the reviewed 8/9/10/11 compatibility marker; never remove user data."""
+"""Switch only the reviewed 8/9/10/11/12 compatibility marker; never remove user data."""
 import sqlite3
 import sys
 import time
 
 path, target = sys.argv[1], int(sys.argv[2])
-if target not in (8, 9, 10, 11):
-    raise SystemExit('Only reviewed additive migrations 8 through 11 are supported')
+if target not in (8, 9, 10, 11, 12):
+    raise SystemExit('Only reviewed additive migrations 8 through 12 are supported')
 with sqlite3.connect(path, timeout=10) as db:
     db.execute('BEGIN IMMEDIATE')
     current = db.execute('PRAGMA user_version').fetchone()[0]
-    if current not in (8, 9, 10, 11):
+    if current not in (8, 9, 10, 11, 12):
         raise RuntimeError('Unexpected schema version')
-    if current == 11 or target == 11:
+    if current == 12 or target == 12:
+        position_columns = {row[1] for row in db.execute('PRAGMA table_info(trip_cover_positions)')}
+        if position_columns != {'trip_id','media_id','x','y'}:
+            raise RuntimeError('Cover positions table is missing or incompatible')
+    position_history = db.execute('SELECT name FROM schema_migrations WHERE version=12').fetchone()
+    if position_history is not None and position_history[0] != 'cover-positions':
+        raise RuntimeError('Unexpected cover position migration history')
+    if target < 12:
+        db.execute('DELETE FROM schema_migrations WHERE version=12')
+    else:
+        db.execute('INSERT OR IGNORE INTO schema_migrations VALUES (12,?,?)', ('cover-positions', int(time.time()*1000)))
+    if current >= 11 or target >= 11:
         cover_columns = {row[1] for row in db.execute('PRAGMA table_info(trip_cover_settings)')}
         if cover_columns != {'trip_id', 'mode', 'photo_ids'}:
             raise RuntimeError('Trip cover settings table is missing or incompatible')

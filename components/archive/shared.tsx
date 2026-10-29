@@ -41,6 +41,7 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
         <path d="m16 8-3 5-5 3 3-5Z" />
       </>
     ),
+    check: <path d="m5 12 4 4L19 6" />,
     plus: <path d="M12 5v14M5 12h14" />,
     arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
     pin: (

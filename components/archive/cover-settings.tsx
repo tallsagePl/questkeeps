@@ -4,8 +4,14 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useLocale } from '../appearance';
 import MediaPreview from '../media-preview';
+import { Icon } from './shared';
+import CoverCropDialog from './cover-crop-dialog';
 import { FeedbackButton } from '../feedback';
-import type { TripCoverSettings } from '../../lib/contracts';
+import type {
+  TripCoverSettings,
+  CoverPosition,
+  MediaItem,
+} from '../../lib/contracts';
 import type { ArchiveController } from './use-archive';
 
 export default function CoverSettings({
@@ -18,6 +24,8 @@ export default function CoverSettings({
   const [saved, setSaved] = useState<TripCoverSettings | null>(null);
   const [all, setAll] = useState(true);
   const [ids, setIds] = useState<string[]>([]);
+  const [positions, setPositions] = useState<Record<string, CoverPosition>>({});
+  const [editing, setEditing] = useState<MediaItem | null>(null);
   const [limit, setLimit] = useState(24);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -35,7 +43,8 @@ export default function CoverSettings({
         if (controller.signal.aborted) return;
         setSaved(result);
         setAll(result.mode === 'all');
-        setIds(result.photoIds);
+        setIds(result.photoIds.slice(0, 5));
+        setPositions(result.positions || {});
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -50,13 +59,25 @@ export default function CoverSettings({
       !photo.missing,
   );
   const available = new Set(photos.map((photo) => photo.id));
-  const chosen = ids.filter((id) => available.has(id));
+  const chosen = ids.filter((id) => available.has(id)).slice(0, 5);
   const value: TripCoverSettings = {
     mode: all ? 'all' : 'selected',
     photoIds: all ? [] : chosen,
+    positions: all
+      ? {}
+      : Object.fromEntries(
+          chosen.map((id) => [id, positions[id] || { x: 50, y: 50 }]),
+        ),
   };
   const signature = (v: TripCoverSettings) =>
-    v.mode === 'all' ? 'all' : v.photoIds.slice().sort().join(',');
+    v.mode === 'all'
+      ? 'all'
+      : JSON.stringify(
+          v.photoIds.map((id) => ({
+            id,
+            ...(v.positions?.[id] || { x: 50, y: 50 }),
+          })),
+        );
   return (
     <section
       className="panel cover-settings"
@@ -95,35 +116,39 @@ export default function CoverSettings({
             });
           }}
         >
-          <label className="cover-all-option">
-            <input
-              type="checkbox"
-              checked={all}
-              disabled={archive.busy}
-              onChange={(event) => setAll(event.target.checked)}
-            />
-            <span>{t('tripCover.all')}</span>
-          </label>
-          <fieldset
-            className="cover-photo-options"
-            disabled={all || archive.busy}
-          >
+          <fieldset className="cover-modes">
+            <legend>{t('tripCover.mode')}</legend>
+            {[true, false].map((mode) => (
+              <label key={String(mode)}>
+                <input
+                  type="radio"
+                  name={'cover-mode-' + trip.id}
+                  checked={all === mode}
+                  disabled={archive.busy || (!mode && !photos.length)}
+                  onChange={() => setAll(mode)}
+                />
+                <span className="cover-mode-indicator" aria-hidden="true" />
+                <span>{t(mode ? 'tripCover.all' : 'tripCover.custom')}</span>
+              </label>
+            ))}
+          </fieldset>
+          <fieldset className="cover-photo-options" disabled={archive.busy}>
             <legend>{t('tripCover.select')}</legend>
             <div className="cover-photo-grid">
               {photos.slice(0, limit).map((photo) => (
-                <label className="cover-photo-option" key={photo.id}>
-                  <input
-                    type="checkbox"
-                    checked={chosen.includes(photo.id)}
-                    aria-label={photo.title || photo.name}
-                    onChange={(event) =>
-                      setIds((old) =>
-                        event.target.checked
-                          ? [...old, photo.id]
-                          : old.filter((id) => id !== photo.id),
-                      )
-                    }
-                  />
+                <button
+                  type="button"
+                  className="cover-photo-option"
+                  key={photo.id}
+                  aria-label={t('tripCover.editPhoto', {
+                    name: photo.title || photo.name,
+                  })}
+                  aria-pressed={!all && chosen.includes(photo.id)}
+                  disabled={
+                    !all && !chosen.includes(photo.id) && chosen.length >= 5
+                  }
+                  onClick={() => setEditing(photo)}
+                >
                   <span className="cover-option-image">
                     <MediaPreview
                       src={archive.mediaPath(photo, 'preview')}
@@ -131,9 +156,14 @@ export default function CoverSettings({
                       kind="photo"
                       rotation={photo.rotation}
                     />
+                    {!all && chosen.includes(photo.id) && (
+                      <span className="cover-selected-mark" aria-hidden="true">
+                        <Icon name="check" size={16} />
+                      </span>
+                    )}
                   </span>
                   <span>{photo.title || photo.name}</span>
-                </label>
+                </button>
               ))}
             </div>
             {photos.length > limit && (
@@ -146,6 +176,11 @@ export default function CoverSettings({
               </button>
             )}
           </fieldset>
+          {!all && (
+            <p className="fine" role="status">
+              {t('tripCover.count', { count: chosen.length })}
+            </p>
+          )}
           {!photos.length && <p className="fine">{t('tripCover.empty')}</p>}
           <p className="fine">{t('tripCover.privacy')}</p>
           <FeedbackButton
@@ -160,6 +195,33 @@ export default function CoverSettings({
             {t('tripCover.save')}
           </FeedbackButton>
         </form>
+      )}
+      {editing && (
+        <CoverCropDialog
+          key={editing.id}
+          archive={archive}
+          photo={editing}
+          initial={positions[editing.id] || { x: 50, y: 50 }}
+          selected={!all && chosen.includes(editing.id)}
+          onClose={() => setEditing(null)}
+          onApply={(position) => {
+            setPositions((old) => ({ ...old, [editing.id]: position }));
+            setIds((old) =>
+              all
+                ? [editing.id]
+                : old.includes(editing.id)
+                  ? old
+                  : [...chosen, editing.id].slice(0, 5),
+            );
+            setAll(false);
+            setEditing(null);
+          }}
+          onRemove={() => {
+            setIds((old) => old.filter((id) => id !== editing.id));
+            if (chosen.length <= 1) setAll(true);
+            setEditing(null);
+          }}
+        />
       )}
     </section>
   );

@@ -109,3 +109,5 @@ Version 1.25.0 adds a defaulted rotation column, an independent exclusions table
 Schema 10 adds only `notification_state`, a private per-user notification snapshot. The reviewed online transition and marker rollback also support 9 ↔ 10 and 8 ↔ 10. The same helper preserves the table and its contents during code rollback; migration 10 uses `IF NOT EXISTS`.
 
 Schema 11 adds only `trip_cover_settings`, an independent per-trip cover preference table. The reviewed online transition is 10 ↔ 11. The compatibility helper preserves the table and selected photo IDs when restoring the schema-10 marker for the previous release; migration 11 is idempotent. Existing trip and media columns are unchanged.
+
+Schema 12 adds only `trip_cover_positions`, with a normalized x/y position per trip and photo. The reviewed transition is 11 ↔ 12. Marker rollback preserves positions, and the idempotent migration restores the ledger on upgrade. Existing custom decks longer than five are read as their first five without deleting stored IDs; new saves enforce the five-photo limit.

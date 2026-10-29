@@ -145,6 +145,7 @@ test('favorite covers respect guest visibility, membership dates and source appr
       await request('owner', {
         mode: 'selected',
         photoIds: ['public', 'private'],
+        positions: { public: { x: 25, y: 80 }, private: { x: 50, y: 20 } },
       })
     ).status,
     200,
@@ -167,19 +168,58 @@ test('favorite covers respect guest visibility, membership dates and source appr
     'public',
   );
   assert.deepEqual(tripCovers('trip', 'owner', 'guest-token'), []);
+  assert.deepEqual(coverSettings('trip').positions?.public, { x: 25, y: 80 });
   assert.deepEqual(
     tripCovers('trip', 'owner').map((x) => x.id),
     ['private'],
   );
+  assert.equal(
+    (
+      await request('owner', {
+        mode: 'selected',
+        photoIds: [
+          'public',
+          'private',
+          'hidden',
+          'missing',
+          'video',
+          'ordinary',
+        ],
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request('owner', {
+        mode: 'selected',
+        photoIds: ['private'],
+        positions: { private: { x: -1, y: 50 } },
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request('owner', {
+        mode: 'selected',
+        photoIds: ['private'],
+        positions: { public: { x: 50, y: 50 } },
+      })
+    ).status,
+    400,
+  );
+  assert.deepEqual(tripCovers('trip', 'owner')[0].position, { x: 50, y: 20 });
   const marker = spawnSync(
     process.platform === 'win32' ? 'python' : 'python3',
-    ['deploy/media-archive-schema.py', process.env.DATABASE_PATH!, '10'],
+    ['deploy/media-archive-schema.py', process.env.DATABASE_PATH!, '11'],
     { encoding: 'utf8', windowsHide: true },
   );
   assert.equal(marker.status, 0, marker.stderr);
+  assert.deepEqual(coverSettings('trip').positions?.public, { x: 25, y: 80 });
   assert.deepEqual(coverSettings('trip').photoIds, ['public', 'private']);
   migrate(db);
-  assert.equal(db.pragma('user_version', { simple: true }), 11);
+  assert.equal(db.pragma('user_version', { simple: true }), 12);
   assert.deepEqual(coverSettings('trip').photoIds, ['public', 'private']);
   assert.equal(
     (await request('owner', { mode: 'all', photoIds: [] })).status,

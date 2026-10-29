@@ -126,11 +126,30 @@ export async function tripRoutes({
         const input = z
           .object({
             mode: z.enum(['all', 'selected']),
-            photoIds: z.array(z.string().min(1).max(100)).max(1000),
+            photoIds: z.array(z.string().min(1).max(100)).max(5),
+            positions: z
+              .record(
+                z.string().min(1).max(100),
+                z
+                  .object({
+                    x: z.number().min(0).max(100),
+                    y: z.number().min(0).max(100),
+                  })
+                  .strict(),
+              )
+              .refine((value) => Object.keys(value).length <= 5)
+              .optional(),
           })
           .strict()
           .parse(await body(req));
         const ids = [...new Set(input.photoIds)];
+        const positions = input.positions || {};
+        if (
+          Object.keys(positions).some(
+            (id) => input.mode !== 'selected' || !ids.includes(id),
+          )
+        )
+          fail(400, 'tripCover.invalidCrop');
         if (input.mode === 'selected' && !ids.length)
           fail(400, 'tripCover.choosePhoto');
         db.transaction(() => {
@@ -154,6 +173,14 @@ export async function tripRoutes({
             input.mode,
             JSON.stringify(input.mode === 'all' ? [] : ids),
           );
+          for (const [mediaId, position] of Object.entries(positions))
+            run(
+              'INSERT INTO trip_cover_positions(trip_id,media_id,x,y) VALUES (?,?,?,?) ON CONFLICT(trip_id,media_id) DO UPDATE SET x=excluded.x,y=excluded.y',
+              tid,
+              mediaId,
+              position.x,
+              position.y,
+            );
         })();
         return json(coverSettings(tid));
       }

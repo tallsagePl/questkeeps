@@ -1,38 +1,42 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
+import type { TripCoverSettings } from '../lib/contracts';
+
+test.use({ hasTouch: true });
 
 for (const width of [393, 1440])
   test(
-    'trip management order and persistent cover selection at ' + width,
+    'cover modes, framing, five-photo limit and footer at ' + width,
     async ({ page }) => {
-      await page.setViewportSize({ width, height: 1000 });
+      await page.setViewportSize({ width, height: width < 700 ? 852 : 1000 });
       const photo = fs.readFileSync('public/welcome/santorini.webp');
-      let settings = { mode: 'all', photoIds: [] as string[] };
-      const requests: unknown[] = [];
+      let settings: TripCoverSettings = {
+        mode: 'all',
+        photoIds: [],
+        positions: {},
+      };
+      const trip = {
+        id: 'frame',
+        title: 'Наша поездка',
+        destination: 'Стамбул',
+        start: '2026-10-10',
+        end: '2026-10-18',
+        from: '2026-10-10',
+        to: '2026-10-18',
+        role: 'owner',
+        sharing: false,
+        media_count: 7,
+      };
       await page.route('**/api/**', (route) => {
         const path = new URL(route.request().url()).pathname;
         if (path.endsWith('/preview'))
           return route.fulfill({ body: photo, contentType: 'image/webp' });
         if (path === '/api/trips/frame/cover') {
-          if (route.request().method() === 'PATCH') {
+          if (route.request().method() === 'PATCH')
             settings = route.request().postDataJSON();
-            requests.push(settings);
-          }
           return route.fulfill({ json: settings });
         }
-        const trip = {
-          id: 'frame',
-          title: 'Наша поездка',
-          destination: 'Стамбул',
-          start: '2026-10-10',
-          end: '2026-10-18',
-          from: '2026-10-10',
-          to: '2026-10-18',
-          role: 'owner',
-          sharing: false,
-          media_count: 4,
-        };
         return route.fulfill({
           json:
             path === '/api/me'
@@ -43,12 +47,12 @@ for (const width of [393, 1440])
               : path === '/api/trips/frame'
                 ? {
                     trip,
-                    media: Array.from({ length: 4 }, (_, i) => ({
+                    media: Array.from({ length: 7 }, (_, i) => ({
                       id: 'photo' + i,
                       name: 'Фото ' + i,
                       kind: 'photo',
                       mime: 'image/jpeg',
-                      favorite: i < 3,
+                      favorite: i < 6,
                       hidden: 0,
                       revision: '1',
                       user_id: 'owner',
@@ -60,26 +64,42 @@ for (const width of [393, 1440])
                     places: [],
                     notes: [],
                   }
-                : path.endsWith('/members')
+                : path === '/api/trips'
                   ? {
-                      members: [],
-                      owner: {
-                        id: 'owner',
-                        name: 'Fixture',
-                        username: 'fixture',
-                      },
+                      trips: [
+                        {
+                          ...trip,
+                          covers:
+                            settings.mode === 'selected'
+                              ? settings.photoIds.map((id) => ({
+                                  id,
+                                  src: '/api/media/' + id + '/preview',
+                                  position: settings.positions?.[id],
+                                }))
+                              : [],
+                        },
+                      ],
                     }
-                  : {
-                      trips: [],
-                      accounts: [],
-                      sources: [],
-                      friends: [],
-                      incoming: [],
-                      outgoing: [],
-                      count: 0,
-                      invitations: [],
-                      drive: [],
-                    },
+                  : path.endsWith('/members')
+                    ? {
+                        members: [],
+                        owner: {
+                          id: 'owner',
+                          name: 'Fixture',
+                          username: 'fixture',
+                        },
+                      }
+                    : {
+                        trips: [],
+                        accounts: [],
+                        sources: [],
+                        friends: [],
+                        incoming: [],
+                        outgoing: [],
+                        count: 0,
+                        invitations: [],
+                        drive: [],
+                      },
         });
       });
       await page.goto('/?trip=frame#view=settings');
@@ -97,76 +117,156 @@ for (const width of [393, 1440])
         'Оформление поездки',
         'Подключённые диски',
       ]);
-      const all = panel.getByLabel('Все избранные', { exact: true });
+      const all = panel.getByRole('radio', {
+        name: 'Все избранные',
+        exact: true,
+      });
       await expect(all).toBeChecked();
-      await expect(
-        panel.getByRole('checkbox', { name: 'Фото 0', exact: true }),
-      ).toBeDisabled();
-      await all.uncheck();
-      await expect(
-        panel.getByRole('button', { name: 'Сохранить обложку' }),
-      ).toBeDisabled();
-      await panel
-        .getByRole('checkbox', { name: 'Фото 0', exact: true })
-        .check();
-      await panel
-        .getByRole('checkbox', { name: 'Фото 2', exact: true })
-        .check();
-      await expect(
-        panel.getByRole('checkbox', { name: 'Фото 3', exact: true }),
-      ).toHaveCount(0);
-      await panel.getByRole('button', { name: 'Сохранить обложку' }).click();
-      await expect(
-        panel.getByRole('button', { name: 'Сохранить обложку' }),
-      ).toBeDisabled();
-      await expect
-        .poll(() => settings)
-        .toEqual({
-          mode: 'selected',
-          photoIds: ['photo0', 'photo2'],
+      await expect(panel.getByRole('checkbox')).toHaveCount(0);
+      const tile = (i: number) =>
+        panel.getByRole('button', {
+          name: 'Настроить кадрирование: Фото ' + i,
+          exact: true,
         });
-      await page.reload();
-      await expect(
-        panel.getByRole('checkbox', { name: 'Фото 0', exact: true }),
-      ).toBeChecked();
-      await expect(
-        panel.getByRole('checkbox', { name: 'Фото 2', exact: true }),
-      ).toBeChecked();
-      await expect(all).not.toBeChecked();
-      await panel.scrollIntoViewIfNeeded();
+      const dialog = page.getByRole('dialog', { name: 'Кадрирование обложки' });
+      const open = async (i: number) => {
+        await tile(i).click();
+        await expect(
+          dialog.getByRole('button', { name: 'Применить кадрирование' }),
+        ).toBeEnabled();
+      };
+      await open(0);
+      await dialog
+        .getByRole('button', { name: 'Закрыть', exact: true })
+        .click();
+      await expect(all).toBeChecked();
+      await expect(tile(0)).toHaveAttribute('aria-pressed', 'false');
+      await open(0);
+      const vertical = dialog.getByRole('slider', { name: 'По вертикали' });
+      await vertical.focus();
+      await vertical.press('End');
+      await expect(vertical).toHaveValue('100');
       expect(
-        await page.evaluate(() => document.documentElement.scrollWidth),
-      ).toBeLessThanOrEqual(width);
-      const violations = (
-        await new AxeBuilder({ page })
-          .include('.cover-settings')
-          .withTags(['wcag2a', 'wcag2aa'])
-          .analyze()
-      ).violations;
-      expect(violations).toEqual([]);
+        (
+          await new AxeBuilder({ page })
+            .include('dialog')
+            .withTags(['wcag2a', 'wcag2aa'])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      expect(
+        await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      ).toBeTruthy();
+      const crop = (await dialog.locator('.cover-crop-preview').boundingBox())!;
+      const measured = (await page
+        .locator('.cover-size-probe .trip-art')
+        .boundingBox())!;
+      expect(
+        Math.abs(crop.width / crop.height - measured.width / measured.height),
+      ).toBeLessThan(0.03);
+      await page.screenshot({ path: 'data/cover-crop-' + width + '.png' });
+      await dialog
+        .getByRole('button', { name: 'Применить кадрирование' })
+        .click();
+      await expect(all).not.toBeChecked();
+      await expect(
+        panel.getByRole('radio', { name: 'Выбранные фото', exact: true }),
+      ).toBeChecked();
+      await expect(tile(0)).toHaveAttribute('aria-pressed', 'true');
+      await open(2);
+      await dialog
+        .getByRole('button', { name: 'Применить кадрирование' })
+        .click();
+      await panel.getByRole('button', { name: 'Сохранить обложку' }).click();
+      await expect.poll(() => settings.photoIds).toEqual(['photo0', 'photo2']);
+      expect(settings.positions?.photo0.y).toBe(100);
+      await page.reload();
+      await expect(tile(0)).toHaveAttribute('aria-pressed', 'true');
       await expect(
         panel.locator('.media-preview[data-state="loaded"]'),
-      ).toHaveCount(3);
-      for (const image of await panel
-        .locator('.cover-option-image img')
-        .all()) {
-        const frame = (await image.locator('..').locator('..').boundingBox())!;
-        const bounds = (await image.boundingBox())!;
-        expect(bounds.width).toBeLessThanOrEqual(frame.width + 1);
-        expect(bounds.height).toBeLessThanOrEqual(frame.height + 1);
-        expect(bounds.y).toBeGreaterThanOrEqual(frame.y - 1);
-      }
+      ).toHaveCount(6);
+      await panel.scrollIntoViewIfNeeded();
+      await expect(panel.locator('.media-preview img').first()).toHaveCSS(
+        'opacity',
+        '1',
+      );
+      await expect(panel.locator('.photo-placeholder').first()).toHaveCSS(
+        'opacity',
+        '0',
+      );
       await page.screenshot({
-        path: 'data/trip-management-' + width + '.png',
+        path: 'data/cover-picker-ready-' + width + '.png',
         fullPage: true,
       });
-      await all.check();
+      await open(0);
+      await expect(vertical).toHaveValue('100');
+      const beforeScroll = await page.evaluate(() => window.scrollY);
+      const target = dialog.locator('.cover-photo-frame');
+      const box = (await target.boundingBox())!;
+      if (width < 700) {
+        const cdp = await page.context().newCDPSession(page);
+        const x = Math.round(box.x + box.width / 2);
+        const y = Math.round(box.y + box.height / 2);
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [{ x, y }],
+        });
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x, y: y + 30 }],
+        });
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchEnd',
+          touchPoints: [],
+        });
+        await cdp.detach();
+      } else {
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(
+          box.x + box.width / 2,
+          box.y + box.height / 2 + 30,
+          { steps: 4 },
+        );
+        await page.mouse.up();
+      }
+      await expect(vertical).not.toHaveValue('100');
+      expect(await page.evaluate(() => window.scrollY)).toBe(beforeScroll);
+      await dialog
+        .getByRole('button', { name: 'Применить кадрирование' })
+        .click();
+      for (const i of [1, 3, 4]) {
+        await open(i);
+        await dialog
+          .getByRole('button', { name: 'Применить кадрирование' })
+          .click();
+      }
+      await expect(tile(5)).toBeDisabled();
       await expect(
-        panel.getByRole('checkbox', { name: 'Фото 0', exact: true }),
-      ).toBeDisabled();
+        panel.getByText('Выбрано 5 из 5', { exact: true }),
+      ).toBeVisible();
+      await open(0);
+      await dialog.getByRole('button', { name: 'Убрать из обложки' }).click();
+      await expect(tile(5)).toBeEnabled();
+      await expect(tile(0)).toHaveAttribute('aria-pressed', 'false');
+      await expect(
+        panel.getByRole('button', {
+          name: 'Настроить кадрирование: Фото 6',
+          exact: true,
+        }),
+      ).toHaveCount(0);
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .include('.cover-settings')
+            .withTags(['wcag2a', 'wcag2aa'])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      await all.check();
+      await expect(tile(2)).toHaveAttribute('aria-pressed', 'false');
       await panel.getByRole('button', { name: 'Сохранить обложку' }).click();
       await expect.poll(() => settings.mode).toBe('all');
-      expect(requests).toHaveLength(2);
       await page.evaluate(() =>
         window.scrollTo(0, document.documentElement.scrollHeight),
       );
@@ -174,15 +274,13 @@ for (const width of [393, 1440])
       await expect(top).toBeVisible();
       const button = (await top.boundingBox())!;
       for (const child of await page.locator('footer.site-footer > *').all()) {
-        const bounds = (await child.boundingBox())!;
-        const overlapX =
-          Math.min(bounds.x + bounds.width, button.x + button.width) -
-          Math.max(bounds.x, button.x);
-        const overlapY =
-          Math.min(bounds.y + bounds.height, button.y + button.height) -
-          Math.max(bounds.y, button.y);
-        expect(overlapX <= 0 || overlapY <= 0).toBeTruthy();
+        const b = (await child.boundingBox())!;
+        expect(
+          Math.min(b.x + b.width, button.x + button.width) <=
+            Math.max(b.x, button.x) ||
+            Math.min(b.y + b.height, button.y + button.height) <=
+              Math.max(b.y, button.y),
+        ).toBeTruthy();
       }
-      await page.screenshot({ path: 'data/trip-footer-' + width + '.png' });
     },
   );

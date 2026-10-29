@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TripCover as Cover } from '../lib/contracts';
 import { Icon } from './archive/shared';
-import RotatedFrame from './rotated-frame';
+import CoverPhotoFrame from './cover-photo-frame';
 import { previewBlob } from '../lib/preview-cache';
 import { queuePreview } from '../lib/preview-queue';
 
@@ -133,9 +133,11 @@ export default function TripCover({
     >
       {previous && (
         <div className="trip-cover-photo" aria-hidden="true">
-          <RotatedFrame rotation={previous.rotation}>
-            <img src={previous.url} alt="" />
-          </RotatedFrame>
+          <CoverPhotoFrame
+            src={previous.url}
+            rotation={previous.rotation}
+            position={previous.position}
+          />
         </div>
       )}
       {active && (
@@ -144,9 +146,11 @@ export default function TripCover({
           className="trip-cover-photo trip-cover-current"
           aria-hidden="true"
         >
-          <RotatedFrame rotation={active.rotation}>
-            <img src={active.url} alt="" />
-          </RotatedFrame>
+          <CoverPhotoFrame
+            src={active.url}
+            rotation={active.rotation}
+            position={active.position}
+          />
         </div>
       )}
       <span className="trip-number">
