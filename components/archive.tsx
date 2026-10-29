@@ -225,14 +225,16 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
               )}
             </div>
             <div className="trip-heading-side">
-              <button
-                type="button"
-                className="secondary trip-publish-button"
-                onClick={() => archive.setModal('publish')}
-              >
-                <Icon name="link" />
-                {t('exports.open')}
-              </button>
+              {isOwner && (
+                <button
+                  type="button"
+                  className="secondary trip-publish-button"
+                  onClick={() => archive.setModal('publish')}
+                >
+                  <Icon name="link" />
+                  {t('exports.open')}
+                </button>
+              )}
               {guest && props.share && (
                 <TripFollow
                   key={trip.id + ':' + (user?.id || '')}
@@ -326,7 +328,9 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
       )}
       {modal === 'share' && <LeaveDialog archive={archive} />}
       {modal === 'leave' && <ShareDialog archive={archive} />}
-      {modal === 'publish' && trip && <PublishDialog archive={archive} />}
+      {modal === 'publish' && trip && isOwner && (
+        <PublishDialog archive={archive} />
+      )}
       {activeMedia && <MediaDialog archive={archive} />}
     </>
   );

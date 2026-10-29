@@ -5,6 +5,7 @@ import sharp from 'sharp';
 async function fixture(
   page: import('@playwright/test').Page,
   favorites = true,
+  role: 'owner' | 'member' | 'guest' = 'owner',
 ) {
   const image = fs.readFileSync('public/welcome/santorini.webp');
   const media = Array.from({ length: 7 }, (_, index) => ({
@@ -80,7 +81,7 @@ async function fixture(
               user: { id: 'owner', name: 'Fixture', username: 'fixture' },
               yandexEnabled: true,
             }
-          : path === '/api/trips/frame'
+          : path === '/api/trips/frame' || path === '/api/share/fixture'
             ? {
                 trip: {
                   id: 'frame',
@@ -91,7 +92,7 @@ async function fixture(
                   end: '2026-10-18',
                   from: '2026-10-10',
                   to: '2026-10-18',
-                  role: 'owner',
+                  role,
                   sharing: false,
                 },
                 media,
@@ -233,3 +234,18 @@ test('publication requires favorites and explains how to select them', async ({
     dialog.getByRole('button', { name: 'Создать предпросмотр' }),
   ).toBeDisabled();
 });
+
+for (const role of ['member', 'guest'] as const)
+  test(role + ' cannot open the trip publication editor', async ({ page }) => {
+    await fixture(page, true, role);
+    await page.goto(role === 'guest' ? '/s/fixture' : '/?trip=frame');
+    await expect(
+      page.getByRole('heading', { name: 'Наше маленькое греческое лето.' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Поделиться поездкой', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('dialog', { name: 'Публикация из поездки' }),
+    ).toHaveCount(0);
+  });

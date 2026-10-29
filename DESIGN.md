@@ -27,3 +27,5 @@ Desktop headers use 16px edge gutters independently of the page content. Profile
 On desktop, the guest badge sits beneath the centered collection caption; neither label competes with the notification and account controls.
 
 Dashboard covers are a shared brand surface for personal and followed trips. Keep the archive artwork while a preview is unavailable. Personal cards use the viewer's favorite photos within their access window; followed cards use only the owner's guest-visible favorites. Load a bounded deck through the scoped preview queue, start at a random frame, and crossfade every eight seconds over 280ms. Stop cycling offscreen, in hidden tabs and under reduced motion; no playback button. Publication exports accept only favorite, guest-visible still photos and explain the star action when empty.
+
+Only the trip owner can open publication exports. Hide both the trigger and editor in participant and guest views, including the owner viewing a guest link. Server-side guest-link creation and retrieval remain owner-only.
