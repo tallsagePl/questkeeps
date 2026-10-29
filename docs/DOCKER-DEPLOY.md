@@ -111,3 +111,45 @@ Schema 10 adds only `notification_state`, a private per-user notification snapsh
 Schema 11 adds only `trip_cover_settings`, an independent per-trip cover preference table. The reviewed online transition is 10 ↔ 11. The compatibility helper preserves the table and selected photo IDs when restoring the schema-10 marker for the previous release; migration 11 is idempotent. Existing trip and media columns are unchanged.
 
 Schema 12 adds only `trip_cover_positions`, with a normalized x/y position per trip and photo. The reviewed transition is 11 ↔ 12. Marker rollback preserves positions, and the idempotent migration restores the ledger on upgrade. Existing custom decks longer than five are read as their first five without deleting stored IDs; new saves enforce the five-photo limit.
+
+
+## Mobile connection diagnosis and transport recovery
+
+The TLS Nginx listener enables HTTP/2 (the `listen ... http2` syntax supports the
+current Ubuntu Nginx 1.18 package). Verify ALPN negotiates `h2`; HTTP/1.1 remains
+available for clients that do not support it. Reload Nginx only after `nginx -t`.
+Do not rebuild or stop application containers for an edge configuration change.
+
+`GET /connection-check` returns a tiny uncached JSON response directly from Nginx.
+It proves only DNS/TCP/TLS/edge delivery; it does not assert application, session,
+database or provider health. Correlate a user's attempt time with this route in
+the existing access log. Never log authentication cookies or query tokens.
+
+For paths with silent packet-size failures, install
+`deploy/99-questkeeps-network.conf` in `/etc/sysctl.d/` and apply that file with
+`sysctl -p`. Mode 1 enables MTU probing after black-hole detection, without
+changing interface MTU or disabling TLS/firewall protection. Save the previous
+value before applying; restore that value and the previous config file on rollback.
+This mitigates a class of mobile/VPN failures; it is not proof that a particular
+user's provider or VPN caused an incident. Confirm on the affected device.
+
+
+### Verified connection incident mitigation: 29 October 2026
+
+One phone intermittently could not open even the address, while another phone
+and the desktop browser could open the site. At diagnosis the app was healthy,
+DNS A was correct with no AAAA answer, the certificate was valid, UFW allowed
+HTTP/HTTPS and fail2ban was inactive. No application container restart was used.
+
+Enabled HTTP/2 on the existing TLS listener and changed TCP MTU probing from
+mode 0 to mode 1. The original Nginx configuration was backed up on the VPS.
+After applying, the affected user confirmed both `/connection-check` and `/`
+opened. A public HTTP/2 connection negotiated `h2`; `/`, `/api/me`, `/about`, the
+transport check and all 14 initial CSS/JS resources returned 200. HTTP/1.1 also
+continued returning 200. The web and worker containers remained running.
+
+This is verified recovery after a combined transport mitigation, not isolation
+of a single root cause. The incident did not capture the affected phone's DNS,
+TLS or packet trace before recovery, so an MTU black hole remains a plausible
+mechanism rather than a proven packet-level diagnosis. The transport check is
+retained to distinguish edge reachability from application loading on recurrence.
