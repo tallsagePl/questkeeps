@@ -24,9 +24,16 @@ An old worker is stopped before its replacement starts; Telegram polling, mail
 and synchronization never intentionally run in both slots at once.
 
 The former web container is stopped gracefully only after the new web and worker
-have passed their checks. Its image and stopped container remain available until
-that inactive slot is reused by a later release. To roll back, deploy the previous
-image tag through the same script. Never delete the only verified rollback image.
+have passed their checks. The new web must also become Docker-healthy without
+restarts, and public page/API/static checks must pass. Until that point a failed
+rollout restores the previous target and worker.
+
+After success, `docker-retire.sh` removes stopped QuestKeeps containers and old
+`questkeeps:*` images without force. The active image is cross-checked against
+both running containers and the state files. This is the owner-approved policy:
+keep the previous image only until the new release passes its checks. After
+retirement, reverting code requires rebuilding an earlier revision. Failure of
+cleanup reports a warning instead of rolling back a healthy deployment.
 
 ## First conversion from systemd
 
@@ -76,7 +83,8 @@ without explicitly reconciling those writes.
 On this 1 GB RAM VPS, two web versions overlap briefly and may use swap.
 Web containers have a 640 MB memory limit and a 384 MB V8 heap; the worker has a
 256 MB memory limit. These are operating limits, not a capacity guarantee.
-Preserve at least one rollback image and monitor disk use before future builds.
+Preserve the preceding image until the new release passes its checks; then retire it.
+Monitor disk use before future builds. Never run a global image or volume prune.
 
 ## Diagnosis
 
@@ -102,16 +110,15 @@ guest tokens.
 - The daily backup timer uses Docker; a new backup passed SQLite integrity checking and had mode 0600. Working database integrity and foreign-key checks passed.
 - Validation includes 156 unit/API/readiness tests, map browser scenarios that preserve map/layer identity and zoom, and desktop/mobile member-action layout checks. These checks do not guarantee unlimited capacity or compatibility of future schema changes.
 
-## Reviewed schema 8 ↔ 9 transition
+## Reviewed schema 8 в†” 9 transition
 
 Version 1.25.0 adds a defaulted rotation column, an independent exclusions table and an insertion trigger. Deploy the updated `deploy/docker-release.sh` **and** `deploy/media-archive-schema.py` together in `/opt/questkeeps/docker-tools/`. The release script backs up the database, applies migration 9 before starting the candidate, and restores only the compatibility marker on failure. The running schema-8 application remains SQL compatible. A release of the retained schema-8 image restores marker 8 while preserving rotations, exclusions and the trigger; redeploying schema 9 is idempotent. The trigger also prevents the old worker from reimporting excluded files. Other version transitions still fail closed. Never replace the live database with the pre-release snapshot for this code rollback: that would discard intervening user writes.
 
-Schema 10 adds only `notification_state`, a private per-user notification snapshot. The reviewed online transition and marker rollback also support 9 ↔ 10 and 8 ↔ 10. The same helper preserves the table and its contents during code rollback; migration 10 uses `IF NOT EXISTS`.
+Schema 10 adds only `notification_state`, a private per-user notification snapshot. The reviewed online transition and marker rollback also support 9 в†” 10 and 8 в†” 10. The same helper preserves the table and its contents during code rollback; migration 10 uses `IF NOT EXISTS`.
 
-Schema 11 adds only `trip_cover_settings`, an independent per-trip cover preference table. The reviewed online transition is 10 ↔ 11. The compatibility helper preserves the table and selected photo IDs when restoring the schema-10 marker for the previous release; migration 11 is idempotent. Existing trip and media columns are unchanged.
+Schema 11 adds only `trip_cover_settings`, an independent per-trip cover preference table. The reviewed online transition is 10 в†” 11. The compatibility helper preserves the table and selected photo IDs when restoring the schema-10 marker for the previous release; migration 11 is idempotent. Existing trip and media columns are unchanged.
 
-Schema 12 adds only `trip_cover_positions`, with a normalized x/y position per trip and photo. The reviewed transition is 11 ↔ 12. Marker rollback preserves positions, and the idempotent migration restores the ledger on upgrade. Existing custom decks longer than five are read as their first five without deleting stored IDs; new saves enforce the five-photo limit.
-
+Schema 12 adds only `trip_cover_positions`, with a normalized x/y position per trip and photo. The reviewed transition is 11 в†” 12. Marker rollback preserves positions, and the idempotent migration restores the ledger on upgrade. Existing custom decks longer than five are read as their first five without deleting stored IDs; new saves enforce the five-photo limit.
 
 ## Mobile connection diagnosis and transport recovery
 
@@ -133,7 +140,6 @@ value before applying; restore that value and the previous config file on rollba
 This mitigates a class of mobile/VPN failures; it is not proof that a particular
 user's provider or VPN caused an incident. Confirm on the affected device.
 
-
 ### Verified connection incident mitigation: 29 October 2026
 
 One phone intermittently could not open even the address, while another phone
@@ -153,3 +159,43 @@ of a single root cause. The incident did not capture the affected phone's DNS,
 TLS or packet trace before recovery, so an MTU black hole remains a plausible
 mechanism rather than a proven packet-level diagnosis. The transport check is
 retained to distinguish edge reachability from application loading on recurrence.
+
+## Database-only backup policy (30 October 2026)
+
+Back up only SQLite: no images, source archives, photos, configuration or keys.
+The host runs `database-backup.py` using Python's online SQLite backup API. It
+checks free space, creates a private temporary snapshot, converts it to a
+standalone rollback-journal database, verifies integrity and foreign keys, then
+atomically publishes `/opt/questkeeps/backups/database/latest.sqlite`. A failed
+attempt preserves the previous verified file. `status.json` records the last
+attempt/success and technical checksums only. Both paths are private.
+
+The existing daily systemd timer remains enabled (03:30 server time plus up to
+15 minutes jitter). Its service no longer depends on a working Docker container.
+Run `python3 /opt/questkeeps/docker-tools/database-backup.py status` to reject a
+failed attempt or a last success older than 36 hours. Before a release the same
+helper creates the database snapshot while holding the deployment lock.
+
+On the owner's computer, `C:\Users\tallsage\QuestKeeps-backups\latest.sqlite`
+is the second copy, outside Git. Access is restricted to the owner, SYSTEM and
+local administrators. The task `QuestKeeps database backup` pulls it daily at
+09:00 local computer time and at user logon, when network connectivity permits.
+It verifies the remote checksum before and after transfer, local SHA-256, SQLite
+integrity, foreign keys and required application tables before replacing the
+old local copy. A missed/failed pull leaves the last local copy intact; the PC
+must be online for this second copy to update. No new SSH credential is stored.
+
+Install `database-backup.py` and `pull-database-backup.py` together under the
+private folder's `tools` subdirectory. Run the latter with the installed Python
+interpreter to pull manually. Check local `status.json` and Scheduled Task result
+for success. A server failure does not erase the PC's last validated copy.
+
+To test restoration, copy `latest.sqlite` into an isolated directory and run
+`database-backup.py check --file RESTORED_PATH`. Never overwrite a live database
+or restore a stale snapshot during a code rollback. Encrypted OAuth fields still
+require the existing application encryption key; this database-only policy does
+not create a backup of that key.
+
+Pre-existing timestamped database archives are not deleted by migration to this
+single-current-copy policy. Image/build-cache cleanup is a separate operation;
+never include volumes or the working data directory in Docker cleanup.

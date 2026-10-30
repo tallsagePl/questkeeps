@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-exec 9>/opt/questkeeps/docker-state/deploy.lock
-flock -s 9
-slot=$(cat /opt/questkeeps/docker-state/active-slot)
-[[ "$slot" = blue || "$slot" = green ]]
-docker exec "qk-web-$slot" node --env-file=/run/questkeeps.env --import tsx --input-type=module -e "process.umask(0o077); await import('./scripts/backup.ts')"
-find /opt/questkeeps/shared/data/backups -maxdepth 1 -type f -name 'travel-*.sqlite' -mtime +14 -delete
+umask 077
+root=/opt/questkeeps
+exec 9>"$root/docker-state/deploy.lock"
+# A snapshot must not overlap a schema transition or release cleanup.
+flock -x -w 240 9
+python3 "$root/docker-tools/database-backup.py" create
+python3 "$root/docker-tools/database-backup.py" status

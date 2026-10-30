@@ -67,19 +67,7 @@ rollback() {
 }
 trap rollback ERR INT TERM
 # Online snapshot before the candidate or the reviewed additive migration.
-python3 - <<'PY'
-import sqlite3, os, time
-folder='/opt/questkeeps/backups'
-os.makedirs(folder,exist_ok=True)
-path=folder+'/pre-docker-'+str(time.time_ns())+'.sqlite'
-source=sqlite3.connect('file:/opt/questkeeps/shared/data/travel.sqlite?mode=ro',uri=True)
-target=sqlite3.connect(path)
-source.backup(target)
-assert target.execute('pragma quick_check').fetchone()[0]=='ok'
-target.close()
-source.close()
-os.chmod(path,0o600)
-PY
+python3 "$root/docker-tools/database-backup.py" create
 # Reviewed 8 -> 9 -> 10 -> 11 -> 12 changes add defaulted columns and independent tables. Old
 # application SQL remains compatible. A rollback retains both and restores only
 # the compatibility marker, without restoring a stale database snapshot.
@@ -138,6 +126,22 @@ sleep 3
 test "$(docker inspect --format '{{.State.Running}}' "$worker")" = true
 test "$(docker inspect --format '{{.RestartCount}}' "$worker")" = 0
 HEALTH_URL="http://127.0.0.1:$port" /usr/local/bin/node "$root/docker-tools/container-health.mjs"
+# Keep the preceding web/image until the candidate passes a stability window.
+# This checks readiness, public assets, Docker health and a non-restarting worker.
+healthy=false
+for attempt in $(seq 1 20); do
+  test "$(docker inspect --format '{{.State.Running}}' "$web")" = true
+  test "$(docker inspect --format '{{.State.Running}}' "$worker")" = true
+  test "$(docker inspect --format '{{.RestartCount}}' "$web")" = 0
+  test "$(docker inspect --format '{{.RestartCount}}' "$worker")" = 0
+  if [ "$(docker inspect --format '{{.State.Health.Status}}' "$web")" = healthy ]; then
+    healthy=true
+    break
+  fi
+  sleep 3
+done
+[ "$healthy" = true ]
+HEALTH_URL=https://questkeeps.ru HEALTH_ASSET_BASE=https://questkeeps.ru /usr/local/bin/node "$root/docker-tools/container-health.mjs"
 if [ "$legacy" = true ]; then systemctl disable questkeeps
 else docker stop --time 60 "$previous_web" >/dev/null; fi
 printf '%s\n' "$slot" > "$state/active-slot.next"
@@ -145,4 +149,8 @@ printf '%s\n' "$image_id" > "$state/active-image.next"
 mv -Tf "$state/active-image.next" "$state/active-image"
 mv -Tf "$state/active-slot.next" "$state/active-slot"
 trap - ERR INT TERM
-echo "Active: $web ($image). Previous image/container retained."
+echo "Active: $web ($image). Readiness checks passed."
+# Cleanup failure must not roll back a healthy release after retirement started.
+if ! bash "$root/docker-tools/docker-retire.sh" "$image_id"; then
+  echo 'WARNING: active release is healthy, but old-image cleanup needs attention.' >&2
+fi
