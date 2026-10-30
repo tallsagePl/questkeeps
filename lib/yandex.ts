@@ -1,4 +1,5 @@
-import { one, run, decrypt, encrypt, Row } from './db';
+import { one, run, decrypt, encrypt, hash, Row } from './db';
+import { MemoryCache } from './memory-cache';
 import { fail } from './access';
 
 export interface Resource {
@@ -169,6 +170,16 @@ export async function fetchMedia(
   signal?: AbortSignal,
 ) {
   const link = await mediaURL(m, preview, signal);
+  return fetchMediaLink(m, link, preview, range, signal);
+}
+
+async function fetchMediaLink(
+  m: Row,
+  link: string,
+  preview: boolean,
+  range?: string | null,
+  signal?: AbortSignal,
+) {
   const headers: Record<string, string> = range ? { Range: range } : {};
   if (preview) {
     const url = new URL(link);
@@ -185,4 +196,57 @@ export async function fetchMedia(
     headers.Authorization = 'OAuth ' + (await accountToken(m.account_id));
   }
   return trustedFetch(link, headers, 0, signal);
+}
+
+const previewLinks = new MemoryCache<string, Promise<string>>(60000, 256);
+
+async function previewLink(m: Row, signal: AbortSignal, refresh: boolean) {
+  const key = hash(
+    JSON.stringify([m.account_id, m.resource_id, m.path, m.revision || '']),
+  );
+  if (refresh) previewLinks.delete(key);
+  let pending = previewLinks.get(key);
+  if (!pending) {
+    // The signal belongs to the shared image job, not to an individual viewer.
+    pending = mediaURL(m, true, signal);
+    previewLinks.set(key, pending);
+    const entry = pending;
+    void pending.catch(() => {
+      if (previewLinks.get(key) === entry) previewLinks.delete(key);
+    });
+  }
+  signal.throwIfAborted();
+  const result = await new Promise<string>((resolve, reject) => {
+    const aborted = () => reject(signal.reason);
+    signal.addEventListener('abort', aborted, { once: true });
+    pending!
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener('abort', aborted));
+  });
+  return result;
+}
+
+export async function fetchPreview(
+  m: Row,
+  signal: AbortSignal,
+  refresh = false,
+) {
+  let response = await fetchMediaLink(
+    m,
+    await previewLink(m, signal, refresh),
+    true,
+    null,
+    signal,
+  );
+  if ([401, 403, 404].includes(response.status)) {
+    await response.body?.cancel();
+    response = await fetchMediaLink(
+      m,
+      await previewLink(m, signal, true),
+      true,
+      null,
+      signal,
+    );
+  }
+  return response;
 }

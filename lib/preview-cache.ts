@@ -139,23 +139,31 @@ export async function previewBlob(
   await validatePreview(blob);
   signal?.throwIfAborted();
   if (cache && generation === currentGeneration) {
-    await cache
-      .put(
+    // Showing a validated image must not wait for a durable browser-cache write.
+    void (async () => {
+      if (generation !== currentGeneration) return;
+      await cache
+        .put(
+          request,
+          new Response(blob, {
+            headers: {
+              'Content-Type': blob.type,
+              'X-QuestKeeps-Expires': String(Date.now() + PREVIEW_STORAGE_TTL),
+            },
+          }),
+        )
+        .catch(() => {});
+      if (generation !== currentGeneration) {
+        await cache.delete(request).catch(() => {});
+        return;
+      }
+      expire(
+        cache,
         request,
-        new Response(blob, {
-          headers: {
-            'Content-Type': blob.type,
-            'X-QuestKeeps-Expires': String(Date.now() + PREVIEW_STORAGE_TTL),
-          },
-        }),
-      )
-      .catch(() => {});
-    expire(
-      cache,
-      request,
-      scope + request.url,
-      Date.now() + PREVIEW_STORAGE_TTL,
-    );
+        scope + request.url,
+        Date.now() + PREVIEW_STORAGE_TTL,
+      );
+    })().catch(() => {});
   }
   return blob;
 }

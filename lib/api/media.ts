@@ -13,6 +13,7 @@ import {
   throttle,
 } from '../access';
 import { fetchMedia } from '../yandex';
+import { serverPreview, PreviewTooLarge } from '../server-preview';
 import { nearby, placeSummary, placeImage, placeText } from '../places';
 import { placeTextContent } from '../place-text';
 import { placeGeometry } from '../place-geometry';
@@ -111,6 +112,50 @@ export async function mediaRoutes({
       const range = req.headers.get('range');
       if (range && !/^bytes=\d*-\d*$/.test(range))
         fail(416, 'messages.invalidRange');
+      const checkAccount = () => {
+        const account = one(
+          'SELECT disk_enabled,token FROM accounts WHERE id=?',
+          m.account_id,
+        );
+        if (!account?.disk_enabled || !account.token)
+          fail(409, 'messages.yandexAccountDisconnectedReconnectItInYour');
+      };
+      if (p[2] === 'preview' && !range) {
+        checkAccount();
+        try {
+          const image = await serverPreview(
+            m,
+            req.signal,
+            new URL(req.url).searchParams.has('reload'),
+          );
+          // Permissions may have changed while a shared download was in progress.
+          if (p[0] === 'my-media') ownProfileMedia(req, p[1]);
+          else mediaFor(req, p[1]);
+          checkAccount();
+          const stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(image.body);
+              controller.close();
+            },
+          });
+          return new Response(stream, {
+            headers: {
+              'Content-Type': image.contentType,
+              'Content-Length': String(image.body.length),
+              'Cache-Control': 'private, no-store',
+              'X-Content-Type-Options': 'nosniff',
+              'Content-Security-Policy': "sandbox; default-src 'none'",
+              'X-QuestKeeps-Preview-Cache': image.cacheStatus,
+            },
+          });
+        } catch (error) {
+          if (req.signal.aborted) return new Response(null, { status: 499 });
+          if (error instanceof Error && error.name === 'TimeoutError')
+            fail(504, 'errors.requestTimedOut');
+          // Unusually large previews retain their original streaming path, without disk caching.
+          if (!(error instanceof PreviewTooLarge)) throw error;
+        }
+      }
       const r = await fetchMedia(m, p[2] === 'preview', range, req.signal);
       if (!r.ok && r.status !== 206)
         fail(
