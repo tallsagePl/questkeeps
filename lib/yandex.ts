@@ -163,14 +163,41 @@ export async function mediaURL(m: Row, preview = false, signal?: AbortSignal) {
   return info.href as string;
 }
 
+// Only short-lived provider URLs live here; video bytes are never retained.
+const videoLinks = new MemoryCache<string, string>(60000, 128);
+
 export async function fetchMedia(
   m: Row,
   preview = false,
   range?: string | null,
   signal?: AbortSignal,
+  refresh = false,
 ) {
-  const link = await mediaURL(m, preview, signal);
-  return fetchMediaLink(m, link, preview, range, signal);
+  // Every request still checks the account, even when its URL is already warm.
+  await accountToken(m.account_id);
+  if (preview || m.kind !== 'video') {
+    const link = await mediaURL(m, preview, signal);
+    return fetchMediaLink(m, link, preview, range, signal);
+  }
+  const key = hash(
+    JSON.stringify([m.account_id, m.resource_id, m.path, m.revision || '']),
+  );
+  if (refresh) videoLinks.delete(key);
+  let link = videoLinks.get(key);
+  const reused = !!link;
+  if (!link) {
+    link = await mediaURL(m, false, signal);
+    videoLinks.set(key, link);
+  }
+  let response = await fetchMediaLink(m, link, false, range, signal);
+  if (reused && [401, 403, 404].includes(response.status)) {
+    await response.body?.cancel();
+    videoLinks.delete(key);
+    link = await mediaURL(m, false, signal);
+    videoLinks.set(key, link);
+    response = await fetchMediaLink(m, link, false, range, signal);
+  }
+  return response;
 }
 
 async function fetchMediaLink(

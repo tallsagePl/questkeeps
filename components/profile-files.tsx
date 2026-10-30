@@ -5,7 +5,7 @@ import {
   MediaArchiveDelete,
 } from './media-archive-controls';
 import { useEffect, useRef, useState, useId } from 'react';
-import VideoViewer from './video-viewer';
+import dynamic from 'next/dynamic';
 import { useMediaReload, MediaReloadButton } from './media-reload';
 import MediaVisibilityControls from './media-visibility-controls';
 import { api } from './api';
@@ -15,6 +15,8 @@ import MediaPreview from './media-preview';
 import PhotoViewer from './photo-viewer';
 import Modal from './modal';
 import { PreviewPriority } from './preview-priority';
+
+const VideoViewer = dynamic(() => import('./video-viewer'), { ssr: false });
 
 type Group = { id: string; title: string; count: number };
 

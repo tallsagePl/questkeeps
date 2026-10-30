@@ -79,7 +79,7 @@ test('MOV is attempted in the player; individual photo and video reload preserve
   });
   await page.goto('/?trip=reload');
   await page.locator('.photo-card').first().click();
-  const dialog = page.getByRole('dialog');
+  const dialog = page.locator('dialog.modal');
   const reload = dialog.getByRole('button', {
     name: 'Перезагрузить фото или видео',
     exact: true,
@@ -103,6 +103,9 @@ test('MOV is attempted in the player; individual photo and video reload preserve
   await close.click();
   await page.locator('.photo-card').nth(1).click();
   await expect(dialog.locator('video')).toBeVisible();
+  await dialog
+    .getByRole('button', { name: 'Воспроизвести', exact: true })
+    .click();
   await expect(dialog.locator('.video-playback-error')).toContainText(
     'Видео не удалось воспроизвести',
   );
@@ -139,13 +142,28 @@ test('MOV is attempted in the player; individual photo and video reload preserve
   await reload.click();
   await expect.poll(() => videoRequests).toBeGreaterThan(before);
   await expect(dialog.locator('video')).toHaveAttribute('src', /reload=/);
-  await page.screenshot({ path: 'test-results/media-reload-video.png' });
   await expect
     .poll(() =>
       dialog.locator('video').evaluate((v: HTMLVideoElement) => v.readyState),
     )
     .toBeGreaterThanOrEqual(1);
   await expect(dialog.locator('.video-playback-error')).toHaveCount(0);
+  await dialog
+    .getByRole('button', { name: 'Воспроизвести', exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      dialog.locator('video').evaluate((v: HTMLVideoElement) => v.currentTime),
+    )
+    .toBeGreaterThan(0);
+  await dialog.locator('.questkeeps-video-player').click();
+  await dialog.locator('.questkeeps-video-player').press('ArrowRight');
+  await expect(dialog.locator('video')).toHaveAttribute('src', /movie/);
+  const width = await dialog
+    .locator('.questkeeps-video-player')
+    .evaluate((el) => el.getBoundingClientRect().width);
+  expect(width).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: 'test-results/media-reload-video.png' });
   expect(tripLoads).toBe(initialTripLoads);
   expect(errors).toEqual([]);
 });

@@ -1,0 +1,31 @@
+.questkeeps-video-player {
+  --media-accent-color: var(--accent);
+  --media-accent-text-color: white;
+  --media-font-family: var(--sans);
+  --media-border-radius: 0px;
+  --media-object-fit: contain;
+  width: 100%;
+  height: min(60dvh, 800px);
+  min-height: 220px;
+  color: white;
+  background: #000;
+  line-height: normal;
+}
+.modal.fullscreen .questkeeps-video-player {
+  height: 100%;
+  min-height: 0;
+}
+.questkeeps-video-player:fullscreen {
+  height: 100%;
+}
+/* App-wide button, text and image rules must not override the packaged skin. */
+.questkeeps-video-player :is(button, p, h2, img, svg) {
+  all: revert-layer;
+}
+
+/* Gallery position belongs above the image, away from the timeline controls. */
+.place-photo-navigation:has(.video-viewer) .place-photo-counter {
+  top: 12px;
+  bottom: auto;
+  pointer-events: none;
+}

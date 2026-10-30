@@ -1,6 +1,6 @@
 {
   "name": "questkeeps",
-  "version": "1.31.0",
+  "version": "1.32.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -25,6 +25,7 @@
   "license": "ISC",
   "dependencies": {
     "@fontsource-variable/onest": "^5.3.1",
+    "@videojs/react": "10.2.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "cities.json": "^1.1.65",

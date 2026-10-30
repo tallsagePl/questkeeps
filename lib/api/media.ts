@@ -110,7 +110,7 @@ export async function mediaRoutes({
       const m =
         p[0] === 'my-media' ? ownProfileMedia(req, p[1]) : mediaFor(req, p[1]);
       const range = req.headers.get('range');
-      if (range && !/^bytes=\d*-\d*$/.test(range))
+      if (range && !/^bytes=(?:\d+-\d*|-\d+)$/.test(range))
         fail(416, 'messages.invalidRange');
       const checkAccount = () => {
         const account = one(
@@ -156,7 +156,29 @@ export async function mediaRoutes({
           if (!(error instanceof PreviewTooLarge)) throw error;
         }
       }
-      const r = await fetchMedia(m, p[2] === 'preview', range, req.signal);
+      const r = await fetchMedia(
+        m,
+        p[2] === 'preview',
+        range,
+        req.signal,
+        new URL(req.url).searchParams.has('reload'),
+      );
+      // A seek may finish after a membership, guest link or account is revoked.
+      try {
+        if (p[0] === 'my-media') ownProfileMedia(req, p[1]);
+        else mediaFor(req, p[1]);
+        checkAccount();
+      } catch (error) {
+        await r.body?.cancel();
+        throw error;
+      }
+      if (r.status === 416) {
+        await r.body?.cancel();
+        const headers = new Headers({ 'Cache-Control': 'private, no-store' });
+        for (const name of ['content-range', 'accept-ranges'])
+          if (r.headers.has(name)) headers.set(name, r.headers.get(name)!);
+        return new Response(null, { status: 416, headers });
+      }
       if (!r.ok && r.status !== 206)
         fail(
           r.status === 404 ? 404 : 502,

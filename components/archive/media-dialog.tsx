@@ -4,7 +4,7 @@ import {
   MediaRotationControls,
   MediaArchiveDelete,
 } from '../media-archive-controls';
-import VideoViewer from '../video-viewer';
+import dynamic from 'next/dynamic';
 import { useMediaReload, MediaReloadButton } from '../media-reload';
 import MediaVisibilityControls from '../media-visibility-controls';
 import { Collapse } from '../smooth-details';
@@ -23,6 +23,8 @@ import { MediaTitle } from '../media-controls';
 import { FeedbackButton } from '../feedback';
 import { type ArchiveController } from './use-archive';
 import { Icon } from './shared';
+
+const VideoViewer = dynamic(() => import('../video-viewer'), { ssr: false });
 
 export default function MediaDialog({
   archive,
