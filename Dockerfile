@@ -1,3 +1,6 @@
+FROM node:24-bookworm-slim AS media-runtime
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates && rm -rf /var/lib/apt/lists/*
+
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -11,7 +14,7 @@ ENV APP_URL=https://questkeeps.ru
 ENV DATABASE_PATH=/tmp/questkeeps-build.sqlite
 RUN npm run build && node --import tsx --input-type=module -e "import fs from 'node:fs'; import {migrations} from './lib/migrations/index.ts'; fs.writeFileSync('deployment.json',JSON.stringify({schema:migrations.at(-1).version}));" && npm prune --omit=dev && npm cache clean --force && rm -rf .next/cache
 
-FROM node:24-bookworm-slim AS runtime
+FROM media-runtime AS runtime
 ARG APP_UID=997
 ARG APP_GID=997
 ARG SOURCE_REVISION=local

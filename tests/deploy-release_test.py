@@ -35,6 +35,7 @@ if a[0]=='run':
  if '--rm' in a:finish('12')
  name=a[a.index('--name')+1]
  if s['scenario']=='worker-fail' and 'worker' in name:finish(code=1)
+ if s['scenario']=='video-fail' and 'video' in name:finish(code=1)
  s['containers'][name]={'running':True,'image':s['new']};finish(name)
 if a[0]=='rm':
  name=a[-1]
@@ -88,7 +89,12 @@ class ReleaseTests(unittest.TestCase):
             fake_state.write_text(json.dumps({"old": OLD, "new": NEW, "scenario": scenario,
                 "images": [OLD, NEW], "events": [], "containers": {
                   "qk-web-green": {"running": True, "image": OLD},
-                  "qk-worker-green": {"running": True, "image": OLD}}}))
+                  "qk-worker-green": {"running": True, "image": OLD},
+                  "qk-video-green": {"running": True, "image": OLD}}}))
+            if scenario == "first-video":
+                initial = json.loads(fake_state.read_text())
+                initial["containers"].pop("qk-video-green")
+                fake_state.write_text(json.dumps(initial))
             result = subprocess.run(["bash", str(tools / "docker-release.sh"), "questkeeps:test"],
                 env={**os.environ, "PATH": str(binaries) + os.pathsep + os.environ['PATH'], "QK_FAKE_STATE": str(fake_state)},
                 capture_output=True, text=True, timeout=30)
@@ -109,6 +115,19 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue(state['containers']['qk-web-green']['running'])
         self.assertTrue(state['containers']['qk-worker-green']['running'])
         self.assertEqual(active, OLD)
+
+    def test_failed_video_restores_previous_video_worker(self):
+        result, state, active = self.run_release("video-fail")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(OLD, state['images'])
+        self.assertTrue(state['containers']['qk-video-green']['running'])
+        self.assertEqual(active, OLD)
+
+    def test_first_video_worker_can_be_added_without_a_previous_video_container(self):
+        result, state, active = self.run_release("first-video")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(state['containers']['qk-video-blue']['running'])
+        self.assertEqual(active, NEW)
 
     def test_success_retires_old_image_only_after_checks(self):
         result, state, active = self.run_release("success")

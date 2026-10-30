@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createServer, connect } from 'node:net';
 
@@ -95,3 +95,22 @@ supervise(
   ['--import', 'tsx', fileURLToPath(new URL('./worker.ts', import.meta.url))],
   'Background worker',
 );
+
+if (
+  spawnSync(process.env.FFMPEG_PATH || 'ffmpeg', ['-version'], {
+    stdio: 'ignore',
+    windowsHide: true,
+  }).status === 0
+) {
+  supervise(
+    [
+      '--import',
+      'tsx',
+      fileURLToPath(new URL('./video-worker.ts', import.meta.url)),
+    ],
+    'Video preparation',
+  );
+} else
+  console.log(
+    'Compatible video preparation needs FFmpeg; original playback remains available.',
+  );

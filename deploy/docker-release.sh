@@ -31,7 +31,9 @@ case "$current_port" in
 esac
 web="qk-web-$slot"
 worker="qk-worker-$slot"
-for container in "$web" "$worker"; do
+video="qk-video-$slot"
+if [ "$slot" = blue ]; then previous_video=qk-video-green; else previous_video=qk-video-blue; fi
+for container in "$web" "$worker" "$video"; do
   if docker container inspect "$container" >/dev/null 2>&1; then
     test "$(docker inspect --format '{{index .Config.Labels "app"}}' "$container")" = questkeeps
     docker rm -f "$container" >/dev/null
@@ -40,9 +42,11 @@ done
 cp "$upstream" "$state/upstream.previous"
 switched=false
 worker_stopped=false
+video_stopped=false
 rollback() {
   trap - ERR INT TERM
   set +e
+  docker rm -f "$video" >/dev/null 2>&1
   docker rm -f "$worker" >/dev/null 2>&1
   docker rm -f "$web" >/dev/null 2>&1
   if [ "$schema_changed" = true ]; then
@@ -51,6 +55,7 @@ rollback() {
       exit 1
     fi
   fi
+  if [ "$video_stopped" = true ]; then docker start "$previous_video" >/dev/null 2>&1; fi
   if [ "$worker_stopped" = true ]; then
     if [ "$legacy" = true ]; then systemctl start questkeeps
     else docker start "$previous_worker" >/dev/null; fi
@@ -122,9 +127,21 @@ docker run -d --init --name "$worker" --label app=questkeeps --label role=worker
   --mount "type=bind,src=$root/shared/data,dst=/app/data" \
   --mount "type=bind,src=$root/shared/.env.local,dst=/run/questkeeps.env,readonly" "$image_id" \
   node --env-file=/run/questkeeps.env --import tsx scripts/worker.ts >/dev/null
+if docker container inspect "$previous_video" >/dev/null 2>&1; then
+  video_stopped=true
+  docker stop --time 30 "$previous_video" >/dev/null
+fi
+docker run -d --init --name "$video" --label app=questkeeps --label role=video --restart unless-stopped \
+  --no-healthcheck --memory 384m --memory-swap 768m --cpus 0.5 --pids-limit 80 \
+  --security-opt no-new-privileges --cap-drop ALL --log-opt max-size=10m --log-opt max-file=3 \
+  --mount "type=bind,src=$root/shared/data,dst=/app/data" \
+  --mount "type=bind,src=$root/shared/.env.local,dst=/run/questkeeps.env,readonly" "$image_id" \
+  node --env-file=/run/questkeeps.env --import tsx scripts/video-worker.ts >/dev/null
 sleep 3
 test "$(docker inspect --format '{{.State.Running}}' "$worker")" = true
 test "$(docker inspect --format '{{.RestartCount}}' "$worker")" = 0
+test "$(docker inspect --format '{{.State.Running}}' "$video")" = true
+test "$(docker inspect --format '{{.RestartCount}}' "$video")" = 0
 HEALTH_URL="http://127.0.0.1:$port" /usr/local/bin/node "$root/docker-tools/container-health.mjs"
 # Keep the preceding web/image until the candidate passes a stability window.
 # This checks readiness, public assets, Docker health and a non-restarting worker.
@@ -134,6 +151,8 @@ for attempt in $(seq 1 20); do
   test "$(docker inspect --format '{{.State.Running}}' "$worker")" = true
   test "$(docker inspect --format '{{.RestartCount}}' "$web")" = 0
   test "$(docker inspect --format '{{.RestartCount}}' "$worker")" = 0
+test "$(docker inspect --format '{{.State.Running}}' "$video")" = true
+test "$(docker inspect --format '{{.RestartCount}}' "$video")" = 0
   if [ "$(docker inspect --format '{{.State.Health.Status}}' "$web")" = healthy ]; then
     healthy=true
     break

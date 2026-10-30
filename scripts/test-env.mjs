@@ -5,6 +5,8 @@ process.env.DATABASE_PATH = './data/test-' + randomUUID() + '.sqlite';
 
 process.env.PREVIEW_CACHE_DIRECTORY = './data/test-preview-' + randomUUID();
 
+process.env.VIDEO_CACHE_DIRECTORY = './data/test-video-' + randomUUID();
+
 process.env.APP_URL = 'http://localhost:3000';
 
 // Next build workers must keep the explicit dummy environment too.

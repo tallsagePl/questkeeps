@@ -13,6 +13,7 @@ async function route(req: NextRequest, ctx: Context) {
 
 export {
   route as GET,
+  route as HEAD,
   route as POST,
   route as PATCH,
   route as DELETE,

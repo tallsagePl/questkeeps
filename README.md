@@ -180,7 +180,7 @@ See [deploy/README.md](deploy/README.md) for server configuration, certificates,
 
 - Cloud storage integration supports Yandex Disk; Google Drive is not connected yet.
 - An email-verification queue and Resend delivery are implemented. Verification is disabled by default and requires a configured sender, domain and API key. Follow [email setup](docs/EMAIL-SETUP.md) before enabling it. Telegram feedback and registration notifications run in the background worker; see [bot setup](docs/TELEGRAM-SETUP.md).
-- Video playback depends on browser format and codec support; there is no server-side transcoding. EXIF extraction is bounded by data size and format support; locations can be set manually.
+- Video playback depends on browser format and codec support; there is on-demand 720p H.264/AAC preparation for supported clips. EXIF extraction is bounded by data size and format support; locations can be set manually.
 - Revoking a guest link cannot revoke files that have already been viewed or downloaded.
 - Password recovery, email changes and account deletion are not implemented yet.
 - Automated tests do not replace manual testing with real media or a completed security audit. Review scope and status are documented in [docs/SECURITY.md (Russian)](docs/SECURITY.md).
@@ -216,3 +216,5 @@ Documentation and screenshots reflect the current interface. The proposed design
 [Privacy policy (RU + EN)](https://questkeeps.ru/privacy) · [Brand surfaces and redesign checklist](docs/BRAND-SURFACES.md)
 
 Docker blue/green deployment: [Docker deployment guide](docs/DOCKER-DEPLOY.md). The running release stays online while the candidate builds and passes readiness checks.
+
+[Compatible video preparation: formats, limits and worker](docs/VIDEO-PREPARATION.md)

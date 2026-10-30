@@ -77,6 +77,23 @@ test('MOV is attempted in the player; individual photo and video reload preserve
       ? r.fulfill({ body: clip, contentType: 'video/webm' })
       : r.fulfill({ status: 502, body: 'Unavailable' });
   });
+  let compatibleQueued = false;
+  await page.route(/\/api\/media\/movie\/playback-status(?:\?|$)/, (r) =>
+    r.fulfill({ json: { state: compatibleQueued ? 'ready' : 'idle' } }),
+  );
+  await page.route(/\/api\/media\/movie\/playback(?:\?|$)/, (r) => {
+    if (r.request().method() === 'POST') {
+      compatibleQueued = true;
+      return r.fulfill({
+        status: 202,
+        json: { state: 'processing', stage: 'encode' },
+      });
+    }
+    return r.fulfill({ body: clip!, contentType: 'video/webm' });
+  });
+  await page.route(/\/api\/media\/movie\/poster(?:\?|$)/, (r) =>
+    r.fulfill({ body: image, contentType: 'image/jpeg' }),
+  );
   await page.goto('/?trip=reload');
   await page.locator('.photo-card').first().click();
   const dialog = page.locator('dialog.modal');
@@ -181,6 +198,23 @@ test('MOV is attempted in the player; individual photo and video reload preserve
     .evaluate((el) => el.getBoundingClientRect().width);
   expect(width).toBeLessThanOrEqual(390);
   await page.screenshot({ path: 'test-results/media-reload-video.png' });
+  await dialog.locator('.video-compatibility-controls button').click();
+  await expect(dialog.locator('video')).toHaveAttribute(
+    'src',
+    /\/playback(?:\?|$)/,
+  );
+  await expect
+    .poll(() =>
+      dialog.locator('video').evaluate((v: HTMLVideoElement) => v.readyState),
+    )
+    .toBeGreaterThanOrEqual(1);
+  expect(compatibleQueued).toBe(true);
+  await page.screenshot({ path: 'test-results/video-compatible-mobile.png' });
+  await dialog.locator('.video-compatibility-controls button').click();
+  await expect(dialog.locator('video')).toHaveAttribute(
+    'src',
+    /\/original(?:\?|$)/,
+  );
   expect(tripLoads).toBe(initialTripLoads);
   expect(errors).toEqual([]);
 });

@@ -1,6 +1,6 @@
 {
   "name": "questkeeps",
-  "version": "1.33.0",
+  "version": "1.34.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,8 @@
     "migrate": "node --env-file=.env.local --import tsx scripts/migrate.ts",
     "format:check": "node scripts/format-source.mjs --check && prettier --check \"lib/i18n/*.json\" \"docs/**/*.md\" \"README*.md\" && prettier --check \".github/**/*.yml\"",
     "mail:test": "node --env-file=.env.local --import tsx scripts/test-email.ts",
-    "telegram:setup": "node --env-file=.env.local --import tsx scripts/setup-telegram.ts"
+    "telegram:setup": "node --env-file=.env.local --import tsx scripts/setup-telegram.ts",
+    "video:worker": "node --env-file=.env.local --import tsx scripts/video-worker.ts"
   },
   "keywords": [],
   "author": "",

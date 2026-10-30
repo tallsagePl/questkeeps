@@ -25,7 +25,7 @@
 
 /* Gallery position belongs above the image, away from the timeline controls. */
 .place-photo-navigation:has(.video-viewer) .place-photo-counter {
-  top: 12px;
+  top: calc(var(--video-toolbar-height, 0px) + 12px);
   bottom: auto;
   pointer-events: none;
 }
@@ -54,3 +54,21 @@
   color: #fff;
   border-color: #aaaac0;
 }
+
+.compatible-video { width: 100%; }
+.video-compatibility-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+.modal.fullscreen .compatible-video {
+  height: calc(100dvh - var(--viewer-header-height));
+  display: flex;
+  flex-direction: column;
+}
+.modal.fullscreen .compatible-video .video-viewer { flex: 1; height: auto; min-height: 0; }

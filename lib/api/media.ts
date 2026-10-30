@@ -1,3 +1,4 @@
+import { videoRoutes } from './video';
 import { ownProfileMedia } from '../profile-media';
 import { localizedWikiArticle } from '../wiki-article';
 import { areaWiki } from '../map-area-wiki';
@@ -25,6 +26,13 @@ export async function mediaRoutes({
   p,
   method,
 }: RequestContext): Promise<Response | undefined> {
+  if (
+    ['media', 'my-media'].includes(p[0]) &&
+    p[1] &&
+    ['playback', 'playback-status', 'poster'].includes(p[2]) &&
+    !p[3]
+  )
+    return videoRoutes({ req, p, method, url: req.nextUrl });
   if (
     (p[0] === 'media' && p[1]) ||
     (p[0] === 'my-media' &&

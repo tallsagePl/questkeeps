@@ -8,7 +8,7 @@ expected=$1
 slot=$(cat "$root/docker-state/active-slot")
 [[ "$slot" = blue || "$slot" = green ]]
 [ "$(cat "$root/docker-state/active-image")" = "$expected" ]
-for role in web worker; do
+for role in web worker video; do
   name="qk-$role-$slot"
   [ "$(docker inspect --format '{{.Image}}' "$name")" = "$expected" ]
   [ "$(docker inspect --format '{{.State.Running}}' "$name")" = true ]
@@ -17,7 +17,7 @@ done
 [ "$(docker inspect --format '{{.State.Health.Status}}' "qk-web-$slot")" = healthy ]
 HEALTH_URL=https://questkeeps.ru HEALTH_ASSET_BASE=https://questkeeps.ru /usr/local/bin/node "$root/docker-tools/container-health.mjs"
 if [ "$slot" = blue ]; then previous=green; else previous=blue; fi
-for role in web worker; do
+for role in web worker video; do
   name="qk-$role-$previous"
   if docker container inspect "$name" >/dev/null 2>&1; then
     [ "$(docker inspect --format '{{index .Config.Labels "app"}}' "$name")" = questkeeps ]
