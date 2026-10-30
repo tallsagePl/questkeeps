@@ -29,3 +29,28 @@
   bottom: auto;
   pointer-events: none;
 }
+
+.video-viewer {
+  position: relative;
+}
+.video-viewer .video-playback-error {
+  position: absolute;
+  z-index: 20;
+  inset: auto 12px 72px;
+  display: grid;
+  gap: 12px;
+  width: fit-content;
+  max-width: min(480px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 16px;
+  border: 1px solid #656575;
+  border-radius: 12px;
+  color: #fff;
+  background: #161622;
+  line-height: 1.5;
+}
+.video-viewer .video-playback-error .secondary {
+  background: #29293d;
+  color: #fff;
+  border-color: #aaaac0;
+}

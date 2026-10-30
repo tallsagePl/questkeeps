@@ -1,6 +1,7 @@
 import { one, run, decrypt, encrypt, hash, Row } from './db';
 import { MemoryCache } from './memory-cache';
 import { fail } from './access';
+import { withYandexDeadline, yandexGet } from './yandex-request';
 
 export interface Resource {
   path: string;
@@ -19,7 +20,8 @@ export interface Resource {
   _embedded?: { items: Resource[]; total: number };
 }
 
-export async function accountToken(accountId: string) {
+export async function accountToken(accountId: string, signal?: AbortSignal) {
+  signal?.throwIfAborted();
   const a =
     one('SELECT * FROM accounts WHERE id=?', accountId) ||
     fail(404, 'messages.accountNotFound');
@@ -34,7 +36,9 @@ export async function accountToken(accountId: string) {
         client_id: process.env.YANDEX_CLIENT_ID || '',
         client_secret: process.env.YANDEX_CLIENT_SECRET || '',
       }),
-      signal: AbortSignal.timeout(20000),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(20000)])
+        : AbortSignal.timeout(20000),
     });
     if (!response.ok) fail(502, 'messages.reconnectYourYandexAccount');
     const data = await response.json();
@@ -56,31 +60,35 @@ export async function disk(
   params: Record<string, string> = {},
   signal?: AbortSignal,
 ) {
-  const auth = await accountToken(accountId);
-  const response = await fetch(
-    'https://cloud-api.yandex.net/v1/disk/' +
-      endpoint +
-      '?' +
-      new URLSearchParams(params),
-    {
-      headers: { Authorization: 'OAuth ' + auth },
-      cache: 'no-store',
-      signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(25000)])
-        : AbortSignal.timeout(25000),
-    },
-  );
-  if (!response.ok) {
-    if (response.status === 401)
-      fail(502, 'messages.reconnectYourYandexAccount');
-    if (response.status === 404)
-      fail(404, 'messages.fileOrFolderNotFoundOnDrive');
-    fail(502, {
-      key: 'errors.yandexUnavailable',
-      params: { status: response.status },
-    });
-  }
-  return response.json();
+  return withYandexDeadline(signal, async (active) => {
+    const auth = await accountToken(accountId, active);
+    return yandexGet(
+      'https://cloud-api.yandex.net/v1/disk/' +
+        endpoint +
+        '?' +
+        new URLSearchParams(params),
+      {
+        headers: { Authorization: 'OAuth ' + auth },
+        cache: 'no-store',
+        signal: active,
+      },
+      'metadata',
+      async (response) => {
+        if (!response.ok) {
+          await response.body?.cancel();
+          if (response.status === 401)
+            fail(502, 'messages.reconnectYourYandexAccount');
+          if (response.status === 404)
+            fail(404, 'messages.fileOrFolderNotFoundOnDrive');
+          fail(502, {
+            key: 'errors.yandexUnavailable',
+            params: { status: response.status },
+          });
+        }
+        return response.json();
+      },
+    );
+  });
 }
 
 export function normalizePath(p: string) {
@@ -103,6 +111,17 @@ export async function trustedFetch(
   depth = 0,
   signal?: AbortSignal,
 ): Promise<Response> {
+  return withYandexDeadline(signal, (active) =>
+    trustedFetchWithin(url, headers, depth, active),
+  );
+}
+
+async function trustedFetchWithin(
+  url: string,
+  headers: Record<string, string>,
+  depth: number,
+  signal: AbortSignal,
+): Promise<Response> {
   const u = new URL(url);
   if (
     u.protocol !== 'https:' ||
@@ -117,14 +136,17 @@ export async function trustedFetch(
     )
   )
     fail(502, 'messages.unexpectedFileAddress');
-  const r = await fetch(u, {
-    headers,
-    redirect: 'manual',
-    cache: 'no-store',
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(60000)])
-      : AbortSignal.timeout(60000),
-  });
+  const r = await yandexGet(
+    u,
+    {
+      headers,
+      redirect: 'manual',
+      cache: 'no-store',
+      signal,
+    },
+    'file',
+    async (response) => response,
+  );
   if ([301, 302, 303, 307, 308].includes(r.status)) {
     await r.body?.cancel();
     if (depth >= 5) fail(502, 'messages.tooManyRedirects');
@@ -134,7 +156,7 @@ export async function trustedFetch(
       for (const name of Object.keys(nextHeaders)) {
         if (name.toLowerCase() === 'authorization') delete nextHeaders[name];
       }
-    return trustedFetch(target.href, nextHeaders, depth + 1, signal);
+    return trustedFetchWithin(target.href, nextHeaders, depth + 1, signal);
   }
   return r;
 }
@@ -173,8 +195,20 @@ export async function fetchMedia(
   signal?: AbortSignal,
   refresh = false,
 ) {
+  return withYandexDeadline(signal, (active) =>
+    fetchMediaWithin(m, preview, range, active, refresh),
+  );
+}
+
+async function fetchMediaWithin(
+  m: Row,
+  preview: boolean,
+  range: string | null | undefined,
+  signal: AbortSignal,
+  refresh: boolean,
+) {
   // Every request still checks the account, even when its URL is already warm.
-  await accountToken(m.account_id);
+  await accountToken(m.account_id, signal);
   if (preview || m.kind !== 'video') {
     const link = await mediaURL(m, preview, signal);
     return fetchMediaLink(m, link, preview, range, signal);
@@ -220,7 +254,8 @@ async function fetchMediaLink(
       )
     )
       fail(502, 'messages.unexpectedPreviewAddress');
-    headers.Authorization = 'OAuth ' + (await accountToken(m.account_id));
+    headers.Authorization =
+      'OAuth ' + (await accountToken(m.account_id, signal));
   }
   return trustedFetch(link, headers, 0, signal);
 }

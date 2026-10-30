@@ -178,3 +178,118 @@ test('video API preserves byte ranges and rechecks guest access after opening th
     globalThis.fetch = original;
   }
 });
+
+test('exhausted provider resets become 502 and canceled media requests are not retried', async () => {
+  const { NextRequest } = await import('next/server');
+  const { handle } = await import('../lib/api');
+  const { hash } = await import('../lib/db');
+  run('UPDATE trips SET share_hash=? WHERE id=?', hash('guest'), 'trip');
+  const original = globalThis.fetch;
+  let downloads = 0;
+  globalThis.fetch = async (input) => {
+    if (new URL(String(input)).hostname === 'cloud-api.yandex.net')
+      return Response.json({
+        href: 'https://downloader.disk.yandex.ru/api-file',
+      });
+    downloads++;
+    throw new TypeError('fetch failed', {
+      cause: Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
+    });
+  };
+  const request = (signal?: AbortSignal) =>
+    handle(
+      new NextRequest(
+        'http://localhost:3000/api/media/movie/original?share=guest',
+        { headers: { Range: 'bytes=0-1' }, signal },
+      ),
+      ['media', 'movie', 'original'],
+    );
+  try {
+    const response = await request();
+    assert.equal(response.status, 502);
+    assert.equal(
+      (await response.json()).errorTranslation.key,
+      'errors.yandexConnectionFailed',
+    );
+    assert.equal(downloads, 2);
+    const abort = new AbortController();
+    abort.abort();
+    assert.equal((await request(abort.signal)).status, 499);
+    assert.equal(downloads, 2);
+    globalThis.fetch = async (_input, init) =>
+      new Promise((_resolve, reject) =>
+        init!.signal!.addEventListener(
+          'abort',
+          () => reject(init!.signal!.reason),
+          { once: true },
+        ),
+      );
+    const timeout = await request(AbortSignal.timeout(10));
+    assert.equal(timeout.status, 504);
+    assert.equal(
+      (await timeout.json()).errorTranslation.key,
+      'errors.requestTimedOut',
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('retries preserve redirect host validation and strip credentials before reaching another origin', async () => {
+  const { trustedFetch } = await import('../lib/yandex');
+  const original = globalThis.fetch;
+  let targetCalls = 0;
+  globalThis.fetch = async (input, init) => {
+    const host = new URL(String(input)).hostname;
+    if (host === 'downloader.disk.yandex.ru') {
+      assert.equal(
+        new Headers(init?.headers).get('authorization'),
+        'OAuth fixture',
+      );
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'https://storage.yandex.net/fixture' },
+      });
+    }
+    assert.equal(host, 'storage.yandex.net');
+    assert.equal(new Headers(init?.headers).get('authorization'), null);
+    assert.equal(new Headers(init?.headers).get('range'), 'bytes=0-1');
+    targetCalls++;
+    if (targetCalls === 1)
+      throw new TypeError('fetch failed', {
+        cause: Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
+      });
+    return new Response(new Uint8Array([1, 2]), { status: 206 });
+  };
+  try {
+    assert.equal(
+      (
+        await trustedFetch('https://downloader.disk.yandex.ru/file', {
+          Authorization: 'OAuth fixture',
+          Range: 'bytes=0-1',
+        })
+      ).status,
+      206,
+    );
+    assert.equal(targetCalls, 2);
+    let calls = 0;
+    globalThis.fetch = async () => {
+      calls++;
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'https://fixture.invalid/private' },
+      });
+    };
+    await assert.rejects(
+      trustedFetch('https://downloader.disk.yandex.ru/file'),
+      /./,
+    );
+    assert.equal(
+      calls,
+      1,
+      'an untrusted redirect is rejected before a request is sent',
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
+});

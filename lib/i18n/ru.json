@@ -958,5 +958,6 @@
   "tripCover.center": "По центру",
   "tripCover.remove": "Убрать из обложки",
   "tripCover.apply": "Применить кадрирование",
-  "tripCover.invalidCrop": "Проверьте выбранные фотографии и положение кадра."
+  "tripCover.invalidCrop": "Проверьте выбранные фотографии и положение кадра.",
+  "errors.yandexConnectionFailed": "Не удалось соединиться с Яндекс Диском. Повторите попытку."
 }

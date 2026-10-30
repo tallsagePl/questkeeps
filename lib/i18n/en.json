@@ -958,5 +958,6 @@
   "tripCover.center": "Center photo",
   "tripCover.remove": "Remove from cover",
   "tripCover.apply": "Apply framing",
-  "tripCover.invalidCrop": "Check your selected photos and framing."
+  "tripCover.invalidCrop": "Check your selected photos and framing.",
+  "errors.yandexConnectionFailed": "Could not connect to Yandex Disk. Please try again."
 }

@@ -7,11 +7,13 @@ import '@videojs/react/video/skin.css';
 import './video-viewer.css';
 import { useLocale } from './appearance';
 
-export default function VideoViewer({ src }: { src: string }) {
-  return <Playback key={src} src={src} />;
+type Props = { src: string; onRetry: () => void };
+
+export default function VideoViewer({ src, onRetry }: Props) {
+  return <Playback key={src} src={src} onRetry={onRetry} />;
 }
 
-function Playback({ src }: { src: string }) {
+function Playback({ src, onRetry }: Props) {
   const { t, language } = useLocale();
   const [failed, setFailed] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
@@ -58,7 +60,10 @@ function Playback({ src }: { src: string }) {
       </I18nProvider>
       {failed && (
         <p role="status" className="video-playback-error">
-          {t('media.videoPlaybackFailed')}
+          <span>{t('media.videoPlaybackFailed')}</span>
+          <button type="button" className="secondary" onClick={onRetry}>
+            {t('common.retry')}
+          </button>
         </p>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { YandexRequestError } from './yandex-request';
 import { invitationRoutes } from './api/invitations';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -92,6 +93,20 @@ export async function handle(
           : 'unknown';
       return oauthFailure(reason, currentUser(req) ? 'link' : 'login');
     }
+    if (req.signal.aborted && req.signal.reason?.name !== 'TimeoutError')
+      return new Response(null, { status: 499 });
+    if (error instanceof Error && error.name === 'TimeoutError')
+      return json({ error: 'errors.requestTimedOut' }, 504);
+    if (error instanceof YandexRequestError)
+      return json(
+        {
+          error:
+            error.reason === 'timeout'
+              ? 'errors.requestTimedOut'
+              : 'errors.yandexConnectionFailed',
+        },
+        error.reason === 'timeout' ? 504 : 502,
+      );
     if (error instanceof z.ZodError)
       return json(
         {

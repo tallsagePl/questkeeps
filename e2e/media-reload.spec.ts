@@ -108,6 +108,10 @@ test('MOV is attempted in the player; individual photo and video reload preserve
   await expect(dialog.locator('.video-playback-error')).toContainText(
     'Видео не удалось воспроизвести',
   );
+  await expect(dialog.locator('.video-playback-error button')).toBeVisible();
+  await page.screenshot({
+    path: 'test-results/video-network-retry-mobile.png',
+  });
   clip = Buffer.from(
     await page.evaluate(async () => {
       const canvas = document.createElement('canvas');
@@ -138,7 +142,7 @@ test('MOV is attempted in the player; individual photo and video reload preserve
     }),
   );
   const before = videoRequests;
-  await reload.click();
+  await dialog.locator('.video-playback-error button').click();
   await expect.poll(() => videoRequests).toBeGreaterThan(before);
   await expect(dialog.locator('video')).toHaveAttribute('src', /reload=/);
   await expect

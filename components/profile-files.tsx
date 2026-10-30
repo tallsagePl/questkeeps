@@ -332,6 +332,7 @@ function FileGroup({
               <p>{t('profileFiles.fileUnavailable')}</p>
             ) : selected.kind === 'video' ? (
               <VideoViewer
+                onRetry={reload.reload}
                 key={reload.key}
                 src={reload.source(url(selected, 'original'))}
               />

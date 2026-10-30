@@ -182,6 +182,7 @@ export default function MediaDialog({
               </div>
             ) : activeMedia.kind === 'video' ? (
               <VideoViewer
+                onRetry={reload.reload}
                 key={reload.key}
                 src={reload.source(mediaPath(activeMedia, 'original'))}
               />
