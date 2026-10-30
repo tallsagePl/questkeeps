@@ -155,12 +155,10 @@ test('MOV is attempted in the player; individual photo and video reload preserve
     )
     .toBeGreaterThan(0);
   expect(
-    await dialog
-      .locator('video')
-      .evaluate((v: HTMLVideoElement) => ({
-        paused: v.paused,
-        time: v.currentTime,
-      })),
+    await dialog.locator('video').evaluate((v: HTMLVideoElement) => ({
+      paused: v.paused,
+      time: v.currentTime,
+    })),
   ).toEqual({ paused: true, time: 0 });
 
   await dialog
