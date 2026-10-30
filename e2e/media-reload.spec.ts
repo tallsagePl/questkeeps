@@ -103,9 +103,8 @@ test('MOV is attempted in the player; individual photo and video reload preserve
   await close.click();
   await page.locator('.photo-card').nth(1).click();
   await expect(dialog.locator('video')).toBeVisible();
-  await dialog
-    .getByRole('button', { name: 'Воспроизвести', exact: true })
-    .click();
+  await expect.poll(() => videoRequests).toBeGreaterThan(0);
+  await expect(dialog.locator('video')).toHaveAttribute('preload', 'auto');
   await expect(dialog.locator('.video-playback-error')).toContainText(
     'Видео не удалось воспроизвести',
   );
@@ -148,6 +147,22 @@ test('MOV is attempted in the player; individual photo and video reload preserve
     )
     .toBeGreaterThanOrEqual(1);
   await expect(dialog.locator('.video-playback-error')).toHaveCount(0);
+  await expect
+    .poll(() =>
+      dialog
+        .locator('video')
+        .evaluate((v: HTMLVideoElement) => v.buffered.length),
+    )
+    .toBeGreaterThan(0);
+  expect(
+    await dialog
+      .locator('video')
+      .evaluate((v: HTMLVideoElement) => ({
+        paused: v.paused,
+        time: v.currentTime,
+      })),
+  ).toEqual({ paused: true, time: 0 });
+
   await dialog
     .getByRole('button', { name: 'Воспроизвести', exact: true })
     .click();

@@ -48,7 +48,7 @@ function Playback({ src }: { src: string }) {
             <Video
               ref={video}
               playsInline
-              preload="metadata"
+              preload="auto"
               src={src}
               onError={() => setFailed(true)}
               onLoadedMetadata={() => setFailed(false)}

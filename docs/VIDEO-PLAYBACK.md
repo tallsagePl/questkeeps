@@ -2,7 +2,7 @@
 
 QuestKeeps uses the pinned Apache-2.0 Video.js 10 React player (`@videojs/react` 10.2.0). The player and its locale packs are served by our application, not a third-party player CDN. It is dynamically imported when a video viewer opens in a trip or the profile library.
 
-The packaged skin provides seeking, volume, speed, fullscreen, picture-in-picture, keyboard shortcuts and Russian/English controls. `playsInline` preserves inline iPhone playback. Player arrow keys do not change the surrounding gallery selection. Metadata preload avoids fetching every original when the gallery opens. A source change/remount clears stale playback errors; an early native error is also checked after mount.
+The packaged skin provides seeking, volume, speed, fullscreen, picture-in-picture, keyboard shortcuts and Russian/English controls. `playsInline` preserves inline iPhone playback. Player arrow keys do not change the surrounding gallery selection. Opening a video viewer requests `preload="auto"`, so buffering starts before Play is pressed. Only the opened video is mounted; browsing the gallery does not preload all originals. Playback and audio still require the user to press Play. Browsers can limit preloading under data-saving policies. A source change/remount clears stale playback errors; an early native error is also checked after mount.
 
 ## Delivery
 
