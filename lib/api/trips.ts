@@ -96,7 +96,7 @@ export async function tripRoutes({
             input.description,
             Date.now(),
           );
-          if (input.source && sourceId)
+          if (input.source && sourceId) {
             run(
               'INSERT INTO sources(id,trip_id,user_id,account_id,path,approved) VALUES (?,?,?,?,?,1)',
               sourceId,
@@ -105,8 +105,9 @@ export async function tripRoutes({
               input.source.accountId,
               selectedFolder,
             );
+            queueSourceSync(sourceId, false);
+          }
         })();
-        if (sourceId) queueSourceSync(sourceId, false);
         return json({ id: tid, sourceId }, 201);
       }
     }
