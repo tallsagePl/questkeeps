@@ -280,7 +280,7 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
               <div className="archive-refresh">
                 <FeedbackButton
                   className="text-button"
-                  disabled={busy}
+                  disabled={busy || archive.importing}
                   onClick={() =>
                     void action(async () => {
                       const result = await api(
@@ -292,7 +292,7 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
                         t(
                           result.failed
                             ? 'trip.somePhotosCouldNotBeLoadedPlease'
-                            : 'trip.archiveRefreshed',
+                            : 'sync.queued',
                         ),
                       );
                     })
@@ -301,6 +301,26 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
                   <Icon name="refresh" size={16} />
                   {t('trip.loadNewPhotos')}
                 </FeedbackButton>
+                {archive.importing && (
+                  <span className="fine" role="status">
+                    {t(
+                      data?.importStatus?.metadataPending
+                        ? 'sync.metadataProgress'
+                        : 'sync.scanProgress',
+                      {
+                        count:
+                          data?.importStatus?.metadataPending ||
+                          data?.importStatus?.scanned ||
+                          0,
+                      },
+                    )}
+                  </span>
+                )}
+                {!archive.importing && !!data?.importStatus?.metadataErrors && (
+                  <span className="fine" role="status">
+                    {t('sync.metadataRetry')}
+                  </span>
+                )}
               </div>
             )}
           </div>

@@ -970,5 +970,9 @@
   "video.tooLong": "Preparation currently supports clips up to 5 minutes. The original remains available.",
   "video.unsupported": "This file could not be prepared. Download the original to open it on your device.",
   "video.storageBusy": "Preparation is busy. Please try again later.",
-  "video.notReady": "The compatible video is not ready yet."
+  "video.notReady": "The compatible video is not ready yet.",
+  "sync.queued": "Update queued. Photos will appear automatically.",
+  "sync.scanProgress": "Checking Drive · files found: {count}",
+  "sync.metadataProgress": "Reading dates and locations · remaining: {count}",
+  "sync.metadataRetry": "Some metadata is unavailable. We will retry with backoff; a manual refresh retries failed items."
 }

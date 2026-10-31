@@ -12,6 +12,7 @@ import type {
   ConfirmedPlace,
   PlaceSuggestion,
   TripInvitation,
+  SourceSyncStatus,
 } from '../../lib/contracts';
 import {
   announceSessionChange,
@@ -183,31 +184,100 @@ export function useArchive({
     data?.importStatus?.waiting || data?.importStatus?.syncing
   );
   useEffect(() => {
-    if (!selected || guest || !importing) return;
+    if (
+      !selected ||
+      guest ||
+      (!importing && !data?.importStatus?.metadataWaiting)
+    )
+      return;
     const controller = new AbortController();
+    const generation = identityGeneration.current;
     let pending = false;
-    const timer = setInterval(async () => {
-      if (pending) return;
+    let stamp = '';
+    let lastRefresh = 0;
+    const poll = async () => {
+      if (pending || document.hidden || !navigator.onLine) return;
       pending = true;
       try {
-        const result = await api<TripData>(
-          'trips/' + selected,
+        const status = await api<SourceSyncStatus>(
+          'trips/' + selected + '/sync',
           'GET',
           undefined,
-          controller.signal,
+          AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
         );
-        if (!controller.signal.aborted) setData(result);
+        if (
+          controller.signal.aborted ||
+          generation !== identityGeneration.current
+        )
+          return;
+        const nextStamp =
+          status.jobs.map((j) => j.finished).join(':') +
+          ':' +
+          status.metadata.completed;
+        if (status.active) {
+          setData((current) =>
+            current?.trip.id === selected && current.importStatus
+              ? {
+                  ...current,
+                  importStatus: {
+                    ...current.importStatus,
+                    metadataPending: status.metadata.active,
+                    metadataWaiting: status.metadata.waiting,
+                    metadataErrors: status.metadata.errors,
+                    scanned: status.jobs.reduce(
+                      (n, j) => n + (j.scanned || 0),
+                      0,
+                    ),
+                  },
+                }
+              : current,
+          );
+        }
+        if (
+          (nextStamp !== stamp && Date.now() - lastRefresh > 10000) ||
+          (!status.active && !status.metadata.waiting)
+        ) {
+          stamp = nextStamp;
+          lastRefresh = Date.now();
+          await loadTrip(selected);
+          const settings = await api<{ sources: DriveSource[] }>(
+            'trips/' + selected + '/sources',
+            'GET',
+            undefined,
+            AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
+          );
+          if (
+            !controller.signal.aborted &&
+            generation === identityGeneration.current
+          )
+            setSources(settings.sources);
+        }
       } catch {
-        /* Keep the current view during transient failures; the next poll retries. */
+        /* Keep the currently loaded archive during transient outages. */
       } finally {
         pending = false;
       }
-    }, 3000);
-    return () => {
-      clearInterval(timer);
-      controller.abort();
     };
-  }, [selected, guest, importing]);
+    const timer = setInterval(() => void poll(), importing ? 3000 : 15000);
+    const visible = () => {
+      if (!document.hidden) void poll();
+    };
+    document.addEventListener('visibilitychange', visible);
+    window.addEventListener('online', visible);
+    void poll();
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', visible);
+      window.removeEventListener('online', visible);
+    };
+  }, [
+    selected,
+    guest,
+    importing,
+    !!data?.importStatus?.metadataWaiting,
+    loadTrip,
+  ]);
   const refresh = useCallback(async () => {
     if (share) {
       setData(await api<TripData>('share/' + share));

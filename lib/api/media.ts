@@ -328,13 +328,21 @@ export async function mediaRoutes({
         );
       if (input.lat !== undefined && input.lon !== undefined) {
         assertDay(m.taken.slice(0, 10), membership(m.trip_id, u.id));
-        run(
-          'UPDATE media SET lat=?,lon=? WHERE id=?',
-          input.lat,
-          input.lon,
-          m.id,
-        );
-        run('DELETE FROM confirmed_places WHERE media_id=?', m.id);
+        db.transaction(() => {
+          run(
+            'UPDATE media SET lat=?,lon=? WHERE id=?',
+            input.lat,
+            input.lon,
+            m.id,
+          );
+          run(
+            'INSERT INTO media_location_overrides(media_id,lat,lon) VALUES (?,?,?) ON CONFLICT(media_id) DO UPDATE SET lat=excluded.lat,lon=excluded.lon',
+            m.id,
+            input.lat,
+            input.lon,
+          );
+          run('DELETE FROM confirmed_places WHERE media_id=?', m.id);
+        }).immediate();
       }
       return json({ ok: true });
     }

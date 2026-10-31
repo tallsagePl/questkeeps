@@ -434,8 +434,8 @@ test('notification snapshots are private and Drive checks are queued once per au
       1,
     );
     assert.equal(
-      one('SELECT last_sync FROM sources WHERE id=?', source)!.last_sync,
-      null,
+      one('SELECT state FROM source_jobs WHERE source_id=?', source)!.state,
+      'queued',
     );
     run('UPDATE sources SET last_sync=? WHERE id=?', 200, source);
     assert.equal(

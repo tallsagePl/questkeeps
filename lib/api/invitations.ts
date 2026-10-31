@@ -1,3 +1,4 @@
+import { queueSourceSync } from '../source-jobs';
 import {
   notificationSnapshot,
   readNotifications,
@@ -54,14 +55,15 @@ export async function invitationRoutes({
           session.expires,
         ).changes;
         if (!first) return 0;
-        return run(
-          'UPDATE sources SET last_sync=NULL WHERE user_id=? AND approved=1 AND lock_until<? AND account_id IN (SELECT id FROM accounts WHERE user_id=? AND disk_enabled=1) AND (trip_id IN (SELECT id FROM trips WHERE owner_id=?) OR trip_id IN (SELECT trip_id FROM members WHERE user_id=? AND active=1))',
-          u.id,
-          Date.now(),
-          u.id,
+        const sources = all(
+          `SELECT s.id FROM sources s JOIN accounts a ON a.id=s.account_id JOIN trips t ON t.id=s.trip_id
+          WHERE s.user_id=? AND s.approved=1 AND a.disk_enabled=1 AND (t.owner_id=? OR EXISTS(SELECT 1 FROM members m WHERE m.trip_id=t.id AND m.user_id=? AND m.active=1))`,
           u.id,
           u.id,
-        ).changes;
+          u.id,
+        );
+        for (const source of sources) queueSourceSync(source.id, false);
+        return sources.length;
       })
       .immediate();
     return json({ queued });

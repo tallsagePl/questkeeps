@@ -203,3 +203,9 @@ never include volumes or the working data directory in Docker cleanup.
 ## Video preparation worker (1.34.0)
 
 The runtime now contains FFmpeg and a third container, qk-video-blue/green. Deploy docker-release.sh and docker-retire.sh together. The converter is limited to one job, 0.5 CPU and 384 MiB RAM, with a shared 1 GiB disposable cache. See [video preparation](VIDEO-PREPARATION.md) for limits, recovery and cache permissions. Original media and the canonical database backup policy are unchanged.
+
+Version 1.35.0 uses schema 13. Install the matching `docker-release.sh` and
+`media-archive-schema.py` helpers together before deployment: the reviewed
+12/13 marker rollback keeps source jobs, metadata jobs and coordinate overrides.
+The existing general worker now handles metadata; no extra container is needed.
+See [Drive synchronization](DRIVE-SYNCHRONIZATION.md).

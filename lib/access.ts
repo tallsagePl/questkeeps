@@ -1,3 +1,4 @@
+import { sourceJobStatus } from './source-jobs';
 import { messageDescriptor } from './i18n/messages';
 import { guestTrip } from './guest-links';
 import { localizeMessage, type LocalizedMessage } from './i18n/translate';
@@ -197,12 +198,25 @@ export function tripData(req: Request, tripId: string) {
           Number(t.role === 'owner'),
           user?.id || '',
         );
+  const progress =
+    t.role === 'guest'
+      ? null
+      : sourceJobStatus(tripId, user?.id || '', t.role === 'owner');
   const importStatus = {
+    metadataPending: progress?.metadata.active || 0,
+    metadataWaiting: progress?.metadata.waiting || 0,
+    metadataErrors: progress?.metadata.errors || 0,
+    scanned: progress?.jobs.reduce((n, j) => n + (j.scanned || 0), 0) || 0,
     sourceCount: sourceRows.length,
-    syncing: sourceRows.some(
-      (s) =>
-        s.approved && s.disk_enabled && s.eligible && s.lock_until > Date.now(),
-    ),
+    syncing:
+      !!progress?.active ||
+      sourceRows.some(
+        (s) =>
+          s.approved &&
+          s.disk_enabled &&
+          s.eligible &&
+          s.lock_until > Date.now(),
+      ),
     waiting: sourceRows.some(
       (s) =>
         s.approved && s.disk_enabled && s.eligible && !s.last_sync && !s.error,

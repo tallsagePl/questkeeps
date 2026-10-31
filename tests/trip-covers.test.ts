@@ -219,7 +219,7 @@ test('favorite covers respect guest visibility, membership dates and source appr
   assert.deepEqual(coverSettings('trip').positions?.public, { x: 25, y: 80 });
   assert.deepEqual(coverSettings('trip').photoIds, ['public', 'private']);
   migrate(db);
-  assert.equal(db.pragma('user_version', { simple: true }), 12);
+  assert.equal(db.pragma('user_version', { simple: true }), 13);
   assert.deepEqual(coverSettings('trip').photoIds, ['public', 'private']);
   assert.equal(
     (await request('owner', { mode: 'all', photoIds: [] })).status,

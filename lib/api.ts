@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { hash } from './db';
 import { HttpError, fail, currentUser, requireUser } from './access';
-import { syncDue } from './sync';
+import { queueDueSync } from './source-jobs';
 import { json, appURL } from './api/http';
 import { oauthFailure } from './api/oauth';
 import type { RequestContext } from './api/context';
@@ -34,7 +34,7 @@ export async function handle(
           hash('Bearer ' + secret)
       )
         fail(401, 'messages.accessDenied');
-      return json(await syncDue());
+      return json({ queued: queueDueSync() }, 202);
     }
     if (method !== 'GET' && method !== 'HEAD') {
       if (req.headers.get('origin') !== new URL(appURL()).origin)

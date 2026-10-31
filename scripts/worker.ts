@@ -1,3 +1,4 @@
+import { runMetadataJobs } from '../lib/metadata-jobs';
 import { pollTelegram, deliverTelegram } from '../lib/telegram';
 import { deliverEmails } from '../lib/email-verification';
 import { syncDue } from '../lib/sync';
@@ -31,10 +32,17 @@ void runWorkerLoops(
       },
     },
     {
+      name: 'metadata',
+      intervalMs: 5000,
+      run: async () => {
+        await runMetadataJobs(shutdown.signal);
+      },
+    },
+    {
       name: 'sync',
       intervalMs: 30000,
       run: async () => {
-        const result = await syncDue();
+        const result = await syncDue(shutdown.signal);
         if (result.length)
           console.log(new Date().toISOString(), 'sync', JSON.stringify(result));
       },

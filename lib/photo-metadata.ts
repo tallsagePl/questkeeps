@@ -5,7 +5,9 @@ import { mediaURL, trustedFetch, Resource } from './yandex';
 export async function readPhotoExif(
   accountId: string,
   r: Resource,
+  signal?: AbortSignal,
 ): Promise<Row> {
+  signal?.throwIfAborted();
   if (
     !['image/jpeg', 'image/heic', 'image/heif', 'image/png'].includes(
       r.mime_type || '',
@@ -34,14 +36,28 @@ export async function readPhotoExif(
     return data;
   }
   try {
-    const url = await mediaURL({ account_id: accountId, path: r.path });
-    const response = await trustedFetch(url, { Range: 'bytes=0-524287' });
-    if (!response.ok || !response.body) return { metadataReadFailed: true };
+    signal?.throwIfAborted();
+    const url = await mediaURL(
+      { account_id: accountId, path: r.path },
+      false,
+      signal,
+    );
+    const response = await trustedFetch(
+      url,
+      { Range: 'bytes=0-524287' },
+      0,
+      signal,
+    );
+    if (!response.ok || !response.body) {
+      await response.body?.cancel();
+      return { metadataReadFailed: true };
+    }
     const reader = response.body.getReader();
     const chunks: Uint8Array[] = [];
     let length = 0;
     try {
       while (length < 524288) {
+        signal?.throwIfAborted();
         const { done, value } = await reader.read();
         if (done) break;
         const part = value.subarray(0, 524288 - length);
@@ -73,6 +89,7 @@ export async function readPhotoExif(
     );
     return info;
   } catch {
+    signal?.throwIfAborted();
     return { metadataReadFailed: true };
   }
 }

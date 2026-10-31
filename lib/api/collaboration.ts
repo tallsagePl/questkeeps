@@ -9,7 +9,7 @@ import { publicProfile, ensureUsername } from '../profiles';
 import { db, one, all, run, id, token, hash } from '../db';
 import { fail, membership, owner, assertDay, throttle } from '../access';
 import { disk, normalizePath } from '../yandex';
-import { syncSource } from '../sync';
+import { queueSourceSync } from '../source-jobs';
 import { json, body, day, dates, bounds, appURL } from './http';
 import type { AuthenticatedContext } from './context';
 
@@ -297,7 +297,7 @@ export async function collaborationRoutes(
         if (t.role !== 'owner' && s.user_id !== u.id)
           fail(403, 'messages.accessDenied');
         throttle('sync:' + s.id, 10);
-        return json(await syncSource(s.id));
+        return json(queueSourceSync(s.id), 202);
       }
     }
   }

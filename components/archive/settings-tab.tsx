@@ -229,7 +229,7 @@ export default function SettingsTab({
                       {isOwner && !s.approved && (
                         <FeedbackButton
                           className="secondary"
-                          disabled={busy}
+                          disabled={busy || archive.importing}
                           onClick={() =>
                             void action(async () => {
                               await api(
@@ -251,7 +251,7 @@ export default function SettingsTab({
                           className="icon-button"
                           title={t('trip.syncFolder')}
                           aria-label={t('trip.syncFolder')}
-                          disabled={busy}
+                          disabled={busy || archive.importing}
                           onClick={() =>
                             void action(async () => {
                               const r = await api(
@@ -268,9 +268,7 @@ export default function SettingsTab({
                               setNotice(
                                 r.busy
                                   ? t('trip.synchronizationIsAlreadyRunning')
-                                  : t('sync.complete', {
-                                      count: r.count,
-                                    }),
+                                  : t('sync.queued'),
                               );
                             })
                           }

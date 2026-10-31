@@ -16,6 +16,8 @@ const { session } = await import('../lib/access');
 
 const { syncSource } = await import('../lib/sync');
 
+const { runMetadataJobs } = await import('../lib/metadata-jobs');
+
 const origin = 'http://localhost:3000';
 
 const uid = id();
@@ -980,8 +982,9 @@ await test('права, авторизация и синхронизация', a
           {},
           memberCookie,
         );
-        assert.equal(result.status, 200);
-        assert.equal((await result.json()).count, 1);
+        assert.equal(result.status, 202);
+        assert.equal((await result.json()).queued, true);
+        assert.equal((await syncSource(sourceId)).count, 1);
         assert.equal(
           one(
             'SELECT count(*) n FROM media WHERE resource_id=?',
@@ -1530,6 +1533,10 @@ await test('права, авторизация и синхронизация', a
       }) as typeof fetch;
       try {
         await syncSource(sid);
+        run(
+          "UPDATE metadata_jobs SET next_attempt=-1 WHERE resource_id='jpeg-with-exif'",
+        );
+        await runMetadataJobs();
         const result = one(
           'SELECT * FROM media WHERE resource_id=?',
           'jpeg-with-exif',
@@ -1824,7 +1831,12 @@ await test('права, авторизация и синхронизация', a
         )!;
         assert.equal(source.trip_id, result.id);
         assert.equal(source.approved, 1);
-        assert.equal(tasks.length, 1);
+        assert.equal(tasks.length, 0);
+        assert.equal(
+          one('SELECT state FROM source_jobs WHERE source_id=?', source.id)
+            ?.state,
+          'queued',
+        );
         const beforeSync = await (
           await request('trips/' + result.id, 'GET', undefined, ownerCookie)
         ).json();
@@ -1834,7 +1846,7 @@ await test('права, авторизация и синхронизация', a
           JSON.stringify(beforeSync).includes('disk:/selected-trip'),
           false,
         );
-        await tasks[0]();
+        await syncSource(source.id);
         const afterSync = await (
           await request('trips/' + result.id, 'GET', undefined, ownerCookie)
         ).json();

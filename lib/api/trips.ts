@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { db, one, all, run, id } from '../db';
 import { fail, membership, owner, tripData, throttle } from '../access';
 import { disk } from '../yandex';
-import { syncSource } from '../sync';
+import { queueSourceSync, sourceJobStatus } from '../source-jobs';
 import { inferTrip, ownFolder } from '../infer-trip';
 import { json, body, day } from './http';
 import type { AuthenticatedContext } from './context';
@@ -106,14 +106,7 @@ export async function tripRoutes({
               selectedFolder,
             );
         })();
-        if (sourceId)
-          background?.(async () => {
-            try {
-              await syncSource(sourceId);
-            } catch {
-              /* syncSource records the error for the UI and worker retries. */
-            }
-          });
+        if (sourceId) queueSourceSync(sourceId, false);
         return json({ id: tid, sourceId }, 201);
       }
     }
@@ -256,26 +249,30 @@ export async function tripRoutes({
         descriptionMentions: descriptionMentions(tid, description),
       });
     }
-    if (p[2] === 'sync' && method === 'POST') {
+    if (p[2] === 'sync' && !p[3]) {
       const trip = membership(tid, u.id);
-      throttle('trip-sync:' + tid + ':' + u.id, 3);
-      const sources = all(
-        'SELECT id FROM sources WHERE trip_id=? AND approved=1 AND (?=1 OR user_id=?)',
-        tid,
-        Number(trip.role === 'owner'),
-        u.id,
-      );
-      let synced = 0;
-      let failed = 0;
-      for (const source of sources) {
-        try {
-          await syncSource(source.id);
-          synced++;
-        } catch {
-          failed++;
+      if (method === 'GET')
+        return json(sourceJobStatus(tid, u.id, trip.role === 'owner'));
+      if (method === 'POST') {
+        throttle('trip-sync:' + tid + ':' + u.id, 3);
+        const sources = all(
+          'SELECT id FROM sources WHERE trip_id=? AND approved=1 AND (?=1 OR user_id=?)',
+          tid,
+          Number(trip.role === 'owner'),
+          u.id,
+        );
+        let queued = 0;
+        let failed = 0;
+        for (const source of sources) {
+          try {
+            queueSourceSync(source.id);
+            queued++;
+          } catch {
+            failed++;
+          }
         }
+        return json({ queued, failed }, 202);
       }
-      return json({ synced, failed });
     }
     if (p[2] === 'area-suggestions') {
       membership(tid, u.id);

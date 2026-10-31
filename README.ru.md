@@ -217,3 +217,5 @@ npm start
 Docker-деплой с двумя слотами: [инструкция](docs/DOCKER-DEPLOY.md). Действующая версия продолжает работать, пока новая собирается и проходит проверку готовности.
 
 [Compatible video preparation: formats, limits and worker](docs/VIDEO-PREPARATION.md)
+
+[Фоновая синхронизация Диска и восстановление метаданных](docs/DRIVE-SYNCHRONIZATION.md)

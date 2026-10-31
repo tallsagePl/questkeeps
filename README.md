@@ -218,3 +218,5 @@ Documentation and screenshots reflect the current interface. The proposed design
 Docker blue/green deployment: [Docker deployment guide](docs/DOCKER-DEPLOY.md). The running release stays online while the candidate builds and passes readiness checks.
 
 [Compatible video preparation: formats, limits and worker](docs/VIDEO-PREPARATION.md)
+
+[Drive synchronization and metadata recovery](docs/DRIVE-SYNCHRONIZATION.md)

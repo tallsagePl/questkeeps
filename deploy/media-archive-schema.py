@@ -1,18 +1,34 @@
 #!/usr/bin/env python3
-"""Switch only the reviewed 8/9/10/11/12 compatibility marker; never remove user data."""
+"""Switch only the reviewed 8/9/10/11/12/13 compatibility marker; never remove user data."""
 import sqlite3
 import sys
 import time
 
 path, target = sys.argv[1], int(sys.argv[2])
-if target not in (8, 9, 10, 11, 12):
-    raise SystemExit('Only reviewed additive migrations 8 through 12 are supported')
+if target not in (8, 9, 10, 11, 12, 13):
+    raise SystemExit('Only reviewed additive migrations 8 through 13 are supported')
 with sqlite3.connect(path, timeout=10) as db:
     db.execute('BEGIN IMMEDIATE')
     current = db.execute('PRAGMA user_version').fetchone()[0]
-    if current not in (8, 9, 10, 11, 12):
+    if current not in (8, 9, 10, 11, 12, 13):
         raise RuntimeError('Unexpected schema version')
-    if current == 12 or target == 12:
+    if current >= 13 or target >= 13:
+        required = {
+            'source_jobs': {'source_id','id','state','scanned','count','attempts','requested','started','finished','next_run'},
+            'metadata_jobs': {'source_id','resource_id','revision','resource','state','attempts','next_attempt','lock_id','lock_until','updated'},
+            'media_location_overrides': {'media_id','lat','lon'},
+        }
+        for table, columns in required.items():
+            if {row[1] for row in db.execute('PRAGMA table_info('+table+')')} != columns:
+                raise RuntimeError('Source job compatibility tables are missing or incompatible')
+    source_history = db.execute('SELECT name FROM schema_migrations WHERE version=13').fetchone()
+    if source_history is not None and source_history[0] != 'source-jobs':
+        raise RuntimeError('Unexpected source job migration history')
+    if target < 13:
+        db.execute('DELETE FROM schema_migrations WHERE version=13')
+    else:
+        db.execute('INSERT OR IGNORE INTO schema_migrations VALUES (13,?,?)', ('source-jobs', int(time.time()*1000)))
+    if current >= 12 or target >= 12:
         position_columns = {row[1] for row in db.execute('PRAGMA table_info(trip_cover_positions)')}
         if position_columns != {'trip_id','media_id','x','y'}:
             raise RuntimeError('Cover positions table is missing or incompatible')

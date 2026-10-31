@@ -119,6 +119,10 @@ export type TripData = {
   noteReplies: JournalReply[];
   importStatus?: {
     sourceCount: number;
+    metadataPending?: number;
+    metadataWaiting?: number;
+    metadataErrors?: number;
+    scanned?: number;
     waiting: boolean;
     syncing: boolean;
     failed: boolean;
@@ -185,4 +189,26 @@ export type DirectTripInvitation = {
   end: string;
   all_photos: number;
   expires: number;
+};
+
+export type SourceSyncStatus = {
+  active: boolean;
+  jobs: {
+    sourceId: string;
+    jobId: string | null;
+    state: string;
+    scanned: number;
+    count: number;
+    finished: number | null;
+    nextAttempt: number | null;
+    paused: boolean;
+  }[];
+  metadata: {
+    total: number;
+    active: number;
+    errors: number;
+    waiting: number;
+    completed: number;
+    updated: number;
+  };
 };

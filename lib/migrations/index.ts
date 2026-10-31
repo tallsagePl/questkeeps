@@ -1,3 +1,4 @@
+import { sourceJobs } from './013-source-jobs';
 import { coverPositions } from './012-cover-positions';
 import { tripCoverSettings } from './011-trip-covers';
 import { notificationState } from './010-notification-state';
@@ -25,6 +26,7 @@ export const migrations = [
   { version: 10, name: 'notification-state', up: notificationState },
   { version: 11, name: 'trip-covers', up: tripCoverSettings },
   { version: 12, name: 'cover-positions', up: coverPositions },
+  { version: 13, name: 'source-jobs', up: sourceJobs },
 ];
 
 export function migrate(db: Database.Database) {
