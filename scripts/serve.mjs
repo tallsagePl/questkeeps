@@ -114,3 +114,12 @@ if (
   console.log(
     'Compatible video preparation needs FFmpeg; original playback remains available.',
   );
+
+supervise(
+  [
+    '--import',
+    'tsx',
+    fileURLToPath(new URL('./geo-worker.ts', import.meta.url)),
+  ],
+  'Geo worker',
+);

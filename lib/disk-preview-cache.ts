@@ -31,11 +31,15 @@ type Entry = {
   used: number;
 };
 
-export function previewKey(media: Record<string, unknown>) {
+export function previewKey(
+  media: Record<string, unknown>,
+  variant = 'provider',
+) {
   return createHash('sha256')
     .update(
       JSON.stringify([
-        'disk-preview-xl-v1',
+        'disk-preview-xl-v2',
+        variant,
         media.account_id,
         media.resource_id,
         media.path,

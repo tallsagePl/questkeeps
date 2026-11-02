@@ -1,5 +1,14 @@
 # История изменений
 
+## 1.36.0
+
+- Move geographic discovery to a durable, bounded worker queue with resumable partial results and provider deadlines.
+- Resize card/viewer previews on the server, reuse upstream files, bound browser warmup and gallery retention, and batch EXIF reads.
+- Add authorized conditional trip responses, coalesced OAuth refresh across processes and bounded action timeouts.
+- Add per-worker heartbeats, delivery terminal states, provider backoff and build the tested production image in CI.
+- Add in-app updates for followed trips and private anniversary memories; no automatic email or Telegram campaigns.
+
+
 ## 1.35.0 — 31 октября 2026
 
 - Обновление Диска ставится в фоновую очередь и сразу возвращает управление интерфейсу; отдельный короткий запрос показывает прогресс.

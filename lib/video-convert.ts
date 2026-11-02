@@ -75,7 +75,7 @@ export type VideoProbe = {
     sample_aspect_ratio?: string;
     side_data_list?: { rotation?: number }[];
   }[];
-  format: { duration: string };
+  format: { duration: string; tags?: Record<string, string> };
 };
 
 export async function probeVideo(
@@ -89,7 +89,7 @@ export async function probeVideo(
       '-v',
       'error',
       '-show_entries',
-      'format=duration:stream=codec_type,codec_name,width,height,pix_fmt,color_transfer,sample_aspect_ratio:stream_side_data=rotation',
+      'format=duration:format_tags=location,com.apple.quicktime.location.ISO6709:stream=codec_type,codec_name,width,height,pix_fmt,color_transfer,sample_aspect_ratio:stream_side_data=rotation',
       '-of',
       'json',
       file,
@@ -149,7 +149,8 @@ export async function convertVideo(
   poster: string,
   signal: AbortSignal,
 ) {
-  const plan = conversionPlan(await probeVideo(input, signal));
+  const original = await probeVideo(input, signal);
+  const plan = conversionPlan(original);
   const args = [
     '-nostdin',
     '-hide_banner',
@@ -261,5 +262,29 @@ export async function convertVideo(
   );
   if ((await stat(poster)).size > 2 * 1024 * 1024)
     throw new VideoFailure('video.failed');
-  return { remux: plan.native, duration: plan.duration };
+  return {
+    remux: plan.native,
+    duration: plan.duration,
+    location: videoLocation(original),
+  };
+}
+
+export function videoLocation(probe: VideoProbe) {
+  const value =
+    probe.format.tags?.['com.apple.quicktime.location.ISO6709'] ||
+    probe.format.tags?.location ||
+    '';
+  const match =
+    /^([+-]\d{2}(?:\.\d+)?)([+-]\d{2,3}(?:\.\d+)?)(?:[+-]\d+(?:\.\d+)?)?\/?$/.exec(
+      value,
+    );
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lon = Number(match[2]);
+  return Number.isFinite(lat) &&
+    Number.isFinite(lon) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lon) <= 180
+    ? { lat, lon }
+    : null;
 }

@@ -322,12 +322,6 @@ test('ограниченная лента сдвигается в обе сто�
   expect(total).toBeLessThanOrEqual(await galleryWindowLimit(grid));
   const first = await page.locator('.photo-card').first().boundingBox();
   expect(first!.width).toBeGreaterThan(100);
-  const originalCard = await page
-    .locator('[data-media-index="0"] .photo-card')
-    .elementHandle();
-  const originalImage = await page
-    .locator('[data-media-index="0"] img')
-    .getAttribute('src');
   const dimensions = await grid.evaluate((el) => ({
     top: el.getBoundingClientRect().top + window.scrollY,
     height: el.clientHeight,
@@ -376,7 +370,10 @@ test('ограниченная лента сдвигается в обе сто�
   }
   expect(await page.evaluate(() => (window as any).__scrollWrites)).toBe(36);
   await expect(page.locator('[data-media-index="0"]')).toBeHidden();
-  await expect(page.locator('[data-media-index="0"]')).toHaveCount(1);
+  await expect(page.locator('[data-media-index="0"]')).toHaveCount(0);
+  expect(
+    await page.locator('.virtual-gallery-cell').count(),
+  ).toBeLessThanOrEqual(3 * (await galleryWindowLimit(grid)));
   await expect
     .poll(async () =>
       Number(
@@ -446,16 +443,8 @@ test('ограниченная лента сдвигается в обе сто�
     page.locator('[data-media-index="0"] .media-preview'),
   ).toHaveAttribute('data-state', 'loaded');
   expect(calls.get('image-0')).toBe(2);
-  expect(
-    await originalCard!.evaluate(
-      (el) =>
-        el === document.querySelector('[data-media-index="0"] .photo-card'),
-    ),
-  ).toBe(true);
-  await expect(page.locator('[data-media-index="0"] img')).toHaveAttribute(
-    'src',
-    originalImage!,
-  );
+  // Old DOM nodes are evicted; the image is restored from the private preview cache.
+  await expect(page.locator('[data-media-index="0"] img')).toBeVisible();
   await page.reload();
   await expect(
     page.locator('[data-media-index="0"] .media-preview'),
@@ -681,7 +670,7 @@ test('HEIC использует кеш, сбой оригинала не скр�
     'naturalWidth',
     640,
   );
-  expect(previewCalls).toBe(initialCalls);
+  expect(previewCalls).toBe(initialCalls + 1);
   await expect(dialog.locator('.viewer-meta-line')).toContainText(
     '11 октября, 13:47',
   );

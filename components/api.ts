@@ -45,6 +45,7 @@ export async function api<T = LegacyApiResponse>(
   data?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
+  signal ||= AbortSignal.timeout(20000);
   let response: Response;
   try {
     response = await fetch('/api/' + path, {

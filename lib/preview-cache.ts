@@ -12,6 +12,24 @@ const prefix = 'questkeeps-previews-v2-';
 
 let generation = 0;
 
+const memory = new Map<string, { blob: Blob; at: number }>();
+
+let memoryBytes = 0;
+
+function remember(key: string, blob: Blob) {
+  const previous = memory.get(key);
+  if (previous) memoryBytes -= previous.blob.size;
+  memory.delete(key);
+  if (blob.size > 16 * 1024 * 1024) return;
+  memory.set(key, { blob, at: Date.now() + PREVIEW_STORAGE_TTL });
+  memoryBytes += blob.size;
+  while (memoryBytes > 16 * 1024 * 1024 || memory.size > 32) {
+    const oldest = memory.keys().next().value!;
+    memoryBytes -= memory.get(oldest)!.blob.size;
+    memory.delete(oldest);
+  }
+}
+
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const pruned = new Set<string>();
@@ -57,6 +75,8 @@ async function cacheFor(scope: string) {
 
 export async function clearPreviewCache() {
   generation++;
+  memory.clear();
+  memoryBytes = 0;
   clearPrivateLocalStorage();
   clearPlaceSearchRequests();
   await clearPlaceClientCache();
@@ -73,6 +93,12 @@ export async function clearPreviewCache() {
 }
 
 export async function discardPreview(src: string, scope: string) {
+  const memoryKey = scope + '|' + src;
+  const old = memory.get(memoryKey);
+  if (old) {
+    memoryBytes -= old.blob.size;
+    memory.delete(memoryKey);
+  }
   const request = await opaqueCacheRequest(src);
   const key = scope + request.url;
   const timer = timers.get(key);
@@ -100,6 +126,14 @@ export async function previewBlob(
   scope: string,
   signal?: AbortSignal,
 ): Promise<Blob> {
+  signal?.throwIfAborted();
+  const memoryKey = scope + '|' + src;
+  const hit = memory.get(memoryKey);
+  if (hit && hit.at > Date.now()) {
+    memory.delete(memoryKey);
+    memory.set(memoryKey, hit);
+    return hit.blob;
+  }
   const currentGeneration = generation;
   const cache =
     typeof caches !== 'undefined'
@@ -116,6 +150,9 @@ export async function previewBlob(
         await validatePreview(blob);
         signal?.throwIfAborted();
         if (cache) expire(cache, request, scope + request.url, at);
+        if (generation !== currentGeneration)
+          throw new DOMException('Session changed', 'AbortError');
+        remember(memoryKey, blob);
         return blob;
       } catch (error) {
         signal?.throwIfAborted();
@@ -165,5 +202,8 @@ export async function previewBlob(
       );
     })().catch(() => {});
   }
+  if (generation !== currentGeneration)
+    throw new DOMException('Session changed', 'AbortError');
+  remember(memoryKey, blob);
   return blob;
 }

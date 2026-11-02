@@ -179,11 +179,12 @@ test('concurrent cold image requests share one job; canceled queued jobs do not 
     await new Promise((r) => setImmediate(r));
     const abort = new AbortController();
     const canceled = placeImage(778, 'ru', abort.signal);
+    const rejection = assert.rejects(canceled);
     abort.abort();
     release();
     assert.equal(await first, 'https://upload.wikimedia.org/fixture.jpg');
     assert.equal(await second, 'https://upload.wikimedia.org/fixture.jpg');
-    await assert.rejects(canceled);
+    await rejection;
     assert.equal(calls, 1);
   } finally {
     release();

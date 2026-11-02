@@ -4330,3 +4330,11 @@ a:any-link:focus-visible,
   .member > div { flex-basis: calc(100% - 60px); }
   .member > .text-button { margin-left: 48px; }
 }
+
+.anniversary-memories { margin-block: 16px; min-width: 0; }
+.anniversary-memories h2 { font-size: 1.125rem; margin: 0 0 8px; }
+.anniversary-items { display: flex; gap: 8px; overflow-x: auto; padding-block: 2px 6px; }
+.anniversary-items > a { position: relative; display: block; flex: 0 0 160px; height: 100px; border-radius: 12px; overflow: hidden; }
+.anniversary-items .media-preview { position: absolute; inset: 0; }
+.anniversary-items > a > span { position: absolute; inset: auto 0 0; padding: 20px 8px 6px; color: white; background: linear-gradient(transparent,rgba(0,0,0,.75)); font-size: .8rem; }
+.anniversary-items small { display: block; }

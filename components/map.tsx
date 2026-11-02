@@ -500,19 +500,34 @@ export default function TravelMap({
     const controller = new AbortController();
     setSuggestionsLoading(true);
     setSuggestionsFailed(false);
-    cachedMapSuggestions(suggestionPath, mapScope)
-      .then((data) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      if (controller.signal.aborted) return;
+      if (document.hidden || !navigator.onLine) {
+        timer = setTimeout(() => void load(), 5000);
+        return;
+      }
+      try {
+        const data = await cachedMapSuggestions(suggestionPath, mapScope);
         if (controller.signal.aborted) return;
         setSuggestions(data.candidates || []);
-        setSuggestionsFailed(!!data.incomplete);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setSuggestionsFailed(true);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setSuggestionsLoading(false);
-      });
-    return () => controller.abort();
+        setSuggestionsFailed(!!data.incomplete && !data.pending);
+        setSuggestionsLoading(!!data.pending);
+        if (data.pending || data.incomplete)
+          timer = setTimeout(() => void load(), data.pending ? 3000 : 30000);
+      } catch {
+        if (!controller.signal.aborted) {
+          setSuggestionsFailed(true);
+          setSuggestionsLoading(false);
+          timer = setTimeout(() => void load(), 30000);
+        }
+      }
+    };
+    void load();
+    return () => {
+      controller.abort();
+      if (timer) clearTimeout(timer);
+    };
   }, [suggestionPath, suggestionRetry, mapScope]);
   useEffect(() => {
     const changed = (event: Event) => {

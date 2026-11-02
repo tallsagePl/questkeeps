@@ -1,17 +1,31 @@
 #!/usr/bin/env python3
-"""Switch only the reviewed 8/9/10/11/12/13 compatibility marker; never remove user data."""
+"""Switch only the reviewed 8/9/10/11/12/13/14 compatibility marker; never remove user data."""
 import sqlite3
 import sys
 import time
 
 path, target = sys.argv[1], int(sys.argv[2])
-if target not in (8, 9, 10, 11, 12, 13):
-    raise SystemExit('Only reviewed additive migrations 8 through 13 are supported')
+if target not in (8, 9, 10, 11, 12, 13, 14):
+    raise SystemExit('Only reviewed additive migrations 8 through 14 are supported')
 with sqlite3.connect(path, timeout=10) as db:
     db.execute('BEGIN IMMEDIATE')
     current = db.execute('PRAGMA user_version').fetchone()[0]
-    if current not in (8, 9, 10, 11, 12, 13):
+    if current not in (8, 9, 10, 11, 12, 13, 14):
         raise RuntimeError('Unexpected schema version')
+    if current >= 14 or target >= 14:
+        expected={'trip_id','user_id','signature','state','result','cursor','total','lock_id','lock_until','attempts','next_run','updated'}
+        if {row[1] for row in db.execute('PRAGMA table_info(geo_jobs)')} != expected:
+            raise RuntimeError('Geo job compatibility schema is missing')
+        if not {'terminal','last_error','created'}.issubset({row[1] for row in db.execute('PRAGMA table_info(telegram_outbox)')}):
+            raise RuntimeError('Delivery queue compatibility schema is missing')
+        for table, columns in {'app_clock': {'id','version'}, 'public_article_cache': {'key','json','updated'}, 'account_refresh_locks': {'account_id','owner','lock_until'}}.items():
+            if {row[1] for row in db.execute('PRAGMA table_info('+table+')')} != columns:
+                raise RuntimeError('Service cache compatibility schema is missing')
+    history14=db.execute('SELECT name FROM schema_migrations WHERE version=14').fetchone()
+    if history14 is not None and history14[0]!='service-queues':
+        raise RuntimeError('Unexpected service queue migration history')
+    if target<14: db.execute('DELETE FROM schema_migrations WHERE version=14')
+    else: db.execute('INSERT OR IGNORE INTO schema_migrations VALUES (14,?,?)',('service-queues',int(time.time()*1000)))
     if current >= 13 or target >= 13:
         required = {
             'source_jobs': {'source_id','id','state','scanned','count','attempts','requested','started','finished','next_run'},

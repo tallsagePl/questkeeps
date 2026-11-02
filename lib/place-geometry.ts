@@ -1,3 +1,4 @@
+import { ProviderQueue, boundedProviderJson } from './provider-queue';
 import { MemoryCache } from './memory-cache';
 import { wiki } from './places';
 import { one, run } from './db';
@@ -154,9 +155,7 @@ export function geometryFromOsm(elements: any[], title: string): PlaceGeometry {
 
 const cache = new MemoryCache<number, Promise<PlaceGeometry>>();
 
-let queue: Promise<void> = Promise.resolve();
-
-let lastRequest = 0;
+const queue = new ProviderQueue(1000, 32);
 
 const providerBackoff = new Map<string, number>();
 
@@ -165,44 +164,65 @@ export async function osmRequest(
   timeoutMs = 12000,
   request: RequestInit = {},
 ) {
-  const pending = queue.then(async () => {
-    const host = new URL(url).host;
-    if ((providerBackoff.get(host) || 0) > Date.now())
-      throw Error('Границы мест временно недоступны');
-    const wait = Math.max(0, 1000 - (Date.now() - lastRequest));
-    if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
-    lastRequest = Date.now();
-    try {
-      const response = await fetch(url, {
-        ...request,
-        headers: {
-          'User-Agent':
-            'QuestKeeps (personal travel journal; public OSM geometry)',
-        },
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      if (!response.ok)
-        throw Object.assign(Error('Границы мест временно недоступны'), {
-          status: response.status,
+  return queue.request(
+    async (signal) => {
+      const host = new URL(url).host;
+      if ((providerBackoff.get(host) || 0) > Date.now())
+        throw Error('OSM temporarily unavailable');
+      try {
+        const response = await fetch(url, {
+          ...request,
+          headers: { 'User-Agent': 'QuestKeeps (public OSM geometry)' },
+          signal,
         });
-      const result = await response.json();
-      if (result.remark) throw Error('Границы мест временно недоступны');
-      return result;
-    } catch (error) {
-      const status = (error as { status?: number }).status;
-      if (!status || status === 429 || status >= 500)
-        providerBackoff.set(host, Date.now() + 5 * 60 * 1000);
-      throw error;
-    }
-  });
-  queue = pending.then(
-    () => {},
-    () => {},
+        if (!response.ok) {
+          const value = response.headers.get('retry-after');
+          const retry =
+            value && /^\d+$/.test(value)
+              ? Number(value) * 1000
+              : value
+                ? Math.max(0, Date.parse(value) - Date.now())
+                : 0;
+          await response.body?.cancel();
+          if (response.status === 429)
+            providerBackoff.set(
+              host,
+              Date.now() + Math.min(3600000, Math.max(60000, retry || 0)),
+            );
+          throw Object.assign(Error('OSM temporarily unavailable'), {
+            status: response.status,
+          });
+        }
+        const result = await boundedProviderJson(response, signal);
+        if (result.remark) throw Error('Incomplete OSM response');
+        return result;
+      } catch (error) {
+        if (
+          !signal.aborted &&
+          (!(error as { status?: number }).status ||
+            Number((error as { status?: number }).status) >= 500)
+        )
+          providerBackoff.set(
+            host,
+            Math.max(providerBackoff.get(host) || 0, Date.now() + 300000),
+          );
+        throw error;
+      }
+    },
+    timeoutMs,
+    request.signal || undefined,
   );
-  return pending;
 }
 
-export async function overpass(query: string, timeoutMs = 12000) {
+export async function overpass(
+  query: string,
+  timeoutMs = 12000,
+  signal?: AbortSignal,
+) {
+  const active = AbortSignal.any([
+    AbortSignal.timeout(timeoutMs),
+    ...(signal ? [signal] : []),
+  ]);
   const providers = process.env.OVERPASS_ENDPOINT
     ? [process.env.OVERPASS_ENDPOINT]
     : [
@@ -210,11 +230,13 @@ export async function overpass(query: string, timeoutMs = 12000) {
         'https://overpass.private.coffee/api/interpreter',
       ];
   for (const endpoint of providers) {
+    active.throwIfAborted();
     try {
       // POST avoids URL filtering/length limits on city-wide geometry requests.
       const result = await osmRequest(endpoint, timeoutMs, {
         method: 'POST',
         body: new URLSearchParams({ data: query }),
+        signal: active,
       });
       return result.elements || [];
     } catch {

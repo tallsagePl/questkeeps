@@ -1,3 +1,4 @@
+import { anniversaryMemories } from '../memories';
 import { queueSourceSync } from '../source-jobs';
 import {
   notificationSnapshot,
@@ -10,7 +11,7 @@ import { z } from 'zod';
 import { all, one, run, db } from '../db';
 import { fail } from '../access';
 import { joinTrip } from '../trip-invitations';
-import { body, json } from './http';
+import { body, json, day } from './http';
 import type { AuthenticatedContext } from './context';
 
 export async function invitationRoutes({
@@ -19,6 +20,14 @@ export async function invitationRoutes({
   method,
   u,
 }: AuthenticatedContext): Promise<Response | undefined> {
+  if (p[0] === 'memories' && !p[1] && method === 'GET') {
+    const date =
+      new URL(req.url).searchParams.get('date') ||
+      new Date().toISOString().slice(0, 10);
+    return json({
+      memories: anniversaryMemories(u.id, day.parse(date)),
+    });
+  }
   if (p[0] !== 'invitations') return;
   if (p[1] === 'read' && !p[2] && method === 'POST') {
     const input = z

@@ -1,4 +1,4 @@
-import { one, run, decrypt, encrypt, hash, Row } from './db';
+import { one, run, decrypt, encrypt, hash, id, Row } from './db';
 import { MemoryCache } from './memory-cache';
 import { fail } from './access';
 import { withYandexDeadline, yandexGet } from './yandex-request';
@@ -20,38 +20,119 @@ export interface Resource {
   _embedded?: { items: Resource[]; total: number };
 }
 
-export async function accountToken(accountId: string, signal?: AbortSignal) {
-  signal?.throwIfAborted();
-  const a =
+const tokenRefreshes = new Map<string, Promise<string>>();
+
+function enabledAccount(accountId: string) {
+  const account =
     one('SELECT * FROM accounts WHERE id=?', accountId) ||
     fail(404, 'messages.accountNotFound');
-  if (!a.disk_enabled || !a.token)
+  if (!account.disk_enabled || !account.token)
     fail(409, 'messages.yandexAccountDisconnectedReconnectItInYour');
-  if (a.expires && a.expires < Date.now() + 60000 && a.refresh) {
+  return account;
+}
+
+function needsRefresh(account: Row) {
+  return (
+    account.expires && account.expires < Date.now() + 60000 && account.refresh
+  );
+}
+
+async function refreshAccount(accountId: string): Promise<string> {
+  const owner = id();
+  const deadline = Date.now() + 25000;
+  let claimed = false;
+  try {
+    while (!claimed) {
+      const account = enabledAccount(accountId);
+      if (!needsRefresh(account)) return decrypt(account.token);
+      claimed =
+        run(
+          `INSERT INTO account_refresh_locks VALUES (?,?,?)
+         ON CONFLICT(account_id) DO UPDATE SET owner=excluded.owner,lock_until=excluded.lock_until
+         WHERE account_refresh_locks.lock_until<?`,
+          accountId,
+          owner,
+          Date.now() + 45000,
+          Date.now(),
+        ).changes > 0;
+      if (!claimed) {
+        if (Date.now() >= deadline)
+          fail(503, 'messages.reconnectYourYandexAccount');
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+    const account = enabledAccount(accountId);
+    if (!needsRefresh(account)) return decrypt(account.token);
+    // The refresh belongs to the account. A viewer leaving must not discard a rotated token.
+    const active = AbortSignal.timeout(20000);
     const response = await fetch('https://oauth.yandex.ru/token', {
       method: 'POST',
       body: new URLSearchParams({
         grant_type: 'refresh_token',
-        refresh_token: decrypt(a.refresh),
+        refresh_token: decrypt(account.refresh),
         client_id: process.env.YANDEX_CLIENT_ID || '',
         client_secret: process.env.YANDEX_CLIENT_SECRET || '',
       }),
-      signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(20000)])
-        : AbortSignal.timeout(20000),
+      signal: active,
     });
-    if (!response.ok) fail(502, 'messages.reconnectYourYandexAccount');
-    const data = await response.json();
+    if (!response.ok) {
+      await response.body?.cancel();
+      fail(502, 'messages.reconnectYourYandexAccount');
+    }
+    const { boundedProviderJson } = await import('./provider-queue');
+    const data = await boundedProviderJson(response, active, 65536);
+    if (
+      typeof data.access_token !== 'string' ||
+      !data.access_token ||
+      (data.refresh_token != null && typeof data.refresh_token !== 'string')
+    )
+      fail(502, 'messages.reconnectYourYandexAccount');
     run(
-      'UPDATE accounts SET token=?,refresh=?,expires=? WHERE id=? AND disk_enabled=1',
+      'UPDATE accounts SET token=?,refresh=?,expires=? WHERE id=? AND disk_enabled=1 AND token=?',
       encrypt(data.access_token),
-      data.refresh_token ? encrypt(data.refresh_token) : a.refresh,
-      data.expires_in ? Date.now() + data.expires_in * 1000 : null,
-      a.id,
+      data.refresh_token ? encrypt(data.refresh_token) : account.refresh,
+      Number.isFinite(Number(data.expires_in)) && Number(data.expires_in) > 0
+        ? Date.now() + Number(data.expires_in) * 1000
+        : null,
+      accountId,
+      account.token,
     );
-    return data.access_token as string;
+    return decrypt(enabledAccount(accountId).token);
+  } finally {
+    if (claimed)
+      run(
+        'DELETE FROM account_refresh_locks WHERE account_id=? AND owner=?',
+        accountId,
+        owner,
+      );
   }
-  return decrypt(a.token);
+}
+
+export async function accountToken(accountId: string, signal?: AbortSignal) {
+  signal?.throwIfAborted();
+  const account = enabledAccount(accountId);
+  if (!needsRefresh(account)) return decrypt(account.token);
+  let pending = tokenRefreshes.get(accountId);
+  if (!pending) {
+    pending = refreshAccount(accountId);
+    tokenRefreshes.set(accountId, pending);
+    const current = pending;
+    void pending
+      .finally(() => {
+        if (tokenRefreshes.get(accountId) === current)
+          tokenRefreshes.delete(accountId);
+      })
+      .catch(() => {});
+  }
+  if (!signal) return pending;
+  return new Promise<string>((resolve, reject) => {
+    const aborted = () => reject(signal.reason);
+    signal.addEventListener('abort', aborted, { once: true });
+    if (signal.aborted) aborted();
+    pending!
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener('abort', aborted));
+  });
 }
 
 export async function disk(

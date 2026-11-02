@@ -17,7 +17,7 @@ current_schema=$(python3 -c "import sqlite3; print(sqlite3.connect('file:/opt/qu
 schema_transition="$current_schema:$target_schema"
 schema_changed=false
 schema_tool="$(dirname "$0")/media-archive-schema.py"
-if [ "$target_schema" != "$current_schema" ] && [ "$schema_transition" != '8:9' ] && [ "$schema_transition" != '9:8' ] && [ "$schema_transition" != '9:10' ] && [ "$schema_transition" != '10:9' ] && [ "$schema_transition" != '8:10' ] && [ "$schema_transition" != '10:8' ] && [ "$schema_transition" != '10:11' ] && [ "$schema_transition" != '11:10' ] && [ "$schema_transition" != '11:12' ] && [ "$schema_transition" != '12:11' ] && [ "$schema_transition" != '12:13' ] && [ "$schema_transition" != '13:12' ]; then
+if [ "$target_schema" != "$current_schema" ] && [ "$schema_transition" != '8:9' ] && [ "$schema_transition" != '9:8' ] && [ "$schema_transition" != '9:10' ] && [ "$schema_transition" != '10:9' ] && [ "$schema_transition" != '8:10' ] && [ "$schema_transition" != '10:8' ] && [ "$schema_transition" != '10:11' ] && [ "$schema_transition" != '11:10' ] && [ "$schema_transition" != '11:12' ] && [ "$schema_transition" != '12:11' ] && [ "$schema_transition" != '12:13' ] && [ "$schema_transition" != '13:12' ] && [ "$schema_transition" != '13:14' ] && [ "$schema_transition" != '14:13' ]; then
   echo "Schema $current_schema -> $target_schema requires a reviewed compatible migration before an online rollout."
   exit 1
 fi
@@ -32,8 +32,10 @@ esac
 web="qk-web-$slot"
 worker="qk-worker-$slot"
 video="qk-video-$slot"
+geo="qk-geo-$slot"
 if [ "$slot" = blue ]; then previous_video=qk-video-green; else previous_video=qk-video-blue; fi
-for container in "$web" "$worker" "$video"; do
+if [ "$slot" = blue ]; then previous_geo=qk-geo-green; else previous_geo=qk-geo-blue; fi
+for container in "$web" "$worker" "$video" "$geo"; do
   if docker container inspect "$container" >/dev/null 2>&1; then
     test "$(docker inspect --format '{{index .Config.Labels "app"}}' "$container")" = questkeeps
     docker rm -f "$container" >/dev/null
@@ -43,9 +45,11 @@ cp "$upstream" "$state/upstream.previous"
 switched=false
 worker_stopped=false
 video_stopped=false
+geo_stopped=false
 rollback() {
   trap - ERR INT TERM
   set +e
+  docker rm -f "$geo" >/dev/null 2>&1
   docker rm -f "$video" >/dev/null 2>&1
   docker rm -f "$worker" >/dev/null 2>&1
   docker rm -f "$web" >/dev/null 2>&1
@@ -55,6 +59,7 @@ rollback() {
       exit 1
     fi
   fi
+  if [ "$geo_stopped" = true ]; then docker start "$previous_geo" >/dev/null 2>&1; fi
   if [ "$video_stopped" = true ]; then docker start "$previous_video" >/dev/null 2>&1; fi
   if [ "$worker_stopped" = true ]; then
     if [ "$legacy" = true ]; then systemctl start questkeeps
@@ -122,7 +127,7 @@ worker_stopped=true
 if [ "$legacy" = true ]; then systemctl stop questkeeps
 else docker stop --time 60 "$previous_worker" >/dev/null; fi
 docker run -d --init --name "$worker" --label app=questkeeps --label role=worker --restart unless-stopped \
-  --no-healthcheck --memory 256m --memory-swap 512m --pids-limit 80 \
+  --health-cmd "node --import tsx scripts/worker-health.ts worker" --health-interval 30s --health-timeout 10s --health-start-period 20s --memory 256m --memory-swap 512m --pids-limit 80 -e QK_WORKER_ROLE=worker -e "QK_RELEASE_ID=$image_id" \
   --security-opt no-new-privileges --cap-drop ALL --log-opt max-size=10m --log-opt max-file=3 \
   --mount "type=bind,src=$root/shared/data,dst=/app/data" \
   --mount "type=bind,src=$root/shared/.env.local,dst=/run/questkeeps.env,readonly" "$image_id" \
@@ -132,16 +137,33 @@ if docker container inspect "$previous_video" >/dev/null 2>&1; then
   docker stop --time 30 "$previous_video" >/dev/null
 fi
 docker run -d --init --name "$video" --label app=questkeeps --label role=video --restart unless-stopped \
-  --no-healthcheck --memory 384m --memory-swap 768m --cpus 0.5 --pids-limit 80 \
+  --health-cmd "node --import tsx scripts/worker-health.ts video" --health-interval 30s --health-timeout 10s --health-start-period 20s --memory 384m --memory-swap 768m --cpus 0.5 --pids-limit 80 -e QK_WORKER_ROLE=video -e "QK_RELEASE_ID=$image_id" \
   --security-opt no-new-privileges --cap-drop ALL --log-opt max-size=10m --log-opt max-file=3 \
   --mount "type=bind,src=$root/shared/data,dst=/app/data" \
   --mount "type=bind,src=$root/shared/.env.local,dst=/run/questkeeps.env,readonly" "$image_id" \
   node --env-file=/run/questkeeps.env --import tsx scripts/video-worker.ts >/dev/null
+if docker container inspect "$previous_geo" >/dev/null 2>&1; then
+  geo_stopped=true
+  docker stop --time 30 "$previous_geo" >/dev/null
+fi
+docker run -d --init --name "$geo" --label app=questkeeps --label role=geo --restart unless-stopped \
+  --health-cmd "node --import tsx scripts/worker-health.ts geo" --health-interval 30s --health-timeout 10s --health-start-period 20s \
+  --memory 256m --memory-swap 512m --cpus 0.5 --pids-limit 80 --security-opt no-new-privileges --cap-drop ALL \
+  -e QK_WORKER_ROLE=geo -e "QK_RELEASE_ID=$image_id" --log-opt max-size=10m --log-opt max-file=3 \
+  --mount "type=bind,src=$root/shared/data,dst=/app/data" \
+  --mount "type=bind,src=$root/shared/.env.local,dst=/run/questkeeps.env,readonly" "$image_id" \
+  node --env-file=/run/questkeeps.env --import tsx scripts/geo-worker.ts >/dev/null
 sleep 3
 test "$(docker inspect --format '{{.State.Running}}' "$worker")" = true
 test "$(docker inspect --format '{{.RestartCount}}' "$worker")" = 0
 test "$(docker inspect --format '{{.State.Running}}' "$video")" = true
 test "$(docker inspect --format '{{.RestartCount}}' "$video")" = 0
+for role in worker video geo; do
+  name="qk-$role-$slot"
+  test "$(docker inspect --format '{{.State.Running}}' "$name")" = true
+  test "$(docker inspect --format '{{.RestartCount}}' "$name")" = 0
+  docker exec "$name" node --import tsx scripts/worker-health.ts "$role"
+done
 HEALTH_URL="http://127.0.0.1:$port" /usr/local/bin/node "$root/docker-tools/container-health.mjs"
 # Keep the preceding web/image until the candidate passes a stability window.
 # This checks readiness, public assets, Docker health and a non-restarting worker.
@@ -153,6 +175,12 @@ for attempt in $(seq 1 20); do
   test "$(docker inspect --format '{{.RestartCount}}' "$worker")" = 0
 test "$(docker inspect --format '{{.State.Running}}' "$video")" = true
 test "$(docker inspect --format '{{.RestartCount}}' "$video")" = 0
+for role in worker video geo; do
+  name="qk-$role-$slot"
+  test "$(docker inspect --format '{{.State.Running}}' "$name")" = true
+  test "$(docker inspect --format '{{.RestartCount}}' "$name")" = 0
+  docker exec "$name" node --import tsx scripts/worker-health.ts "$role"
+done
   if [ "$(docker inspect --format '{{.State.Health.Status}}' "$web")" = healthy ]; then
     healthy=true
     break

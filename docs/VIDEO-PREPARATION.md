@@ -30,7 +30,7 @@ Queue state and derived files are excluded from the canonical database backup. T
 
 Install FFmpeg/ffprobe on PATH (or set FFMPEG_PATH/FFPROBE_PATH). npm run dev/start supervises the video worker when FFmpeg is present. npm run video:worker is available when running it separately. The worker heartbeat prevents accepting jobs when preparation is unavailable. Do not run an extra video worker alongside the supervisor without need; the lock still serializes them.
 
-The Docker runtime includes FFmpeg. Deploy updated docker-release.sh and docker-retire.sh together. They start qk-video-blue/green, stop the preceding converter before replacement, restore it on a failed release, and retire the old application image only after all three new containers pass checks. No main database migration is required.
+The Docker runtime includes FFmpeg. Deploy updated docker-release.sh and docker-retire.sh together. They start qk-video-blue/green, stop the preceding converter before replacement, restore it on a failed release, and retire the old application image only after all four new containers pass checks. Release 1.36 adds the independent geography worker and additive schema 14.
 
 ## Verification
 

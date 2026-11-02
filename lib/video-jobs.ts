@@ -1,9 +1,10 @@
+import { eligibleSource } from './source-jobs';
 import { dirname, join } from 'node:path';
 import { createWriteStream, statfsSync } from 'node:fs';
 import { rename, unlink } from 'node:fs/promises';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { one } from './db';
+import { one, run, db } from './db';
 import { fetchMedia } from './yandex';
 import {
   VideoStore,
@@ -87,7 +88,7 @@ export async function runVideoJob(signal: AbortSignal) {
       { signal: download },
     );
     cache.stage(key, 'encode');
-    await convertVideo(
+    const converted = await convertVideo(
       cache.file(key, 'input'),
       cache.file(key, 'working.mp4'),
       cache.file(key, 'working.jpg'),
@@ -99,6 +100,30 @@ export async function runVideoJob(signal: AbortSignal) {
     );
     if (!current?.disk_enabled || videoKey(current) !== key)
       throw new VideoFailure('video.failed');
+    if (converted.location)
+      db.transaction(() => {
+        const source = eligibleSource(current.source_id);
+        if (
+          !source?.approved ||
+          !source.disk_enabled ||
+          (source.user_id !== source.owner_id && !source.member_active)
+        )
+          return;
+        if (
+          !one(
+            'SELECT 1 FROM media_location_overrides WHERE media_id=?',
+            current.id,
+          )
+        ) {
+          run(
+            'UPDATE media SET lat=?,lon=? WHERE id=? AND revision IS ?',
+            converted.location!.lat,
+            converted.location!.lon,
+            current.id,
+            current.revision,
+          );
+        }
+      }).immediate();
     await rename(cache.file(key, 'working.mp4'), cache.file(key, 'mp4'));
     await rename(cache.file(key, 'working.jpg'), cache.file(key, 'jpg'));
     cache.ready(key);

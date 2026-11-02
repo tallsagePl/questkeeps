@@ -1,3 +1,5 @@
+import { one, run, db, hash } from './db';
+import { ProviderQueue, boundedProviderJson } from './provider-queue';
 import { setTimeout as delay } from 'node:timers/promises';
 import { MemoryCache, CACHE_TTL } from './memory-cache';
 import { fail } from './access';
@@ -9,41 +11,74 @@ import {
   obviousAttraction,
 } from './attractions';
 
-let wikiQueue: Promise<void> = Promise.resolve();
-
-let lastWikiRequest = 0;
-
-let pendingWikiRequests = 0;
+const wikiQueue = new ProviderQueue(500);
 
 export function wiki(
   params: Record<string, string>,
-  language: string = 'ru',
+  language = 'ru',
   signal?: AbortSignal,
+  priority = 0,
 ) {
-  if (!/^[a-z]{2,3}$/.test(language))
-    throw new Error('Invalid Wikipedia language');
-  signal?.throwIfAborted();
-  if (pendingWikiRequests >= 64)
-    fail(429, 'messages.thePlaceServiceIsBusyPleaseTry');
-  const lifetime = AbortSignal.any([
-    AbortSignal.timeout(45000),
-    ...(signal ? [signal] : []),
-  ]);
-  pendingWikiRequests++;
-  const result = wikiQueue.then(async () => {
-    lifetime.throwIfAborted();
-    const wait = Math.max(0, 500 - (Date.now() - lastWikiRequest));
-    if (wait) await delay(wait, undefined, { signal: lifetime });
-    lastWikiRequest = Date.now();
-    return requestWiki(params, language, lifetime);
-  });
-  wikiQueue = result.then(
-    () => undefined,
-    () => undefined,
+  if (!/^[a-z]{2,3}$/.test(language)) throw Error('Invalid Wikipedia language');
+  const key = hash(JSON.stringify([language, params]));
+  const cacheable = !!(params.pageids || params.titles);
+  const saved = cacheable
+    ? one('SELECT json,updated FROM public_article_cache WHERE key=?', key)
+    : undefined;
+  if (saved && saved.updated > Date.now() - 86400000) {
+    try {
+      return Promise.resolve(JSON.parse(saved.json));
+    } catch {
+      run('DELETE FROM public_article_cache WHERE key=?', key);
+    }
+  }
+  return wikiQueue.request(
+    async (active) => {
+      try {
+        const value = await requestWiki(params, language, active);
+        if (cacheable && value.query?.pages) {
+          const encoded = JSON.stringify(value);
+          if (Buffer.byteLength(encoded) <= 512 * 1024)
+            db.transaction(() => {
+              run(
+                'INSERT INTO public_article_cache VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET json=excluded.json,updated=excluded.updated',
+                key,
+                encoded,
+                Date.now(),
+              );
+              run(
+                'DELETE FROM public_article_cache WHERE updated<? OR key IN (SELECT key FROM public_article_cache ORDER BY updated DESC LIMIT -1 OFFSET 255)',
+                Date.now() - 7 * 86400000,
+              );
+              while (
+                one(
+                  'SELECT COALESCE(SUM(length(json)),0) n FROM public_article_cache',
+                )!.n >
+                8 * 1024 * 1024
+              )
+                run(
+                  'DELETE FROM public_article_cache WHERE key=(SELECT key FROM public_article_cache ORDER BY updated LIMIT 1)',
+                );
+            }).immediate();
+        }
+        return value;
+      } catch (error) {
+        if (
+          !active.aborted &&
+          saved &&
+          saved.updated > Date.now() - 7 * 86400000
+        ) {
+          try {
+            return JSON.parse(saved.json);
+          } catch {}
+        }
+        throw error;
+      }
+    },
+    45000,
+    signal,
+    priority,
   );
-  return result.finally(() => {
-    pendingWikiRequests--;
-  });
 }
 
 async function requestWiki(
@@ -74,14 +109,25 @@ async function requestWiki(
       fail(503, 'messages.thePlaceSearchServiceIsTemporarilyUnavailable');
     }
     if ([429, 502, 503, 504].includes(res.status)) {
+      const value = res.headers.get('retry-after');
+      const retry =
+        value && /^\d+$/.test(value)
+          ? Number(value) * 1000
+          : value
+            ? Math.max(0, Date.parse(value) - Date.now())
+            : 0;
+      await res.body?.cancel();
+      if (retry > 5000) fail(503, 'messages.thePlaceSearchServiceIsBusyTry');
       if (attempt < 2) {
-        await delay(500 * (attempt + 1), undefined, { signal });
+        await delay(Math.max(retry || 0, 500 * (attempt + 1)), undefined, {
+          signal,
+        });
         continue;
       }
       fail(503, 'messages.thePlaceSearchServiceIsBusyTry');
     }
     if (!res.ok) fail(502, 'messages.couldNotLoadThePlaceDescription');
-    const data = await res.json();
+    const data = await boundedProviderJson(res, signal, 4 * 1024 * 1024);
     if (data.error) {
       if (/busy|ratelimit|readonly|maxlag/i.test(data.error.code || '')) {
         if (language === 'ru' && params.list === 'geosearch')

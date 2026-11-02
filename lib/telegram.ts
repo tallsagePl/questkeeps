@@ -66,10 +66,11 @@ function queue(
   key = id(),
 ) {
   run(
-    'INSERT OR IGNORE INTO telegram_outbox(id,payload,feedback_id,available) VALUES (?,?,?,?)',
+    'INSERT OR IGNORE INTO telegram_outbox(id,payload,feedback_id,available,created) VALUES (?,?,?,?,?)',
     key,
     encrypt(JSON.stringify({ method, params, feedback })),
     feedback || null,
+    Date.now(),
     Date.now(),
   );
 }
@@ -358,11 +359,15 @@ export async function pollTelegram() {
 
 export async function deliverTelegram() {
   if (!telegramConfigured()) return;
+  run(
+    'DELETE FROM telegram_outbox WHERE terminal=1 AND created<?',
+    Date.now() - 7 * 86400000,
+  );
   for (let i = 0; i < 10; i++) {
     const row = db
       .transaction(() => {
         const job = one(
-          'SELECT * FROM telegram_outbox WHERE available<=? AND lease_until<? ORDER BY available,id LIMIT 1',
+          'SELECT * FROM telegram_outbox WHERE terminal=0 AND available<=? AND lease_until<? ORDER BY available,id LIMIT 1',
           Date.now(),
           Date.now(),
         );
@@ -376,24 +381,30 @@ export async function deliverTelegram() {
       })
       .immediate();
     if (!row) return;
-    const job: Job = JSON.parse(decrypt(row.payload));
+    let job: Job | undefined;
     try {
-      const result = await telegramCall(job.method, job.params);
+      job = JSON.parse(decrypt(row.payload)) as Job;
+      if (!job || typeof job.method !== 'string' || !job.params)
+        throw new TelegramError(400);
+      if (row.attempts >= 8 || Date.now() - row.created > 7 * 86400000)
+        throw new TelegramError(410);
+      const delivery = job;
+      const result = await telegramCall(delivery.method, delivery.params);
       db.transaction(() => {
         if (
-          job.feedback &&
+          delivery.feedback &&
           result?.message_id &&
-          one('SELECT id FROM telegram_feedback WHERE id=?', job.feedback)
+          one('SELECT id FROM telegram_feedback WHERE id=?', delivery.feedback)
         )
           run(
             'INSERT OR IGNORE INTO telegram_feedback_messages VALUES (?,?)',
-            job.feedback,
+            delivery.feedback,
             result.message_id,
           );
         if (
-          job.feedback &&
+          delivery.feedback &&
           result?.message_id &&
-          !one('SELECT id FROM telegram_feedback WHERE id=?', job.feedback)
+          !one('SELECT id FROM telegram_feedback WHERE id=?', delivery.feedback)
         )
           queue('deleteMessage', {
             chat_id: admin(),
@@ -405,7 +416,7 @@ export async function deliverTelegram() {
       if (
         error instanceof TelegramError &&
         error.code === 400 &&
-        job.method === 'deleteMessage'
+        job?.method === 'deleteMessage'
       ) {
         // Telegram cannot delete messages older than 48h. Remove the actionable button instead.
         queue('editMessageReplyMarkup', {
@@ -416,21 +427,46 @@ export async function deliverTelegram() {
       } else if (
         error instanceof TelegramError &&
         error.code === 400 &&
-        ['answerCallbackQuery', 'editMessageReplyMarkup'].includes(job.method)
+        ['answerCallbackQuery', 'editMessageReplyMarkup'].includes(
+          job?.method || '',
+        )
       ) {
         run('DELETE FROM telegram_outbox WHERE id=?', row.id);
+      } else if (
+        !(error instanceof TelegramError) ||
+        [400, 401, 403, 404, 410].includes(error.code) ||
+        row.attempts >= 7
+      ) {
+        run(
+          'UPDATE telegram_outbox SET terminal=1,last_error=?,lease_until=0,attempts=attempts+1 WHERE id=?',
+          error instanceof TelegramError
+            ? 'telegram_' + error.code
+            : 'payload_invalid',
+          row.id,
+        );
       } else {
         const wait =
           error instanceof TelegramError && error.retryAfter
             ? error.retryAfter * 1000
             : Math.min(3600000, 5000 * 2 ** Math.min(row.attempts, 10));
         run(
-          'UPDATE telegram_outbox SET available=?,attempts=attempts+1,lease_until=0 WHERE id=?',
+          'UPDATE telegram_outbox SET available=?,attempts=attempts+1,lease_until=0,last_error=? WHERE id=?',
           Date.now() + wait,
+          error instanceof TelegramError ? 'telegram_' + error.code : 'network',
           row.id,
         );
         return;
       }
     }
   }
+}
+
+export function retryTelegramDelivery(jobId: string) {
+  return (
+    run(
+      'UPDATE telegram_outbox SET terminal=0,attempts=0,available=?,lease_until=0,last_error=NULL WHERE id=? AND terminal=1',
+      Date.now(),
+      jobId,
+    ).changes > 0
+  );
 }

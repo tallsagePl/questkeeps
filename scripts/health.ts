@@ -1,3 +1,4 @@
+import { readWorkerHealth } from '../lib/worker-health';
 import { migrations } from '../lib/migrations';
 import Database from 'better-sqlite3';
 import { resolve } from 'node:path';
@@ -49,7 +50,31 @@ const tables = (
   }[]
 ).map((t) => t.name);
 
+const workers = Object.fromEntries(
+  ['worker', 'geo', 'video'].map((role) => {
+    try {
+      return [role, readWorkerHealth(role)];
+    } catch {
+      return [role, { alive: false }];
+    }
+  }),
+);
+
 const report = {
+  workers,
+  backgroundQueues: {
+    geo: db
+      .prepare('SELECT state,count(*) count FROM geo_jobs GROUP BY state')
+      .all(),
+    metadata: db
+      .prepare('SELECT state,count(*) count FROM metadata_jobs GROUP BY state')
+      .all(),
+    telegramTerminal: (
+      db
+        .prepare('SELECT count(*) count FROM telegram_outbox WHERE terminal=1')
+        .get() as { count: number }
+    ).count,
+  },
   database: {
     path,
     integrity: integrity.every((r) => r.quick_check === 'ok') ? 'ok' : 'failed',

@@ -95,6 +95,15 @@ export type Mail = {
   attachments?: { filename: string; content: string; content_id: string }[];
 };
 
+class DeliveryFailure extends Error {
+  constructor(
+    readonly permanent: boolean,
+    readonly retryAfterMs = 0,
+  ) {
+    super('Mail provider rejected delivery');
+  }
+}
+
 export async function sendMail(mail: Mail, jobId: string) {
   if (!mailConfigured()) throw Error('Mail transport is disabled');
   const response = await fetch('https://api.resend.com/emails', {
@@ -115,20 +124,37 @@ export async function sendMail(mail: Mail, jobId: string) {
       attachments: mail.attachments,
     }),
   });
-  if (!response.ok) throw Error('Mail provider rejected delivery');
+  if (!response.ok) {
+    const value = response.headers.get('retry-after');
+    const retry =
+      value && /^\d+$/.test(value)
+        ? Number(value) * 1000
+        : value
+          ? Date.parse(value) - Date.now()
+          : 0;
+    await response.body?.cancel();
+    throw new DeliveryFailure(
+      [400, 401, 403, 404, 410, 422].includes(response.status),
+      Number.isFinite(retry) ? Math.max(0, Math.min(86400000, retry)) : 0,
+    );
+  }
+  await response.body?.cancel();
 }
 
 export async function deliverEmails(
   transport: (mail: Mail, jobId: string) => Promise<void> = sendMail,
-  now = Date.now(),
+  now?: number,
 ) {
+  const clock = () => now ?? Date.now();
+  const initial = clock();
   if (transport === sendMail && !mailConfigured())
     return { sent: 0, failed: 0 };
-  run('DELETE FROM email_verifications WHERE expires<?', now);
-  run('DELETE FROM delivery_jobs WHERE created<?', now - 7 * 86400000);
+  run('DELETE FROM email_verifications WHERE expires<?', initial);
+  run('DELETE FROM delivery_jobs WHERE created<?', initial - 7 * 86400000);
   let sent = 0;
   let failed = 0;
   for (let i = 0; i < 10; i++) {
+    const now = clock();
     const lease = token();
     const job = db
       .transaction(() => {
@@ -168,15 +194,22 @@ export async function deliverEmails(
         job.id,
         lease,
       );
-    } catch {
+    } catch (error) {
       failed++;
       const attempts = Number(job.attempts) + 1;
+      const terminal =
+        attempts >= 8 ||
+        error instanceof SyntaxError ||
+        (error instanceof DeliveryFailure && error.permanent);
+      const retryAfter =
+        error instanceof DeliveryFailure ? error.retryAfterMs : 0;
       run(
         "UPDATE delivery_jobs SET available=?,lease_id=NULL,lease_until=0,last_error=?,finished=?,payload=CASE WHEN ? THEN '' ELSE payload END WHERE id=? AND lease_id=?",
-        now + Math.min(3600000, 30000 * 2 ** attempts),
+        clock() +
+          Math.max(retryAfter, Math.min(3600000, 30000 * 2 ** attempts)),
         'delivery_failed',
-        attempts >= 8 ? now : null,
-        Number(attempts >= 8),
+        terminal ? clock() : null,
+        Number(terminal),
         job.id,
         lease,
       );

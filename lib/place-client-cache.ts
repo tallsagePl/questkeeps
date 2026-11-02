@@ -116,7 +116,7 @@ async function cached<T>(
       // An incomplete provider response must not erase a previously downloaded contour.
       if (
         stale !== undefined &&
-        ((value as any).incomplete ||
+        (((value as any).incomplete && !(value as any).pending) ||
           ((stale as any).features?.length && !(value as any).features?.length))
       ) {
         freshUntil.set(key, Date.now() + 30000);
@@ -308,11 +308,11 @@ export const cachedMapSuggestions = (
   cached<any>(
     endpoint,
     scope + ':map-v1',
-    () => json(endpoint, currentLanguage(), 120000),
+    () => json(endpoint, currentLanguage(), 12000),
     (value) => Response.json(value),
     (r) => r.json(),
     (value) => Array.isArray(value?.candidates),
-    (value) => (value.incomplete ? 30000 : CACHE_TTL),
+    (value) => (value.pending ? 1500 : value.incomplete ? 15000 : CACHE_TTL),
     true,
     priority,
   );

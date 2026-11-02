@@ -1,5 +1,5 @@
 import { MemoryCache } from './memory-cache';
-import { one, hash, type Row } from './db';
+import { all, hash, type Row } from './db';
 import { closestCity } from './city-lookup';
 import { distanceMeters } from './geo';
 
@@ -68,14 +68,24 @@ export function captureClock(value: unknown) {
 }
 
 export function addMapDetails(media: Row[]) {
+  const keys = media.map((item) =>
+    hash(
+      item._account_id + '|' + item._resource_id + '|' + (item.revision || ''),
+    ),
+  );
+  const saved = all(
+    'SELECT key,json FROM exif_cache WHERE key IN (SELECT value FROM json_each(?))',
+    JSON.stringify(keys),
+  );
+  const byKey = new Map(saved.map((row) => [row.key, row.json]));
   for (const item of media) {
     const cacheKey = hash(
       item._account_id + '|' + item._resource_id + '|' + (item.revision || ''),
     );
-    const cached = one('SELECT json FROM exif_cache WHERE key=?', cacheKey);
+    const cached = byKey.get(cacheKey);
     let exif: Row = {};
     try {
-      if (cached) exif = JSON.parse(cached.json);
+      if (cached) exif = JSON.parse(cached);
     } catch {}
     item.capture_time =
       captureClock(exif.DateTimeOriginal) ||

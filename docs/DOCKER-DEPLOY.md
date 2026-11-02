@@ -209,3 +209,9 @@ Version 1.35.0 uses schema 13. Install the matching `docker-release.sh` and
 12/13 marker rollback keeps source jobs, metadata jobs and coordinate overrides.
 The existing general worker now handles metadata; no extra container is needed.
 See [Drive synchronization](DRIVE-SYNCHRONIZATION.md).
+
+## Version 1.36: image build and fourth worker
+
+Prefer the verified GitHub Actions image artifact and `image-manifest.py` output. `load-ci-image.py` accepts its short-lived HTTPS download URL, exact bytes, SHA-256, tag, image ID and revision through stdin JSON. It streams into Docker and validates before any release. Never log the signed URL. After successful rollout, delete image and manifest artifacts; the registry is not a backup store.
+
+Install the updated release, retire and schema compatibility scripts together. The release starts qk-web, qk-worker, qk-video and qk-geo in the inactive slot. Geography has a 256-MiB limit and half a CPU. Each background role has a release-specific heartbeat health check, and a failed geography start restores the preceding traffic target. Schema 14 is additive and supports reviewed marker rollback to 13. See SERVICE-COMPLETION.md for cache budgets and remaining operational limits.

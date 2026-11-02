@@ -129,9 +129,10 @@ export async function serverPreview(
   media: Row,
   signal?: AbortSignal,
   refresh = false,
-) {
+  variant: 'provider' | 'card' | 'viewer' = 'provider',
+): Promise<PreviewImage & { cacheStatus: string }> {
   signal?.throwIfAborted();
-  const key = previewKey(media);
+  const key = previewKey(media, variant);
   if (!refresh) {
     const hit = await cache.get(key);
     signal?.throwIfAborted();
@@ -148,8 +149,29 @@ export async function serverPreview(
     ]);
     job = { controller, promise: undefined!, readers: 0 };
     const entry = job;
-    job.promise = slot(deadline, async () => {
-      const image = await load(media, refresh, deadline);
+    job.promise = (async () => {
+      let image: PreviewImage;
+      if (variant === 'provider')
+        image = await slot(deadline, () => load(media, refresh, deadline));
+      else {
+        const base = await serverPreview(media, deadline, refresh, 'provider');
+        image = await slot(deadline, async () => ({
+          body: await sharp(base.body, {
+            limitInputPixels: 8000000,
+            failOn: 'warning',
+            sequentialRead: true,
+          })
+            .rotate()
+            .resize(
+              variant === 'card' ? 640 : 1600,
+              variant === 'card' ? 640 : 1600,
+              { fit: 'inside', withoutEnlargement: true },
+            )
+            .jpeg({ quality: 82 })
+            .toBuffer(),
+          contentType: 'image/jpeg',
+        }));
+      }
       // Do not retain an error page or a damaged/unsupported image in the server cache.
       let valid = false;
       try {
@@ -167,7 +189,7 @@ export async function serverPreview(
       deadline.throwIfAborted();
       if (valid) await cache.put(key, image);
       return image;
-    }).finally(() => {
+    })().finally(() => {
       if (jobs.get(key) === entry) jobs.delete(key);
     });
     jobs.set(key, job);

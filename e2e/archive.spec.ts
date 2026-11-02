@@ -108,7 +108,9 @@ test('регистрация, поездка, дневник, гостевая �
 
   const tid = new URL(page.url()).searchParams.get('trip')!;
   await page.route('**/api/trips/' + tid, async (route) => {
-    const response = await route.fetch();
+    const headers = { ...route.request().headers() };
+    delete headers['if-none-match'];
+    const response = await route.fetch({ headers });
     const data = await response.json();
     data.media = [
       {

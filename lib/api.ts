@@ -2,7 +2,7 @@ import { YandexRequestError } from './yandex-request';
 import { invitationRoutes } from './api/invitations';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { hash } from './db';
+import { hash, id } from './db';
 import { HttpError, fail, currentUser, requireUser } from './access';
 import { queueDueSync } from './source-jobs';
 import { json, appURL } from './api/http';
@@ -18,6 +18,41 @@ import { accountRoutes } from './api/accounts';
 import { tripRoutes } from './api/trips';
 
 export async function handle(
+  req: NextRequest,
+  p: string[],
+  background?: RequestContext['background'],
+) {
+  const requestId = id();
+  const started = performance.now();
+  const response = await dispatch(req, p, background);
+  response.headers.set('X-Request-Id', requestId);
+  const durationMs = Math.round(performance.now() - started);
+  if (durationMs >= 2000 || response.status >= 500) {
+    const group = [
+      'auth',
+      'trips',
+      'media',
+      'my-media',
+      'invitations',
+      'friends',
+      'profile',
+      'memories',
+      'shares',
+    ].includes(p[0])
+      ? p[0]
+      : 'other';
+    console.warn('API diagnostic', {
+      requestId,
+      group,
+      method: req.method,
+      status: response.status,
+      durationMs,
+    });
+  }
+  return response;
+}
+
+async function dispatch(
   req: NextRequest,
   p: string[],
   background?: RequestContext['background'],
@@ -107,6 +142,17 @@ export async function handle(
         },
         error.reason === 'timeout' ? 504 : 502,
       );
+    if (
+      error &&
+      typeof error === 'object' &&
+      ['SQLITE_BUSY', 'SQLITE_LOCKED'].includes(
+        String((error as { code?: unknown }).code),
+      )
+    ) {
+      const response = json({ error: 'errors.databaseBusy' }, 503);
+      response.headers.set('Retry-After', '1');
+      return response;
+    }
     if (error instanceof z.ZodError)
       return json(
         {
@@ -139,7 +185,10 @@ export async function handle(
       );
     if (error instanceof Error && error.message.includes('UNIQUE constraint'))
       return json({ error: 'messages.thisRecordAlreadyExists' }, 409);
-    console.error('API error:', error instanceof Error ? error.message : error);
+    console.error(
+      'API error:',
+      error instanceof Error ? error.name : 'UnknownError',
+    );
     return json({ error: 'messages.theActionCouldNotBeCompletedPlease' }, 500);
   }
 }

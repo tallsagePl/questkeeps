@@ -3,7 +3,13 @@
 import { useTopScroll } from './use-top-scroll';
 import { useVirtualScrollPosition } from './use-virtual-scroll-position';
 import { PreviewPriority } from './preview-priority';
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  useMemo,
+  type ReactNode,
+} from 'react';
 
 type Layout = {
   visibleFirst: number;
@@ -205,12 +211,22 @@ export default function VirtualGallery<T>({
   }, [layout]);
   const first = layout?.first || 0;
   const last = layout?.last ?? Math.min(items.length, 3);
-  // Retain previously visited elements so their image nodes and loaded state survive.
-  // Hidden cells take no layout space and are excluded from keyboard navigation.
-  useLayoutEffect(() => {
-    for (const item of items.slice(first, last))
-      retainedKeys.current.add(itemKey(item));
-  });
+  const indexByKey = useMemo(
+    () => new Map(items.map((item, index) => [itemKey(item), index])),
+    [items, itemKey],
+  );
+  for (const item of items.slice(first, last)) {
+    const key = itemKey(item);
+    retainedKeys.current.delete(key);
+    retainedKeys.current.add(key);
+  }
+  const retainedLimit = Math.max(24, (last - first) * 3);
+  while (retainedKeys.current.size > retainedLimit)
+    retainedKeys.current.delete(retainedKeys.current.values().next().value!);
+  const mountedIndices = [...retainedKeys.current]
+    .map((key) => indexByKey.get(key))
+    .filter((index): index is number => index !== undefined)
+    .sort((a, b) => a - b);
   return (
     <div
       ref={root}
@@ -253,7 +269,8 @@ export default function VirtualGallery<T>({
         jumpTo(target);
       }}
     >
-      {items.map((item, index) => {
+      {mountedIndices.map((index) => {
+        const item = items[index];
         const active = index >= first && index < last;
         if (!active && !retainedKeys.current.has(itemKey(item))) return null;
         return (

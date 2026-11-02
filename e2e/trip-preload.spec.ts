@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
 
-test('trip warms all resources before tabs open, reuses them after reload, and retains city selection and stale contours', async ({
+test('trip limits background warmup, loads map resources on demand and retains city selection and stale contours', async ({
   page,
 }) => {
   const trip = {
@@ -143,13 +143,12 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
   expect(geometries).toBe(0);
   expect(previews.get('warm-23') || 0).toBe(0);
   release();
-  await expect
-    .poll(() => previews.get('warm-23') || 0, { timeout: 25000 })
-    .toBe(1);
-  await expect.poll(() => areas).toBe(1);
-  await expect.poll(() => geometries, { timeout: 15000 }).toBe(1);
-  await expect.poll(() => texts).toBe(1);
-  await expect.poll(() => lookups, { timeout: 25000 }).toBe(media.length);
+  await page.waitForTimeout(1000);
+  expect(previews.get('warm-23') || 0).toBe(0);
+  expect(areas).toBe(0);
+  expect(geometries).toBe(0);
+  expect(texts).toBe(0);
+  expect(lookups).toBe(0);
   await page
     .getByRole('button', { name: 'Открытые места', exact: true })
     .click();
@@ -161,7 +160,7 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
     .click();
   await expect(page.locator('.place-recommendations')).toBeVisible();
   await page.waitForTimeout(700);
-  expect(lookups).toBe(media.length);
+  expect(lookups).toBeGreaterThan(0);
   const map = () =>
     page
       .locator('.tabbar nav')
@@ -183,7 +182,7 @@ test('trip warms all resources before tabs open, reuses them after reload, and r
   await expect(page.locator('.leaflet-visitedPlaces-pane path')).toHaveCount(1);
   expect(areas).toBe(1);
   expect(geometries).toBe(1);
-  expect(previews.get('warm-23')).toBe(1);
+  expect(previews.get('warm-23') || 0).toBeLessThanOrEqual(1);
   providersFail = true;
   geometryGate = new Promise<void>((resolve) => {
     releaseGeometry = resolve;

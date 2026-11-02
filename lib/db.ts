@@ -34,20 +34,35 @@ db.function('quest_fold', { deterministic: true }, (value: unknown) =>
     .toLowerCase(),
 );
 
-db.pragma('busy_timeout = 5000');
+db.pragma('busy_timeout = ' + (process.env.QK_WORKER_ROLE ? 5000 : 1500));
 
 migrate(db);
 
+const statements = new Map<string, Database.Statement>();
+
+function statement(sql: string) {
+  let cached = statements.get(sql);
+  if (cached) {
+    statements.delete(sql);
+    statements.set(sql, cached);
+    return cached;
+  }
+  cached = db.prepare(sql);
+  statements.set(sql, cached);
+  if (statements.size > 128) statements.delete(statements.keys().next().value!);
+  return cached;
+}
+
 export function one<T = Row>(sql: string, ...args: any[]): T | undefined {
-  return db.prepare(sql).get(...args) as T | undefined;
+  return statement(sql).get(...args) as T | undefined;
 }
 
 export function all<T = Row>(sql: string, ...args: any[]): T[] {
-  return db.prepare(sql).all(...args) as T[];
+  return statement(sql).all(...args) as T[];
 }
 
 export function run(sql: string, ...args: any[]) {
-  return db.prepare(sql).run(...args);
+  return statement(sql).run(...args);
 }
 
 export const id = () => randomBytes(18).toString('base64url');

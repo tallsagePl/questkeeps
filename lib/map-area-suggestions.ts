@@ -1,7 +1,4 @@
-import {
-  photoSearchRegions,
-  type PhotoSearchRegion,
-} from './photo-search-regions';
+import type { PhotoSearchRegion } from './photo-search-regions';
 import { russianAreaTitle, russianAreaDescription } from './area-localization';
 import { all, one, run, db, id } from './db';
 import { closestCity } from './city-lookup';
@@ -59,7 +56,11 @@ export function eligibleAreaObject(e: any) {
   );
 }
 
-export async function discoverPhotoRegion(region: PhotoSearchRegion) {
+export async function discoverPhotoRegion(
+  region: PhotoSearchRegion,
+  signal?: AbortSignal,
+) {
+  signal?.throwIfAborted();
   const { key, lat, lon, radius } = region;
   let pending = discovered.get(key);
   if (pending) return pending;
@@ -92,6 +93,7 @@ export async function discoverPhotoRegion(region: PhotoSearchRegion) {
         'wr(pivot.containing)["name"]["place"~"^(neighbourhood|quarter|suburb)$"];' +
         ');out geom;',
       50000,
+      signal,
     );
     let incomplete = false;
     const nodes = elements.filter((e: any) => e.type === 'node');
@@ -106,6 +108,18 @@ export async function discoverPhotoRegion(region: PhotoSearchRegion) {
     }
     const results: string[] = [];
     const seenWays = new Set<number>();
+    const writes: any[][] = [];
+    const flushWrites = () =>
+      db
+        .transaction(() => {
+          for (const values of writes)
+            run(
+              'INSERT INTO map_areas VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,summary=excluded.summary,geometry=excluded.geometry,updated=excluded.updated',
+              ...values,
+            );
+          writes.length = 0;
+        })
+        .immediate();
     for (const object of candidates) {
       if (object.type === 'way' && seenWays.has(object.id)) continue;
       let pieces = [object];
@@ -177,8 +191,7 @@ export async function discoverPhotoRegion(region: PhotoSearchRegion) {
       if (!pairs.length) continue;
       const x = pairs.reduce((n, p) => n + p[0], 0) / pairs.length;
       const y = pairs.reduce((n, p) => n + p[1], 0) / pairs.length;
-      run(
-        'INSERT INTO map_areas VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,summary=excluded.summary,geometry=excluded.geometry,updated=excluded.updated',
+      writes.push([
         areaId,
         title,
         kind,
@@ -188,9 +201,11 @@ export async function discoverPhotoRegion(region: PhotoSearchRegion) {
         x,
         JSON.stringify(geometry),
         Date.now(),
-      );
+      ]);
+      if (writes.length >= 50) flushWrites();
       results.push(areaId);
     }
+    flushWrites();
     if (!incomplete)
       run(
         'INSERT INTO map_area_city_cache VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET json=excluded.json,updated=excluded.updated',
@@ -230,7 +245,7 @@ export async function discoverPhotoRegion(region: PhotoSearchRegion) {
 export function accessibleAreaPhotos(tripId: string, userId: string) {
   const trip = membership(tripId, userId);
   const photos = all(
-    "SELECT m.* FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=? AND m.kind='photo' AND m.hidden=0 AND m.missing=0 AND s.approved=1 AND m.lat IS NOT NULL AND m.lon IS NOT NULL AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (?=1 OR m.user_id=?)",
+    "SELECT m.id,m.lat,m.lon,m.revision,m.taken,m.user_id FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=? AND m.kind='photo' AND m.hidden=0 AND m.missing=0 AND s.approved=1 AND m.lat IS NOT NULL AND m.lon IS NOT NULL AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (?=1 OR m.user_id=?)",
     tripId,
     trip.from,
     trip.to,
@@ -240,20 +255,12 @@ export function accessibleAreaPhotos(tripId: string, userId: string) {
   return { trip, photos };
 }
 
-export async function areaSuggestions(tripId: string, userId: string) {
-  const { photos } = accessibleAreaPhotos(tripId, userId);
-  const regions = photoSearchRegions(photos as { lat: number; lon: number }[]);
-  let incomplete = false;
-  const ids = new Set<string>();
-  for (const region of regions) {
-    try {
-      const result = await discoverPhotoRegion(region);
-      result.ids.forEach((id) => ids.add(id));
-      incomplete ||= result.incomplete;
-    } catch {
-      incomplete = true;
-    }
-  }
+export function buildAreaCandidates(
+  tripId: string,
+  photos: Record<string, any>[],
+  ids: Set<string>,
+  incomplete = false,
+) {
   const known = all(
     'SELECT DISTINCT url,title FROM confirmed_places WHERE trip_id=?',
     tripId,
@@ -276,7 +283,8 @@ export async function areaSuggestions(tripId: string, userId: string) {
   });
   const candidates = [];
   for (const areaId of ids) {
-    const area = one('SELECT * FROM map_areas WHERE id=?', areaId)!;
+    const area = one('SELECT * FROM map_areas WHERE id=?', areaId);
+    if (!area) continue;
     const title = russianAreaTitle(
       area.title,
       closestCity(area.lat, area.lon)?.country,

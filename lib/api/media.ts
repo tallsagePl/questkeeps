@@ -135,6 +135,11 @@ export async function mediaRoutes({
             m,
             req.signal,
             new URL(req.url).searchParams.has('reload'),
+            new URL(req.url).searchParams.get('size') === 'card'
+              ? 'card'
+              : new URL(req.url).searchParams.get('size') === 'viewer'
+                ? 'viewer'
+                : 'provider',
           );
           // Permissions may have changed while a shared download was in progress.
           if (p[0] === 'my-media') ownProfileMedia(req, p[1]);

@@ -37,6 +37,7 @@ import {
 import { includesDate } from '../../lib/date-selection';
 import { groupPlacePhotos } from '../../lib/place-photo-groups';
 import { tripMapScope } from '../trip-preloader';
+import type { LocalizedMessage } from '../../lib/i18n/translate';
 import { ApiError, useFeedback } from '../feedback';
 import { values } from './shared';
 import { hasCoordinates } from '../../lib/geo';
@@ -153,17 +154,41 @@ export function useArchive({
     if (generation !== identityGeneration.current) return;
     setTrips(r.trips);
   }, []);
+  const tripResponses = useRef(
+    new Map<string, { etag: string; data: TripData }>(),
+  );
   const loadTrip = useCallback(async (tid: string) => {
     const generation = identityGeneration.current;
     const navigation = navigationGeneration.current;
     let r;
     try {
-      r = await api<TripData>(
-        'trips/' + tid,
-        'GET',
-        undefined,
-        AbortSignal.timeout(20000),
-      );
+      const cached = tripResponses.current.get(tid);
+      const response = await fetch('/api/trips/' + encodeURIComponent(tid), {
+        cache: 'no-store',
+        headers: cached ? { 'If-None-Match': cached.etag } : {},
+        signal: AbortSignal.timeout(20000),
+      });
+      if (response.status === 304 && cached) r = cached.data;
+      else {
+        const value = await response.json();
+        if (!response.ok)
+          throw new ApiError(
+            (value.errorTranslation ||
+              value.error ||
+              'errors.requestFailed') as string | LocalizedMessage,
+            {},
+            response.status,
+          );
+        r = value as TripData;
+        const etag = response.headers.get('etag');
+        if (etag && generation === identityGeneration.current) {
+          tripResponses.current.set(tid, { etag, data: r });
+          while (tripResponses.current.size > 2)
+            tripResponses.current.delete(
+              tripResponses.current.keys().next().value!,
+            );
+        }
+      }
     } catch (error) {
       if (
         generation !== identityGeneration.current ||
@@ -179,6 +204,11 @@ export function useArchive({
       return;
     setData(r);
     setSelected(tid);
+  }, []);
+  useEffect(() => {
+    const clear = () => tripResponses.current.clear();
+    window.addEventListener('questkeeps:session-ending', clear);
+    return () => window.removeEventListener('questkeeps:session-ending', clear);
   }, []);
   const importing = !!(
     data?.importStatus?.waiting || data?.importStatus?.syncing

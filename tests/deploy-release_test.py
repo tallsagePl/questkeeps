@@ -36,6 +36,7 @@ if a[0]=='run':
  name=a[a.index('--name')+1]
  if s['scenario']=='worker-fail' and 'worker' in name:finish(code=1)
  if s['scenario']=='video-fail' and 'video' in name:finish(code=1)
+ if s['scenario']=='geo-fail' and 'geo' in name:finish(code=1)
  s['containers'][name]={'running':True,'image':s['new']};finish(name)
 if a[0]=='rm':
  name=a[-1]
@@ -45,6 +46,7 @@ if a[0]=='rm':
 if a[0]=='stop':s['containers'][a[-1]]['running']=False;finish()
 if a[0]=='start':s['containers'][a[-1]]['running']=True;finish()
 if a[0]=='cp':finish()
+if a[0]=='exec':finish(code=1 if s['scenario']=='health-fail' else 0)
 if a[:2]==['image','ls']:finish('\n'.join(s['images']))
 if a[:2]==['image','rm']:
  image=a[-1]
@@ -123,6 +125,20 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue(state['containers']['qk-video-green']['running'])
         self.assertEqual(active, OLD)
 
+    def test_stale_worker_health_rolls_back(self):
+        result, state, active = self.run_release("health-fail")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(OLD, state['images'])
+        self.assertTrue(state['containers']['qk-worker-green']['running'])
+        self.assertEqual(active, OLD)
+
+    def test_failed_geo_keeps_previous_web_and_image(self):
+        result, state, active = self.run_release("geo-fail")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(OLD, state['images'])
+        self.assertTrue(state['containers']['qk-web-green']['running'])
+        self.assertEqual(active, OLD)
+
     def test_first_video_worker_can_be_added_without_a_previous_video_container(self):
         result, state, active = self.run_release("first-video")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -136,6 +152,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(active, NEW)
         self.assertTrue(state['containers']['qk-web-blue']['running'])
         self.assertTrue(state['containers']['qk-worker-blue']['running'])
+        self.assertTrue(state['containers']['qk-geo-blue']['running'])
         removal = next(i for i,e in enumerate(state['events']) if e[:3]==['docker','image','rm'])
         self.assertTrue(any(e[0]=='node' for e in state['events'][:removal]))
 

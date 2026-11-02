@@ -1,5 +1,9 @@
 'use client';
 
+import {
+  notificationCoordinator,
+  markNotificationFeed,
+} from '../lib/notification-coordinator';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { DirectTripInvitation } from '../lib/contracts';
 import { api } from './api';
@@ -17,6 +21,9 @@ export default function TripInvitations({ userId }: { userId: string }) {
     newest: number;
     stamp?: string;
   };
+  const [followChanges, setFollowChanges] = useState<
+    (Drive & { notes: number; url: string })[]
+  >([]);
   const pending = useRef<AbortController | null>(null);
   const known = useRef(new Set<string>());
   const checkRequested = useRef(false);
@@ -31,6 +38,57 @@ export default function TripInvitations({ userId }: { userId: string }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const coordinator = useRef<ReturnType<typeof notificationCoordinator> | null>(
+    null,
+  );
+  const applySnapshot = useCallback(
+    (result: Record<string, any>) => {
+      markNotificationFeed(userId);
+      const invitations = result.invitations || [];
+      setItems(invitations);
+      const friends =
+        result.friends && Array.isArray(result.friends.friends)
+          ? result.friends
+          : undefined;
+      const accepted = (result.accepted || []) as Person[];
+      const changes = (result.driveChanges || []) as Drive[];
+      setIncoming(friends?.incoming || []);
+      setAccepted(accepted);
+      setDriveChanges(changes);
+      const followed = (result.followChanges || []) as (Drive & {
+        notes: number;
+        url: string;
+      })[];
+      setFollowChanges(followed);
+      if (friends)
+        window.dispatchEvent(
+          new CustomEvent('questkeeps:social-updated', {
+            detail: { userId, friends },
+          }),
+        );
+      const keys = [
+        ...followed.map((trip) => 'follow:' + trip.id + ':' + trip.stamp),
+        ...invitations.map((i: DirectTripInvitation) => 'invite:' + i.id),
+        ...(friends?.incoming || []).map((p: Person) => 'friend:' + p.id),
+        ...accepted.map((p) => 'accepted:' + p.id),
+        ...changes.map(
+          (trip) => 'drive:' + trip.id + ':' + (trip.stamp || trip.newest),
+        ),
+      ];
+      const unseen = keys.filter((key) => !(result.seen || []).includes(key));
+      setUnread(unseen.length > 0);
+      if (unseen.some((key) => !known.current.has(key))) setRing((n) => n + 1);
+      known.current = new Set(keys);
+      setCount(
+        Number(result.count || 0) +
+          (friends?.incoming.length || 0) +
+          accepted.length +
+          changes.length +
+          followed.length,
+      );
+    },
+    [userId],
+  );
   const load = useCallback(
     async (signal?: AbortSignal, force = false) => {
       if (pending.current && !force) return;
@@ -50,42 +108,8 @@ export default function TripInvitations({ userId }: { userId: string }) {
           requestSignal,
         );
         if (requestSignal.aborted || !mounted.current) return;
-        const invitations = result.invitations || [];
-        setItems(invitations);
-        const friends =
-          result.friends && Array.isArray(result.friends.friends)
-            ? result.friends
-            : undefined;
-        const accepted = (result.accepted || []) as Person[];
-        const changes = (result.driveChanges || []) as Drive[];
-        setIncoming(friends?.incoming || []);
-        setAccepted(accepted);
-        setDriveChanges(changes);
-        if (friends)
-          window.dispatchEvent(
-            new CustomEvent('questkeeps:social-updated', {
-              detail: { userId, friends },
-            }),
-          );
-        const keys = [
-          ...invitations.map((i: DirectTripInvitation) => 'invite:' + i.id),
-          ...(friends?.incoming || []).map((p: Person) => 'friend:' + p.id),
-          ...accepted.map((p) => 'accepted:' + p.id),
-          ...changes.map(
-            (trip) => 'drive:' + trip.id + ':' + (trip.stamp || trip.newest),
-          ),
-        ];
-        const unseen = keys.filter((key) => !(result.seen || []).includes(key));
-        setUnread(unseen.length > 0);
-        if (unseen.some((key) => !known.current.has(key)))
-          setRing((n) => n + 1);
-        known.current = new Set(keys);
-        setCount(
-          Number(result.count || 0) +
-            (friends?.incoming.length || 0) +
-            accepted.length +
-            changes.length,
-        );
+        applySnapshot(result);
+        coordinator.current?.publish(result);
         if (!checkRequested.current) {
           checkRequested.current = true;
           void api('invitations/check-drive', 'POST', {}, requestSignal).catch(
@@ -100,13 +124,20 @@ export default function TripInvitations({ userId }: { userId: string }) {
         if (pending.current === request) pending.current = null;
       }
     },
-    [userId],
+    [userId, applySnapshot],
   );
   useEffect(() => {
     mounted.current = true;
     const controller = new AbortController();
+    coordinator.current = notificationCoordinator(userId, (value) => {
+      if (mounted.current && !controller.signal.aborted) applySnapshot(value);
+    });
     const refresh = () => {
-      if (document.visibilityState === 'visible')
+      if (
+        document.visibilityState === 'visible' &&
+        navigator.onLine &&
+        (coordinator.current?.leader() ?? true)
+      )
         void load(controller.signal).catch(() => {});
     };
     const timer = window.setInterval(refresh, 15000);
@@ -118,6 +149,9 @@ export default function TripInvitations({ userId }: { userId: string }) {
     // Establish the baseline before asking the worker to check Drive.
     void load(controller.signal).catch(() => {});
     const ending = () => {
+      coordinator.current?.close();
+      coordinator.current = null;
+      controller.abort();
       pending.current?.abort();
     };
     window.addEventListener('questkeeps:session-ending', ending);
@@ -125,6 +159,8 @@ export default function TripInvitations({ userId }: { userId: string }) {
     document.addEventListener('visibilitychange', refresh);
     return () => {
       mounted.current = false;
+      coordinator.current?.close();
+      coordinator.current = null;
       controller.abort();
       pending.current?.abort();
       pending.current = null;
@@ -134,7 +170,7 @@ export default function TripInvitations({ userId }: { userId: string }) {
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [load]);
+  }, [load, applySnapshot, userId]);
   const date = (value: string) =>
     new Date(value + 'T12:00:00').toLocaleDateString(
       language === 'ru' ? 'ru-RU' : 'en-GB',
@@ -192,7 +228,8 @@ export default function TripInvitations({ userId }: { userId: string }) {
             !items.length &&
             !incoming.length &&
             !accepted.length &&
-            !driveChanges.length && <p>{t('notifications.empty')}</p>
+            !driveChanges.length &&
+            !followChanges.length && <p>{t('notifications.empty')}</p>
           )}
           {!loading &&
             incoming.map((person) => (
@@ -219,6 +256,16 @@ export default function TripInvitations({ userId }: { userId: string }) {
                   {t('notifications.friendAccepted', { name: person.name })}
                 </h3>
                 <a href={'/@' + person.username}>@{person.username}</a>
+              </article>
+            ))}
+          {!loading &&
+            followChanges.map((trip) => (
+              <article className="invitation-item" key={'follow:' + trip.id}>
+                <h3>{t('notifications.followUpdated')}</h3>
+                <p>{trip.title}</p>
+                <a className="secondary" href={trip.url}>
+                  {t('notifications.openTrip')}
+                </a>
               </article>
             ))}
           {!loading &&

@@ -1,3 +1,4 @@
+import { startWorkerHealth } from '../lib/worker-health';
 import { runMetadataJobs } from '../lib/metadata-jobs';
 import { pollTelegram, deliverTelegram } from '../lib/telegram';
 import { deliverEmails } from '../lib/email-verification';
@@ -13,6 +14,8 @@ process.on('SIGTERM', () => shutdown.abort());
 console.log(
   'QuestKeeps: email queue every 5 seconds; Drive synchronization every 15 minutes',
 );
+
+const health = startWorkerHealth('worker');
 
 void runWorkerLoops(
   [
@@ -49,8 +52,14 @@ void runWorkerLoops(
     },
   ],
   shutdown.signal,
-  (name, error) => console.error(name, error),
-).catch((error) => {
-  console.error('Worker stopped', error);
-  process.exitCode = 1;
-});
+  (name, error) =>
+    console.error(name, {
+      reason: error instanceof Error ? error.name : 'Error',
+    }),
+  health.event,
+)
+  .catch((error) => {
+    console.error('Worker stopped', error);
+    process.exitCode = 1;
+  })
+  .finally(() => health.close());

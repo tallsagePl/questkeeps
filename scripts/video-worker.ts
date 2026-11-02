@@ -1,3 +1,4 @@
+import { startWorkerHealth } from '../lib/worker-health';
 import { setTimeout as delay } from 'node:timers/promises';
 import { runVideoJob, closeVideoStore, videoStore } from '../lib/video-jobs';
 import { videoCommand } from '../lib/video-convert';
@@ -19,6 +20,8 @@ await videoCommand(
 
 console.log('QuestKeeps video worker ready: one 720p job at a time');
 
+const health = startWorkerHealth('video');
+
 const heartbeat = setInterval(() => {
   try {
     videoStore().tick();
@@ -28,8 +31,11 @@ const heartbeat = setInterval(() => {
 try {
   while (!shutdown.signal.aborted) {
     try {
+      health.event('prepare', 'start');
       await runVideoJob(shutdown.signal);
-    } catch {
+      health.event('prepare', 'success');
+    } catch (error) {
+      health.event('prepare', 'failure', error);
       if (!shutdown.signal.aborted)
         console.warn('Video worker waiting for cache');
     }
@@ -41,5 +47,6 @@ try {
   }
 } finally {
   clearInterval(heartbeat);
+  health.close();
   closeVideoStore();
 }

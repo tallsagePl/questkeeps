@@ -1,5 +1,6 @@
 'use client';
 
+import Memories from '../memories';
 import { useLocale } from '@/components/appearance';
 import Friends from '../friends';
 import TripCover from '../trip-cover';
@@ -40,6 +41,7 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
             {t('trip.newTrip')}
           </FeedbackButton>
         </div>
+        {user && <Memories key={'memories:' + user.id} userId={user.id} />}
         {user && <Friends key={user.id} viewerId={user.id} compact />}
         {user && <FollowedTrips key={'follows:' + user.id} userId={user.id} />}
         <div className="section-line">

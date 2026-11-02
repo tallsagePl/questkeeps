@@ -1,3 +1,4 @@
+import { ProviderQueue, boundedProviderJson } from './provider-queue';
 import { wiki } from './places';
 import { MemoryCache } from './memory-cache';
 import { placeTextContent } from './place-text';
@@ -42,14 +43,22 @@ export async function readWikiPage(
   );
 }
 
+const entityQueue = new ProviderQueue(500);
+
 export async function readWikiEntity(id: string) {
   if (!/^Q[1-9][0-9]*$/.test(id)) return undefined;
-  const response = await fetch(
-    'https://www.wikidata.org/wiki/Special:EntityData/' + id + '.json',
-    { signal: AbortSignal.timeout(12000) },
-  );
-  if (!response.ok) throw Error('Wikidata unavailable');
-  return (await response.json()).entities?.[id];
+  return entityQueue.request(async (signal) => {
+    const response = await fetch(
+      'https://www.wikidata.org/wiki/Special:EntityData/' + id + '.json',
+      { signal },
+    );
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw Error('Wikidata unavailable');
+    }
+    return (await boundedProviderJson(response, signal, 4 * 1024 * 1024))
+      .entities?.[id];
+  }, 12000);
 }
 
 export async function chooseWikiPage(

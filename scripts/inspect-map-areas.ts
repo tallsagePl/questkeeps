@@ -1,5 +1,5 @@
 import { one } from '../lib/db';
-import { areaSuggestions } from '../lib/map-area-suggestions';
+import { queuedAreaSuggestions as areaSuggestions } from '../lib/geo-jobs';
 
 const trip = one('SELECT id,owner_id FROM trips WHERE id=?', process.argv[2]);
 

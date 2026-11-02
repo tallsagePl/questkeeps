@@ -974,5 +974,8 @@
   "sync.queued": "Update queued. Photos will appear automatically.",
   "sync.scanProgress": "Checking Drive · files found: {count}",
   "sync.metadataProgress": "Reading dates and locations · remaining: {count}",
-  "sync.metadataRetry": "Some metadata is unavailable. We will retry with backoff; a manual refresh retries failed items."
+  "sync.metadataRetry": "Some metadata is unavailable. We will retry with backoff; a manual refresh retries failed items.",
+  "notifications.followUpdated": "Updates to a trip you follow",
+  "memories.onThisDay": "On this day",
+  "errors.databaseBusy": "The database is busy. Try again in a second."
 }

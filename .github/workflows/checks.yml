@@ -39,3 +39,40 @@ jobs:
       - name: Install browser for the isolated test suite
         run: npx playwright install --with-deps msedge
       - run: npm run test:e2e -- --workers=1
+
+  image:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Build immutable production image away from the VPS
+        env:
+          QK_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          tag="questkeeps:$version-${QK_COMMIT:0:7}"
+          docker build --build-arg "SOURCE_REVISION=$QK_COMMIT" -t "$tag" .
+          docker run --rm --network none --read-only --tmpfs /app/data:uid=997,gid=997,mode=0700,size=128m --tmpfs /tmp:uid=997,gid=997,mode=0700,size=64m -v "$PWD/tests:/app/tests:ro" "$tag" node --import ./scripts/test-env.mjs --import tsx --test tests/service-completion.test.ts
+          docker save "$tag" | gzip -1 > questkeeps-image.tar.gz
+          QK_TAG="$tag" QK_COMMIT="$QK_COMMIT" python3 deploy/image-manifest.py > image-manifest.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: questkeeps-image-${{ github.sha }}
+          path: questkeeps-image.tar.gz
+          archive: false
+          retention-days: 1
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: questkeeps-manifest-${{ github.sha }}
+          path: image-manifest.json
+          archive: false
+          retention-days: 1
+          if-no-files-found: error

@@ -14,14 +14,25 @@ export default function MediaPreview({
   kind,
   scope,
   rotation = 0,
+  size = 'card',
+  onReady,
 }: {
   src: string;
   kind: string;
   scope: string;
   rotation?: number;
+  size?: 'card' | 'viewer';
+  onReady?: () => void;
 }) {
+  const source = src + (src.includes('?') ? '&' : '?') + 'size=' + size;
   const image = (
-    <RetryingPreview key={scope + src} src={src} kind={kind} scope={scope} />
+    <RetryingPreview
+      key={scope + source}
+      src={source}
+      kind={kind}
+      scope={scope}
+      onReady={onReady}
+    />
   );
   if (rotation) return <RotatedFrame rotation={rotation}>{image}</RotatedFrame>;
   return image;
@@ -31,10 +42,12 @@ function RetryingPreview({
   src,
   kind,
   scope,
+  onReady,
 }: {
   src: string;
   kind: string;
   scope: string;
+  onReady?: () => void;
 }) {
   const { t } = useLocale();
   const priority = useContext(PreviewPriority);
@@ -144,7 +157,10 @@ function RetryingPreview({
           alt=""
           loading="eager"
           decoding="async"
-          onLoad={() => setState('loaded')}
+          onLoad={() => {
+            setState('loaded');
+            onReady?.();
+          }}
           onError={() => {
             setState(attempt < 3 ? 'retrying' : 'failed');
             // A failed object URL must not block the next network attempt.

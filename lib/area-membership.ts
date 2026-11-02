@@ -1,5 +1,38 @@
 type Coord = [number, number];
 
+const bounds = new WeakMap<object, [number, number, number, number]>();
+
+function nearBounds(p: Coord, g: any) {
+  if (!g || !Array.isArray(g.coordinates)) return false;
+  let box = bounds.get(g);
+  if (!box) {
+    box = [Infinity, Infinity, -Infinity, -Infinity];
+    const visit = (v: any) => {
+      if (
+        Array.isArray(v) &&
+        typeof v[0] === 'number' &&
+        typeof v[1] === 'number'
+      ) {
+        box![0] = Math.min(box![0], v[0]);
+        box![1] = Math.min(box![1], v[1]);
+        box![2] = Math.max(box![2], v[0]);
+        box![3] = Math.max(box![3], v[1]);
+      } else if (Array.isArray(v)) for (const child of v) visit(child);
+    };
+    visit(g.coordinates);
+    bounds.set(g, box);
+  }
+  if (box[2] - box[0] > 180 || Math.abs(p[1]) > 89) return true;
+  const dy = STREET_DISTANCE_METERS / 111320;
+  const dx = dy / Math.max(0.001, Math.cos((p[1] * Math.PI) / 180));
+  return (
+    p[0] >= box[0] - dx &&
+    p[0] <= box[2] + dx &&
+    p[1] >= box[1] - dy &&
+    p[1] <= box[3] + dy
+  );
+}
+
 export const STREET_DISTANCE_METERS = 30;
 
 function segmentDistance(p: Coord, a: Coord, b: Coord) {
@@ -49,6 +82,7 @@ export function photoInArea(
   const p: Coord = [photo.lon, photo.lat];
   return collection.features.some((feature) => {
     const g = feature.geometry;
+    if (!nearBounds(p, g)) return false;
     if (g?.type === 'Polygon') return polygonContains(p, g.coordinates);
     if (g?.type === 'MultiPolygon')
       return g.coordinates.some((r: Coord[][]) => polygonContains(p, r));

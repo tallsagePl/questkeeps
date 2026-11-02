@@ -1,3 +1,5 @@
+import { tripResponse } from '../trip-response';
+import { queuedAreaSuggestions } from '../geo-jobs';
 import { tripCovers, coverSettings } from '../trip-covers';
 import type { TripSummary } from '../contracts';
 import {
@@ -6,10 +8,10 @@ import {
   resolveMentions,
 } from '../profiles';
 import { areaWiki } from '../map-area-wiki';
-import { areaSuggestions, addAreaToPhotos } from '../map-area-suggestions';
+import { addAreaToPhotos } from '../map-area-suggestions';
 import { z } from 'zod';
 import { db, one, all, run, id } from '../db';
-import { fail, membership, owner, tripData, throttle } from '../access';
+import { fail, membership, owner, throttle } from '../access';
 import { disk } from '../yandex';
 import { queueSourceSync, sourceJobStatus } from '../source-jobs';
 import { inferTrip, ownFolder } from '../infer-trip';
@@ -179,7 +181,7 @@ export async function tripRoutes({
         return json(coverSettings(tid));
       }
     }
-    if (!p[2] && method === 'GET') return json(tripData(req, tid));
+    if (!p[2] && method === 'GET') return tripResponse(req, tid);
     if (!p[2] && method === 'PATCH') {
       owner(tid, u.id);
       const input = z
@@ -285,7 +287,7 @@ export async function tripRoutes({
             url.searchParams.get('lang') === 'en' ? 'en' : 'ru',
           ),
         );
-      if (method === 'GET') return json(await areaSuggestions(tid, u.id));
+      if (method === 'GET') return json(queuedAreaSuggestions(tid, u.id));
       if (method === 'POST') {
         const input = z
           .object({

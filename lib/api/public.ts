@@ -1,10 +1,11 @@
+import { tripResponse } from '../trip-response';
 import { joinTrip } from '../trip-invitations';
 import { sharedProfileTrips } from '../profile-media';
 import { guestTrip } from '../guest-links';
 import { publicProfile } from '../profiles';
 import { accountAvatar } from '../account-avatar';
 import { db, one, run, hash } from '../db';
-import { fail, currentUser, requireUser, tripData } from '../access';
+import { fail, currentUser, requireUser } from '../access';
 import { json } from './http';
 import type { RequestContext } from './context';
 
@@ -54,7 +55,7 @@ export async function publicRoutes({
       guestTrip(p[1]) || fail(404, 'messages.thisGuestLinkIsNoLongerValid');
     const next = new URL(req.url);
     next.searchParams.set('share', p[1]);
-    return json(tripData(new Request(next, { headers: req.headers }), t.id));
+    return tripResponse(new Request(next, { headers: req.headers }), t.id);
   }
   if (p[0] === 'invites' && p[1]) {
     const invite =

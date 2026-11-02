@@ -226,6 +226,17 @@ test('polygon matching respects holes and street matching uses 30 metres', () =>
 
 test('area discovery and atomic batch attachment enforce author, dates, visibility and idempotence', async () => {
   const path = 'trips/trip/area-suggestions';
+  const queued = await req(path);
+  assert.equal((await queued.json()).pending, true);
+  const { runGeoJob } = await import('../lib/geo-jobs');
+  for (
+    let i = 0;
+    i < 20 &&
+    one("SELECT state FROM geo_jobs WHERE trip_id='trip' AND user_id='owner'")
+      ?.state !== 'ready';
+    i++
+  )
+    await runGeoJob(new AbortController().signal);
   const discovery = await req(path);
   assert.equal(discovery.status, 200);
   const data = await discovery.json();
@@ -514,6 +525,7 @@ test('Russian articles take priority, English is a fallback, and Turkish extract
       }
       return response;
     };
+    run('DELETE FROM public_article_cache');
     const english = await resolveAreaWiki('relation', '206', { country: 'TR' });
     assert.equal(
       english.description,
@@ -521,6 +533,7 @@ test('Russian articles take priority, English is a fallback, and Turkish extract
     );
     assert.ok(english.url?.startsWith('https://en.wikipedia.org/'));
     assert.equal(english.title, 'Джанкуртаран');
+    run('DELETE FROM public_article_cache');
     globalThis.fetch = originalLookup;
     const base = globalThis.fetch;
     globalThis.fetch = async (input: any) => {

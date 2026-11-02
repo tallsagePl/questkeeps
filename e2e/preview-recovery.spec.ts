@@ -111,6 +111,8 @@ test('carousel recovers a damaged cached preview and a later image decoding erro
     return count;
   });
   expect(poisoned).toBeGreaterThan(0);
+  // Reload drops the validated in-memory copy so the damaged disk entry is exercised.
+  await page.reload();
   await page
     .locator('.tabbar nav')
     .getByRole('button', { name: 'Дневник', exact: true })
