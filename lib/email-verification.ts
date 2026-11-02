@@ -1,3 +1,4 @@
+import { resetPending } from './password-reset';
 import { verificationMail } from './verification-email';
 import { db, one, run, id, token, hash, encrypt, decrypt } from './db';
 
@@ -150,6 +151,7 @@ export async function deliverEmails(
   if (transport === sendMail && !mailConfigured())
     return { sent: 0, failed: 0 };
   run('DELETE FROM email_verifications WHERE expires<?', initial);
+  run('DELETE FROM password_resets WHERE expires<=?', initial);
   run('DELETE FROM delivery_jobs WHERE created<?', initial - 7 * 86400000);
   let sent = 0;
   let failed = 0;
@@ -159,7 +161,7 @@ export async function deliverEmails(
     const job = db
       .transaction(() => {
         const row = one(
-          "SELECT * FROM delivery_jobs WHERE kind='verify-email' AND finished IS NULL AND attempts<8 AND available<=? AND lease_until<=? ORDER BY created LIMIT 1",
+          "SELECT * FROM delivery_jobs WHERE kind IN ('verify-email','password-reset') AND finished IS NULL AND attempts<8 AND available<=? AND lease_until<=? ORDER BY created LIMIT 1",
           now,
           now,
         );
@@ -176,13 +178,19 @@ export async function deliverEmails(
     if (!job) break;
     try {
       const payload = JSON.parse(decrypt(job.payload));
-      if (payload.expires > now && emailPending(payload.userId)) {
+      if (
+        payload.expires > now &&
+        (job.kind === 'password-reset'
+          ? resetPending(payload.resetHash, payload.userId, now)
+          : emailPending(payload.userId))
+      ) {
         await transport(
           await verificationMail(
             payload.to,
             payload.url,
             false,
             payload.language === 'en' ? 'en' : 'ru',
+            job.kind === 'password-reset' ? 'reset' : 'verify',
           ),
           job.id,
         );

@@ -18,6 +18,8 @@ type FollowUpdate = {
   title: string;
   count: number;
   notes: number;
+  newest?: number;
+  newestNote?: number;
   stamp: string;
   url: string;
 };
@@ -65,6 +67,8 @@ function snapshots(userId: string) {
     `SELECT t.id,t.title,t.share_hash,
   (SELECT COUNT(*) FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=t.id AND m.hidden=0 AND m.hidden_from_guests=0 AND m.missing=0 AND s.approved=1 AND substr(m.taken,1,10) BETWEEN t.start AND t.end) count,
   (SELECT GROUP_CONCAT(m.id ORDER BY m.id) FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=t.id AND m.hidden=0 AND m.hidden_from_guests=0 AND m.missing=0 AND s.approved=1 AND substr(m.taken,1,10) BETWEEN t.start AND t.end) frames,
+  (SELECT COALESCE(MAX(m.rowid),0) FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=t.id AND m.hidden=0 AND m.hidden_from_guests=0 AND m.missing=0 AND s.approved=1 AND substr(m.taken,1,10) BETWEEN t.start AND t.end) newest,
+  (SELECT COALESCE(MAX(n.rowid),0) FROM notes n WHERE n.trip_id=t.id AND n.day BETWEEN t.start AND t.end AND length(n.text)>0) newestNote,
   (SELECT COUNT(*) FROM notes n WHERE n.trip_id=t.id AND n.day BETWEEN t.start AND t.end AND length(n.text)>0) notes,
   (SELECT GROUP_CONCAT(n.id ORDER BY n.id) FROM notes n WHERE n.trip_id=t.id AND n.day BETWEEN t.start AND t.end AND length(n.text)>0) entries
   FROM trip_follows f JOIN trips t ON t.id=f.trip_id WHERE f.user_id=? AND f.share_hash=t.share_hash AND t.share_hash IS NOT NULL`,
@@ -74,6 +78,8 @@ function snapshots(userId: string) {
     title: t.title,
     count: t.count,
     notes: t.notes,
+    newest: t.newest,
+    newestNote: t.newestNote,
     stamp: hash(JSON.stringify([t.frames, t.entries])),
     url: '/s/' + guestToken(t as { id: string; share_hash: string }),
   })) as FollowUpdate[];
@@ -117,7 +123,10 @@ export function notificationSnapshot(userId: string) {
         if (!previous) state.follow[trip.id] = trip;
         else if (
           trip.stamp !== previous.stamp &&
-          (trip.count >= previous.count || trip.notes > previous.notes)
+          (trip.count > previous.count ||
+            trip.notes > previous.notes ||
+            Number(trip.newest || 0) > Number(previous.newest || 0) ||
+            Number(trip.newestNote || 0) > Number(previous.newestNote || 0))
         )
           followChanges.push(trip);
         else if (trip.count < previous.count || trip.notes < previous.notes)

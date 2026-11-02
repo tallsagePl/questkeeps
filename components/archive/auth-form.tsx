@@ -128,6 +128,11 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
             ? t('trip.alreadyHaveAnAccountSignIn')
             : t('trip.newHereCreateAnAccount')}
         </FeedbackButton>
+        {!register && (
+          <a className="text-button centered" href="/reset-password">
+            {t('reset.forgot')}
+          </a>
+        )}
         {yandex && (
           <a
             className="secondary centered"

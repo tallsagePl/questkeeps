@@ -223,3 +223,5 @@ Docker blue/green deployment: [Docker deployment guide](docs/DOCKER-DEPLOY.md). 
 [Drive synchronization and metadata recovery](docs/DRIVE-SYNCHRONIZATION.md)
 
 Reliability and in-app updates: [service completion](docs/SERVICE-COMPLETION.md).
+
+Password recovery uses a 30-minute one-time link to a verified email and revokes all prior sessions.

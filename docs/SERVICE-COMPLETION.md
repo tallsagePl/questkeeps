@@ -20,10 +20,16 @@ Video preparation also extracts ISO6709 GPS from files it already processes, wit
 
 GitHub Actions verifies source, browser behavior and the actual production image before publishing a short-lived image artifact and its SHA-256 manifest. The VPS imports the exact image without rebuilding npm dependencies. The loader verifies archive length/digest and image revision/ID before execution. A failed candidate keeps the prior image and traffic target. All four replacement containers must pass before retirement. Delete the CI image artifacts after a successful deployment; retain only the current production image. Only the canonical database is backed up, on the server and PC.
 
-Schema 14 adds independent queues, caches and invalidation triggers. The reviewed compatibility tool can restore the schema-13 marker without restoring an old snapshot or dropping user data. Re-upgrade is idempotent. Deployment scripts and schema helper must be updated together.
+Schema 14 adds independent queues, caches and invalidation triggers. Schema 15 adds the independent password recovery table. The reviewed compatibility tool can restore the schema-13 marker without restoring an old snapshot or dropping user data. Re-upgrade is idempotent. Deployment scripts and schema helper must be updated together.
 
 ## Acceptance and limits
 
 Unit/API tests cover access revocation before 304, partial geographic jobs, provider cancellation/body limits, shared image downloads, private memories, follower visibility, terminal deliveries and OAuth cancellation/disconnection. Browser tests cover restricted login, long scrolling, media reload, notifications, short pages and phone/tablet/laptop layouts. POSIX release tests simulate failed assets, failed workers and successful retirement.
 
 This release does not claim that an emulated browser proves all Russian mobile/VPN routes or iPhone Safari behavior. Real-device connection checks and playback remain required acceptance on the affected device. Provider outages degrade with explicit retries; they are not evidence that every route is reachable. Full gallery cursor pagination, adaptive streaming, external storage and multi-node databases remain scaling options, not prerequisites established by the current 779-file archive. No external analytics or background marketing consent is inferred.
+
+## Password recovery
+
+`/reset-password` requests a one-time email link for an explicitly verified primary address. Requests return the same response for unknown and unverified accounts. Address and requester budgets restrict repeated requests. The token lasts 30 minutes, is hashed in the database and travels in a URL fragment that the page immediately removes. Opening the link does not change credentials; the user must submit and confirm a new password. Requesting another link invalidates the preceding one.
+
+The token is bound to the current password and email. The final transaction rechecks it after bcrypt, changes the password, consumes all reset links, cancels outstanding reset emails and revokes every session for that user. Concurrent attempts cannot both succeed. Login rechecks credentials inside session creation so a previously started old-password login cannot race the reset. No automatic sign-in occurs. Verification and recovery reuse the branded RU/EN mail template and bounded delivery queue; these are transactional emails, not marketing campaigns.

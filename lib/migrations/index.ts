@@ -1,3 +1,4 @@
+import { passwordRecovery } from './015-password-recovery';
 import { serviceQueues } from './014-service-queues';
 import { sourceJobs } from './013-source-jobs';
 import { coverPositions } from './012-cover-positions';
@@ -29,6 +30,7 @@ export const migrations = [
   { version: 12, name: 'cover-positions', up: coverPositions },
   { version: 13, name: 'source-jobs', up: sourceJobs },
   { version: 14, name: 'service-queues', up: serviceQueues },
+  { version: 15, name: 'password-recovery', up: passwordRecovery },
 ];
 
 export function migrate(db: Database.Database) {

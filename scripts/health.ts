@@ -101,17 +101,24 @@ const report = {
       /^\d+$/.test(process.env.TELEGRAM_ADMIN_ID || ''),
   },
   emailQueue: {
+    failed: (
+      db
+        .prepare(
+          "SELECT count(*) n FROM delivery_jobs WHERE kind IN ('verify-email','password-reset') AND finished IS NOT NULL AND last_error IS NOT NULL",
+        )
+        .get() as { n: number }
+    ).n,
     pending: (
       db
         .prepare(
-          "SELECT count(*) n FROM delivery_jobs WHERE kind='verify-email' AND finished IS NULL",
+          "SELECT count(*) n FROM delivery_jobs WHERE kind IN ('verify-email','password-reset') AND finished IS NULL",
         )
         .get() as { n: number }
     ).n,
     exhausted: (
       db
         .prepare(
-          "SELECT count(*) n FROM delivery_jobs WHERE kind='verify-email' AND attempts>=8 AND last_error IS NOT NULL",
+          "SELECT count(*) n FROM delivery_jobs WHERE kind IN ('verify-email','password-reset') AND attempts>=8 AND last_error IS NOT NULL",
         )
         .get() as { n: number }
     ).n,
@@ -133,7 +140,9 @@ const report = {
       : null,
     pending: tables.includes('telegram_outbox')
       ? (
-          db.prepare('SELECT count(*) n FROM telegram_outbox').get() as {
+          db
+            .prepare('SELECT count(*) n FROM telegram_outbox WHERE terminal=0')
+            .get() as {
             n: number;
           }
         ).n

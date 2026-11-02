@@ -54,3 +54,5 @@ The shared footer and the contact section in `components/about.tsx` link to http
 Trip invitations (1.18.0): `components/archive/invite-dialog.tsx` holds link/in-app invitation controls and visibility copy; `components/trip-invitations.tsx` is the shared header bell and invitation inbox; `components/trip-day-calendar.tsx` marks participation days. Review both languages, mobile layout and dark mode together.
 
 Anniversary memories (1.36): `components/memories.tsx` uses the existing card, preview, Onest type and color tokens. Follow-update copy lives in the shared notification bell and both locale files; no external marketing template is activated.
+
+Password recovery (1.36): `components/reset-password.tsx`, `/reset-password`, and the reset variant in `lib/verification-email.ts` reuse the site shell, fields, colors, embedded logo and contact footer. Keep reset copy in both locale JSON files and inspect the RU/EN email and mobile page when changing the brand.

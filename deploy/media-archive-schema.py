@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
-"""Switch only the reviewed 8/9/10/11/12/13/14 compatibility marker; never remove user data."""
+"""Switch only the reviewed 8/9/10/11/12/13/14/15 compatibility marker; never remove user data."""
 import sqlite3
 import sys
 import time
 
 path, target = sys.argv[1], int(sys.argv[2])
-if target not in (8, 9, 10, 11, 12, 13, 14):
-    raise SystemExit('Only reviewed additive migrations 8 through 14 are supported')
+if target not in (8, 9, 10, 11, 12, 13, 14, 15):
+    raise SystemExit('Only reviewed additive migrations 8 through 15 are supported')
 with sqlite3.connect(path, timeout=10) as db:
     db.execute('BEGIN IMMEDIATE')
     current = db.execute('PRAGMA user_version').fetchone()[0]
-    if current not in (8, 9, 10, 11, 12, 13, 14):
+    if current not in (8, 9, 10, 11, 12, 13, 14, 15):
         raise RuntimeError('Unexpected schema version')
+    if current >= 15 or target >= 15:
+        if {row[1] for row in db.execute('PRAGMA table_info(password_resets)')} != {'hash','user_id','expires','credential_hash'}:
+            raise RuntimeError('Password recovery compatibility schema is missing')
+    history15=db.execute('SELECT name FROM schema_migrations WHERE version=15').fetchone()
+    if history15 is not None and history15[0]!='password-recovery':
+        raise RuntimeError('Unexpected password recovery migration history')
+    if target<15: db.execute('DELETE FROM schema_migrations WHERE version=15')
+    else: db.execute('INSERT OR IGNORE INTO schema_migrations VALUES (15,?,?)',('password-recovery',int(time.time()*1000)))
     if current >= 14 or target >= 14:
         expected={'trip_id','user_id','signature','state','result','cursor','total','lock_id','lock_until','attempts','next_run','updated'}
         if {row[1] for row in db.execute('PRAGMA table_info(geo_jobs)')} != expected:

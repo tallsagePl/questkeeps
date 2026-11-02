@@ -409,7 +409,7 @@ test('additive schema rollback retains queue state and protected coordinates', a
     before,
   );
   migrate(db);
-  assert.equal(db.pragma('user_version', { simple: true }), 14);
+  assert.equal(db.pragma('user_version', { simple: true }), 15);
   assert.equal(
     one('SELECT lat FROM media_location_overrides WHERE media_id=?', mid)?.lat,
     12,

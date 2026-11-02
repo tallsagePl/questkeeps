@@ -977,5 +977,22 @@
   "sync.metadataRetry": "Some metadata is unavailable. We will retry with backoff; a manual refresh retries failed items.",
   "notifications.followUpdated": "Updates to a trip you follow",
   "memories.onThisDay": "On this day",
-  "errors.databaseBusy": "The database is busy. Try again in a second."
+  "errors.databaseBusy": "The database is busy. Try again in a second.",
+  "reset.title": "Reset your password",
+  "reset.intro": "Enter your account’s verified email address. We will send a one-time link.",
+  "reset.request": "Send reset link",
+  "reset.sent": "If this email belongs to a verified account, we will send a reset link. Check your inbox and spam folder.",
+  "reset.newPassword": "New password",
+  "reset.save": "Save new password",
+  "reset.invalid": "This link is invalid or has expired. Request a new link.",
+  "reset.done": "Your password has changed. All previous sessions have ended. Sign in with your new password.",
+  "reset.forgot": "Forgot your password?",
+  "reset.linkIntro": "Choose a new password. You will need to sign in again on every device after saving.",
+  "email.resetTitle": "A new password for your archive",
+  "email.resetIntroduction": "You requested access to your QuestKeeps account. Follow the link to choose a new password.",
+  "email.resetAction": "Change password",
+  "email.resetNote": "This one-time link expires in 30 minutes. Changing your password ends all previous sessions.",
+  "email.resetPreheader": "Your one-time link to restore access to QuestKeeps.",
+  "email.resetSubject": "Reset your QuestKeeps password",
+  "email.ignoreReset": "If you did not request a password reset, ignore this email. Your password will stay unchanged."
 }

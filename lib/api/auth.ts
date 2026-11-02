@@ -1,3 +1,4 @@
+import { queuePasswordReset, resetPassword } from '../password-reset';
 import { queueTelegramRegistration } from '../telegram';
 import {
   verificationRequired,
@@ -33,6 +34,56 @@ export async function authRoutes({
     if (result) return result;
   }
   if (p[0] === 'auth' && method === 'POST') {
+    if (p[1] === 'forgot-password' && !p[2]) {
+      const input = z
+        .object({
+          email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
+          language: z.enum(['ru', 'en']).optional(),
+        })
+        .strict()
+        .parse(await body(req));
+      throttle('reset:address:' + hash(input.email), 3, 3600000);
+      throttle(
+        'reset:requester:' + hash(req.headers.get('x-real-ip') || 'local'),
+        10,
+        3600000,
+      );
+      if (!mailConfigured())
+        fail(
+          503,
+          'messages.registrationIsTemporarilyUnavailableEmailDeliveryIs',
+        );
+      queuePasswordReset(
+        input.email,
+        input.language ||
+          (req.headers.get('X-QuestKeeps-Language') === 'en' ? 'en' : 'ru'),
+      );
+      return json({ message: 'reset.sent' }, 202);
+    }
+    if (p[1] === 'reset-password' && !p[2]) {
+      const input = z
+        .object({
+          token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+          password: z.string().max(72),
+          passwordConfirmation: z.string().max(72),
+        })
+        .strict()
+        .parse(await body(req));
+      throttle('reset:token:' + hash(input.token), 8, 3600000);
+      if (input.password !== input.passwordConfirmation)
+        fail(400, 'trip.passwordsDoNotMatch');
+      if (!validRegistrationPassword(input.password))
+        fail(400, 'trip.672CharactersUppercaseAndLowercaseLatin');
+      const viewer = currentUser(req);
+      const userId = await resetPassword(input.token, input.password);
+      const response = json({
+        message: 'reset.done',
+        sessionEnded: viewer?.id === userId,
+      });
+      if (viewer?.id === userId)
+        response.headers.set('Set-Cookie', sessionCookie('', 0));
+      return response;
+    }
     if (p[1] === 'verify-email') {
       const input = z
         .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
@@ -194,7 +245,21 @@ export async function authRoutes({
           message: 'trip.verifyYourEmailUsingTheLinkIn',
         });
       const r = json({ user: userProfile(u!.id) });
-      r.headers.set('Set-Cookie', sessionCookie(session(u!.id)));
+      const freshSession = db
+        .transaction(() => {
+          if (
+            !registering &&
+            !one(
+              'SELECT 1 FROM users WHERE id=? AND password IS ?',
+              u!.id,
+              u!.password,
+            )
+          )
+            fail(401, 'auth.invalidCredentials');
+          return session(u!.id);
+        })
+        .immediate();
+      r.headers.set('Set-Cookie', sessionCookie(freshSession));
       return r;
     }
   }

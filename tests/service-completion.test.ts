@@ -171,6 +171,30 @@ test('follow notifications ignore hidden frames, include public photos and journ
   assert.equal(notificationSnapshot(f.follower).followChanges.length, 0);
 });
 
+test('deleting a journal entry does not invent a new followed-trip update', () => {
+  const f = setup();
+  photo(f);
+  const note = randomUUID();
+  run(
+    'INSERT INTO notes(id,trip_id,user_id,day,text) VALUES (?,?,?,?,?)',
+    note,
+    f.trip,
+    f.owner,
+    '2025-10-13',
+    'Entry',
+  );
+  run(
+    'INSERT INTO trip_follows VALUES (?,?,?,?)',
+    f.follower,
+    f.trip,
+    hash(f.trip),
+    Date.now(),
+  );
+  assert.equal(notificationSnapshot(f.follower).followChanges.length, 0);
+  run('DELETE FROM notes WHERE id=?', note);
+  assert.equal(notificationSnapshot(f.follower).followChanges.length, 0);
+});
+
 test('anniversary memories respect participation dates and exclude guests, hidden frames and the current year', () => {
   const f = setup();
   const mid = photo(f);

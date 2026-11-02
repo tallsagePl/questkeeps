@@ -2,6 +2,8 @@
 
 ## 1.36.0
 
+- Add verified-email password recovery with 30-minute one-time links and atomic revocation of all prior sessions.
+
 - Move geographic discovery to a durable, bounded worker queue with resumable partial results and provider deadlines.
 - Resize card/viewer previews on the server, reuse upstream files, bound browser warmup and gallery retention, and batch EXIF reads.
 - Add authorized conditional trip responses, coalesced OAuth refresh across processes and bounded action timeouts.

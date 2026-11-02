@@ -34,25 +34,41 @@ export async function verificationMail(
   url: string,
   test = false,
   language: Language = 'ru',
+  purpose: 'verify' | 'reset' = 'verify',
 ): Promise<Mail> {
+  const reset = purpose === 'reset';
   const target = test ? website : url;
   const href = safeLink(target);
   const support = process.env.EMAIL_SUPPORT_URL
     ? safeLink(process.env.EMAIL_SUPPORT_URL)
     : '';
   const t = (key: TranslationKey) => translate(key, language);
-  const title = t(test ? 'email.testTitle' : 'email.verifyTitle');
-  const introduction = t(
-    test ? 'email.testIntroduction' : 'email.verifyIntroduction',
+  const title = t(
+    test ? 'email.testTitle' : reset ? 'email.resetTitle' : 'email.verifyTitle',
   );
-  const action = t(test ? 'email.testAction' : 'email.verifyAction');
-  const note = t(test ? 'email.testNote' : 'email.verifyNote');
-  const text = `${title}\n\n${introduction}\n\n${action}: ${target}\n\n${note}\n\n${t(test ? 'email.testFooter' : 'email.ignoreRegistration')}\n\nQuestKeeps — ${t('email.brandLine')}\n${t('email.siteLink')}: ${website}${support ? '\n' + t('email.contactLink') + ': ' + process.env.EMAIL_SUPPORT_URL : ''}`;
+  const introduction = t(
+    test
+      ? 'email.testIntroduction'
+      : reset
+        ? 'email.resetIntroduction'
+        : 'email.verifyIntroduction',
+  );
+  const action = t(
+    test
+      ? 'email.testAction'
+      : reset
+        ? 'email.resetAction'
+        : 'email.verifyAction',
+  );
+  const note = t(
+    test ? 'email.testNote' : reset ? 'email.resetNote' : 'email.verifyNote',
+  );
+  const text = `${title}\n\n${introduction}\n\n${action}: ${target}\n\n${note}\n\n${t(test ? 'email.testFooter' : reset ? 'email.ignoreReset' : 'email.ignoreRegistration')}\n\nQuestKeeps — ${t('email.brandLine')}\n${t('email.siteLink')}: ${website}${support ? '\n' + t('email.contactLink') + ': ' + process.env.EMAIL_SUPPORT_URL : ''}`;
   const html = `<!doctype html>
 <html lang="${language}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${title}</title>
 <style>@media only screen and (max-width:600px){.email-shell{padding:16px 12px!important}.email-content{padding:32px 24px!important}.email-header{padding:24px!important}.email-title{font-size:30px!important;line-height:36px!important}.email-footer{padding:24px!important}}</style></head>
 <body style="margin:0;padding:0;background:#f3f4fa;color:#191c26;font-family:Arial,Helvetica,sans-serif">
-<div style="display:none;font-size:1px;line-height:1px;color:#f3f4fa;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">${t(test ? 'email.testPreheader' : 'email.verifyPreheader')}</div>
+<div style="display:none;font-size:1px;line-height:1px;color:#f3f4fa;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">${t(test ? 'email.testPreheader' : reset ? 'email.resetPreheader' : 'email.verifyPreheader')}</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f4fa"><tr><td class="email-shell" align="center" style="padding:48px 20px">
 <!--[if mso]><table role="presentation" width="600"><tr><td><![endif]-->
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #dce1ef;border-radius:16px;overflow:hidden">
@@ -69,14 +85,20 @@ export async function verificationMail(
 </td></tr>
 <tr><td class="email-footer" style="padding:28px 40px;border-top:1px solid #e3e7f1;background:#fafbff">
 <p style="margin:0 0 12px;font-size:14px;line-height:22px;font-weight:700;color:#191c26">${t('email.brandLine')}</p>
-<p style="margin:0 0 16px;font-size:12px;line-height:20px;color:#52617d">${t(test ? 'email.testFooter' : 'email.ignoreRegistration')}</p>
+<p style="margin:0 0 16px;font-size:12px;line-height:20px;color:#52617d">${t(test ? 'email.testFooter' : reset ? 'email.ignoreReset' : 'email.ignoreRegistration')}</p>
 <p style="margin:0;font-size:12px;line-height:20px"><a href="${website}" style="color:#3448f5;text-decoration:underline">${t('email.siteLink')}</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${website}/about" style="color:#3448f5;text-decoration:underline">${t('email.aboutLink')}</a>${support ? '&nbsp;&nbsp;·&nbsp;&nbsp;<a href="' + support + '" style="color:#3448f5;text-decoration:underline">' + t('email.contactLink') + '</a>' : ''}</p>
 </td></tr></table>
 <!--[if mso]></td></tr></table><![endif]-->
 </td></tr></table></body></html>`;
   return {
     to,
-    subject: t(test ? 'email.testSubject' : 'email.verifySubject'),
+    subject: t(
+      test
+        ? 'email.testSubject'
+        : reset
+          ? 'email.resetSubject'
+          : 'email.verifySubject',
+    ),
     text,
     html,
     attachments: [

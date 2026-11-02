@@ -17,7 +17,7 @@ current_schema=$(python3 -c "import sqlite3; print(sqlite3.connect('file:/opt/qu
 schema_transition="$current_schema:$target_schema"
 schema_changed=false
 schema_tool="$(dirname "$0")/media-archive-schema.py"
-if [ "$target_schema" != "$current_schema" ] && [ "$schema_transition" != '8:9' ] && [ "$schema_transition" != '9:8' ] && [ "$schema_transition" != '9:10' ] && [ "$schema_transition" != '10:9' ] && [ "$schema_transition" != '8:10' ] && [ "$schema_transition" != '10:8' ] && [ "$schema_transition" != '10:11' ] && [ "$schema_transition" != '11:10' ] && [ "$schema_transition" != '11:12' ] && [ "$schema_transition" != '12:11' ] && [ "$schema_transition" != '12:13' ] && [ "$schema_transition" != '13:12' ] && [ "$schema_transition" != '13:14' ] && [ "$schema_transition" != '14:13' ]; then
+if [ "$target_schema" != "$current_schema" ] && [ "$schema_transition" != '8:9' ] && [ "$schema_transition" != '9:8' ] && [ "$schema_transition" != '9:10' ] && [ "$schema_transition" != '10:9' ] && [ "$schema_transition" != '8:10' ] && [ "$schema_transition" != '10:8' ] && [ "$schema_transition" != '10:11' ] && [ "$schema_transition" != '11:10' ] && [ "$schema_transition" != '11:12' ] && [ "$schema_transition" != '12:11' ] && [ "$schema_transition" != '12:13' ] && [ "$schema_transition" != '13:12' ] && [ "$schema_transition" != '13:14' ] && [ "$schema_transition" != '14:13' ] && [ "$schema_transition" != '14:15' ] && [ "$schema_transition" != '15:14' ] && [ "$schema_transition" != '13:15' ] && [ "$schema_transition" != '15:13' ]; then
   echo "Schema $current_schema -> $target_schema requires a reviewed compatible migration before an online rollout."
   exit 1
 fi
