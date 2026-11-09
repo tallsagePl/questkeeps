@@ -1,17 +1,29 @@
 #!/usr/bin/env python3
-"""Switch only the reviewed 8/9/10/11/12/13/14/15 compatibility marker; never remove user data."""
+"""Switch only the reviewed 8/9/10/11/12/13/14/15/16 compatibility marker; never remove user data."""
 import sqlite3
 import sys
 import time
 
 path, target = sys.argv[1], int(sys.argv[2])
-if target not in (8, 9, 10, 11, 12, 13, 14, 15):
-    raise SystemExit('Only reviewed additive migrations 8 through 15 are supported')
+if target not in (8, 9, 10, 11, 12, 13, 14, 15, 16):
+    raise SystemExit('Only reviewed additive migrations 8 through 16 are supported')
 with sqlite3.connect(path, timeout=10) as db:
     db.execute('BEGIN IMMEDIATE')
     current = db.execute('PRAGMA user_version').fetchone()[0]
-    if current not in (8, 9, 10, 11, 12, 13, 14, 15):
+    if current not in (8, 9, 10, 11, 12, 13, 14, 15, 16):
         raise RuntimeError('Unexpected schema version')
+    if current >= 16 or target >= 16:
+        if 'can_manage' not in {row[1] for row in db.execute('PRAGMA table_info(members)')}:
+            raise RuntimeError('Trip manager compatibility schema is missing')
+        if not db.execute("SELECT 1 FROM sqlite_master WHERE type='trigger' AND name='revoke_inactive_trip_manager'").fetchone():
+            raise RuntimeError('Trip manager revocation trigger is missing')
+    manager_history = db.execute('SELECT name FROM schema_migrations WHERE version=16').fetchone()
+    if manager_history is not None and manager_history[0] != 'trip-managers':
+        raise RuntimeError('Unexpected trip manager migration history')
+    if target < 16:
+        db.execute('DELETE FROM schema_migrations WHERE version=16')
+    else:
+        db.execute('INSERT OR IGNORE INTO schema_migrations VALUES (16,?,?)', ('trip-managers', int(time.time()*1000)))
     if current >= 15 or target >= 15:
         if {row[1] for row in db.execute('PRAGMA table_info(password_resets)')} != {'hash','user_id','expires','credential_hash'}:
             raise RuntimeError('Password recovery compatibility schema is missing')

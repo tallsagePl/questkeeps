@@ -46,6 +46,7 @@ export type TripView = Omit<TripSummary, 'media_count'> & {
   from: string;
   to: string;
   sharing: boolean;
+  canManage?: boolean;
   participationStart?: string;
   participationEnd?: string;
   allPhotos?: boolean;
@@ -141,6 +142,7 @@ export type TripMember = {
   end: string;
   active: number;
   all_photos: number;
+  can_manage?: number;
 };
 
 export type DriveSource = {
@@ -171,6 +173,7 @@ export type TripRecord = Omit<TripSummary, 'media_count'> & {
 };
 
 export type TripAccess = TripRecord & {
+  canManage?: boolean;
   participationStart?: string;
   participationEnd?: string;
   allPhotos?: boolean;

@@ -7,7 +7,14 @@ import {
 import { guestToken } from '../guest-links';
 import { publicProfile, ensureUsername } from '../profiles';
 import { db, one, all, run, id, token, hash } from '../db';
-import { fail, membership, owner, assertDay, throttle } from '../access';
+import {
+  fail,
+  membership,
+  owner,
+  tripManager,
+  assertDay,
+  throttle,
+} from '../access';
 import { disk, normalizePath } from '../yandex';
 import { queueSourceSync } from '../source-jobs';
 import { json, body, day, dates, bounds, appURL } from './http';
@@ -22,7 +29,7 @@ export async function collaborationRoutes(
     if (method === 'GET')
       return json({
         members: all(
-          'SELECT u.id,u.name,m.start,m.end,m.active,m.all_photos FROM members m JOIN users u ON u.id=m.user_id WHERE m.trip_id=?',
+          'SELECT u.id,u.name,m.start,m.end,m.active,m.all_photos,m.can_manage FROM members m JOIN users u ON u.id=m.user_id WHERE m.trip_id=?',
           tid,
         ).map((member) => ({
           ...member,
@@ -31,16 +38,17 @@ export async function collaborationRoutes(
         owner: publicProfile(ensureUsername(t.owner_id)),
       });
     if (method === 'PATCH') {
-      owner(tid, u.id);
       const input = z
         .object({
           userId: z.string(),
           active: z.boolean().optional(),
           allPhotos: z.boolean().optional(),
+          canManage: z.boolean().optional(),
           start: day.optional(),
           end: day.optional(),
         })
         .parse(await body(req));
+      const access = tripManager(tid, u.id);
       const m =
         one(
           'SELECT * FROM members WHERE trip_id=? AND user_id=?',
@@ -51,16 +59,19 @@ export async function collaborationRoutes(
         start: input.start || m.start,
         end: input.end || m.end,
       });
-      bounds(range, t);
+      bounds(range, access);
+      const active = input.active ?? !!m.active;
+      const canManage = active && (input.canManage ?? !!m.can_manage);
       db.transaction(() => {
         run(
-          'UPDATE members SET start=?,end=?,active=?,all_photos=? WHERE trip_id=? AND user_id=?',
+          'UPDATE members SET start=?,end=?,active=?,all_photos=?,can_manage=? WHERE trip_id=? AND user_id=?',
           range.start,
           range.end,
-          input.active === undefined ? m.active : Number(input.active),
+          Number(active),
           input.allPhotos === undefined
             ? m.all_photos
             : Number(input.allPhotos),
+          Number(canManage),
           tid,
           input.userId,
         );
@@ -74,7 +85,7 @@ export async function collaborationRoutes(
       fail(400, 'messages.theOwnerCannotLeaveTheirOwnTrip');
     db.transaction(() => {
       run(
-        'UPDATE members SET active=0 WHERE trip_id=? AND user_id=?',
+        'UPDATE members SET active=0,can_manage=0 WHERE trip_id=? AND user_id=?',
         tid,
         u.id,
       );
@@ -82,7 +93,7 @@ export async function collaborationRoutes(
     return json({ ok: true });
   }
   if (p[2] === 'invitees' && method === 'GET') {
-    owner(tid, u.id);
+    tripManager(tid, u.id);
     throttle('trip-invite-search:' + u.id, 60, 60000);
     return json({
       users: findInvitees(
@@ -93,11 +104,13 @@ export async function collaborationRoutes(
     });
   }
   if (p[2] === 'invite' && method === 'POST') {
-    const t = owner(tid, u.id);
     const input = invitationOptions.parse(await body(req));
+    const t = tripManager(tid, u.id);
     bounds(input, t);
     throttle('trip-invite:' + u.id, 30, 60000);
     if (input.recipientId) {
+      if (input.recipientId === t.owner_id)
+        fail(400, 'messages.youAlreadyOwnThisTrip');
       sendTripInvitation(tid, u.id, input.recipientId, input);
       return json({ sent: true });
     }
@@ -114,13 +127,13 @@ export async function collaborationRoutes(
     return json({ url: appURL() + '/join/' + raw });
   }
   if (p[2] === 'share' && method === 'GET') {
-    const trip = owner(tid, u.id);
+    const trip = tripManager(tid, u.id);
     const raw = guestToken(trip);
     return json({ url: raw ? appURL() + '/s/' + raw : null });
   }
   if (p[2] === 'share' && method === 'POST') {
-    owner(tid, u.id);
     const input = z.object({ enabled: z.boolean() }).parse(await body(req));
+    tripManager(tid, u.id);
     const raw = input.enabled ? token() : null;
     run(
       'UPDATE trips SET share_hash=? WHERE id=?',

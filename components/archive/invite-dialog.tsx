@@ -126,6 +126,7 @@ export default function InviteDialog({
                   await api('trips/' + trip.id + '/members', 'PATCH', {
                     ...input,
                     userId: modal.split(':')[1],
+                    canManage: fields.canManage === 'on',
                   });
                   await reloadSettings();
                   setModal('');
@@ -230,6 +231,23 @@ export default function InviteDialog({
               <span>{t('invitations.allPhotos')}</span>
             </label>
             <p className="fine">{t('invitations.visibilityHint')}</p>
+            {modal.startsWith('member:') && (
+              <>
+                <label className="invite-all-photos">
+                  <input
+                    type="checkbox"
+                    name="canManage"
+                    defaultChecked={
+                      !!members.find(
+                        (member) => 'member:' + member.id === modal,
+                      )?.can_manage
+                    }
+                  />
+                  <span>{t('trip.manager')}</span>
+                </label>
+                <p className="fine">{t('trip.managerHint')}</p>
+              </>
+            )}
             <FeedbackButton
               className="primary"
               disabled={

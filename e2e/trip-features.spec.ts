@@ -234,7 +234,15 @@ test('единый диапазон, карты улиц и районов, уд
   await calendar
     .getByRole('button', { name: '12 октября 2026 г.', exact: true })
     .click();
-  await expect(page.locator('.photo-card')).toHaveCount(2);
+  const dayGroups = page.locator('.gallery-day-toggle');
+  await expect(dayGroups).toHaveCount(2);
+  await expect(page.locator('.photo-card')).toHaveCount(0);
+  await dayGroups.first().click();
+  await expect(page.locator('.photo-card')).toHaveCount(1);
+  await dayGroups.last().click();
+  await expect(dayGroups.first()).toHaveAttribute('aria-expanded', 'false');
+  await expect(dayGroups.last()).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('.photo-card')).toHaveCount(1);
   await page
     .getByRole('button', { name: 'Открытые места', exact: true })
     .click();

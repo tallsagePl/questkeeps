@@ -109,11 +109,12 @@ export function membership(tripId: string, userId: string): TripAccess {
   return {
     ...trip,
     role: 'member',
-    from: m.all_photos ? trip.start : m.start,
-    to: m.all_photos ? trip.end : m.end,
+    canManage: !!m.can_manage,
+    from: m.can_manage || m.all_photos ? trip.start : m.start,
+    to: m.can_manage || m.all_photos ? trip.end : m.end,
     participationStart: m.start,
     participationEnd: m.end,
-    allPhotos: !!m.all_photos,
+    allPhotos: !!(m.can_manage || m.all_photos),
   };
 }
 
@@ -121,6 +122,13 @@ export function owner(tripId: string, userId: string) {
   const t = membership(tripId, userId);
   if (t.role !== 'owner') fail(403, 'messages.thisActionIsOnlyAvailableToThe');
   return t;
+}
+
+export function tripManager(tripId: string, userId: string) {
+  const access = membership(tripId, userId);
+  if (access.role !== 'owner' && !access.canManage)
+    fail(403, 'trip.managerRequired');
+  return access;
 }
 
 export function viewAccess(req: Request, tripId: string): TripAccess {
@@ -242,6 +250,7 @@ export function tripData(req: Request, tripId: string) {
       from: t.from,
       to: t.to,
       sharing: !!t.share_hash,
+      canManage: t.canManage,
       participationStart: t.participationStart,
       participationEnd: t.participationEnd,
       allPhotos: t.allPhotos,

@@ -1,3 +1,4 @@
+import { tripManagers } from './016-trip-managers';
 import { passwordRecovery } from './015-password-recovery';
 import { serviceQueues } from './014-service-queues';
 import { sourceJobs } from './013-source-jobs';
@@ -31,6 +32,7 @@ export const migrations = [
   { version: 13, name: 'source-jobs', up: sourceJobs },
   { version: 14, name: 'service-queues', up: serviceQueues },
   { version: 15, name: 'password-recovery', up: passwordRecovery },
+  { version: 16, name: 'trip-managers', up: tripManagers },
 ];
 
 export function migrate(db: Database.Database) {

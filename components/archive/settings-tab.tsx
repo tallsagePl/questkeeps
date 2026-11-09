@@ -26,6 +26,7 @@ export default function SettingsTab({
     setFolders,
     setGenerated,
     isOwner,
+    user,
     guest,
     setNotice,
     action,
@@ -33,6 +34,7 @@ export default function SettingsTab({
     reloadSettings,
   } = archive;
   const trip = archive.trip!;
+  const canManage = isOwner || trip.canManage;
   return (
     <>
       {tab === 'settings' && !guest && (
@@ -63,19 +65,21 @@ export default function SettingsTab({
                   <strong>{m.name}</strong>
                   <p>
                     {date(m.start)} — {date(m.end)} ·{' '}
-                    {m.active ? t('trip.member') : t('trip.leftTheTrip')}
+                    {m.active
+                      ? t(m.can_manage ? 'trip.manager' : 'trip.member')
+                      : t('trip.leftTheTrip')}
                   </p>
                   {!!m.active && (
                     <small>
                       {t(
-                        m.all_photos
+                        m.all_photos || m.can_manage
                           ? 'invitations.viewAll'
                           : 'invitations.viewPeriod',
                       )}
                     </small>
                   )}
                 </div>
-                {isOwner && !!m.active && (
+                {canManage && !!m.active && m.id !== user?.id && (
                   <FeedbackButton
                     className="text-button"
                     onClick={() => {
@@ -88,7 +92,7 @@ export default function SettingsTab({
                 )}
               </div>
             ))}
-            {isOwner ? (
+            {canManage && (
               <FeedbackButton
                 className="secondary"
                 onClick={() => {
@@ -99,7 +103,8 @@ export default function SettingsTab({
                 <Icon name="plus" />
                 {t('trip.inviteAMember')}
               </FeedbackButton>
-            ) : (
+            )}
+            {!isOwner && (
               <FeedbackButton
                 className="text-button danger"
                 onClick={() => setModal('leave')}
@@ -108,7 +113,7 @@ export default function SettingsTab({
               </FeedbackButton>
             )}
           </section>
-          {isOwner && (
+          {canManage && (
             <section className="panel share-panel">
               <div>
                 <span className="eyebrow">{t('trip.shareYourMemories')}</span>

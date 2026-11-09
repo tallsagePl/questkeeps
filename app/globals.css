@@ -758,6 +758,37 @@ select {
 .tabbar > .text-button {
   font-size: 0.875rem;
 }
+.gallery-day {
+  border-bottom: 1px solid var(--line);
+}
+
+.gallery-day h2 {
+  margin: 0;
+}
+
+.gallery-day-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  color: inherit;
+  background: transparent;
+  text-align: start;
+  font: inherit;
+  font-size: 1rem;
+}
+
+.gallery-day-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+}
+
 .gallery-toolbar {
   display: flex;
   align-items: center;

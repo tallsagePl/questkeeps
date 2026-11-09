@@ -547,3 +547,58 @@ test('new media and accepted friendship notifications survive sessions and are a
     0,
   );
 });
+
+test('a manager can delegate trip administration and loses it immediately on revocation', async () => {
+  const f = fixture();
+  const trip = 'trips/' + f.trip;
+  for (const user of [f.person, f.other]) {
+    run(
+      'INSERT INTO members(trip_id,user_id,start,end,active,all_photos) VALUES(?,?,?,?,1,0)',
+      f.trip,
+      user,
+      dates.start,
+      dates.end,
+    );
+  }
+
+  const changeManager = (cookie: string, userId: string, canManage: boolean) =>
+    request(trip + '/members', cookie, { userId, canManage }, 'PATCH');
+
+  assert.equal(
+    (await changeManager(f.personCookie, f.other, true)).status,
+    403,
+  );
+  assert.equal((await request(trip + '/share', f.personCookie)).status, 403);
+  assert.equal(
+    (await changeManager(f.ownerCookie, f.person, true)).status,
+    200,
+  );
+  assert.equal(
+    (await changeManager(f.personCookie, f.other, true)).status,
+    200,
+  );
+  assert.equal(
+    (await request(trip + '/invite', f.otherCookie, dates)).status,
+    200,
+  );
+  assert.equal(
+    (await request(trip + '/share', f.otherCookie, { enabled: true })).status,
+    200,
+  );
+  const managed = await (await request(trip, f.otherCookie)).json();
+  assert.equal(managed.trip.canManage, true);
+  assert.equal(managed.trip.from, '2026-10-10');
+
+  assert.equal(
+    (await changeManager(f.personCookie, f.other, false)).status,
+    200,
+  );
+  assert.equal(
+    (await request(trip + '/invite', f.otherCookie, dates)).status,
+    403,
+  );
+  assert.equal((await request(trip + '/share', f.otherCookie)).status, 403);
+  const member = await (await request(trip, f.otherCookie)).json();
+  assert.equal(member.trip.canManage, false);
+  assert.equal(member.trip.from, dates.start);
+});

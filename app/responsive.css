@@ -192,6 +192,12 @@
     padding: 8px 0;
     font-size: 0.875rem;
   }
+  .archive-refresh {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
   .gallery-toolbar {
     gap: 12px 8px;
     margin-block: 16px;

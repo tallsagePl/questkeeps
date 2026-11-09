@@ -10,7 +10,7 @@ Responsive density uses three reference viewports: 393×852 (phone), 1024×1366 
 
 The phone header is one 64px row: menu at the left, centered QK/QuestKeeps identity, invitation bell and profile at the right. Secondary navigation, language, theme and sign-out live in the menu. Invitation notifications use an anchored non-modal native popover on every viewport; no backdrop dimming, page scroll lock or focus trap. Keep close, outside-press and Escape dismissal, keyboard return to the trigger, 44px targets, and viewport-clamped popup bounds.
 
-Photo galleries use a stable native scroll track with virtualized cells and retained loaded previews. Do not compensate normal scrolling with scrollBy: it fights touch momentum and scrollbar dragging. Only preserve the frame when column geometry changes. Media opens edge to edge in a full-viewport viewer, with one 64px toolbar row (title and pencil, reload and close), contained uncropped imagery, and metadata below the first screen. Keep the viewer opaque and stationary on opening.
+Trip galleries group filtered frames under date and count disclosures. A single matching day opens by default, and a jump from Favorites opens the target date. Photo galleries use a stable native scroll track with virtualized cells and retained loaded previews. Do not compensate normal scrolling with scrollBy: it fights touch momentum and scrollbar dragging. Only preserve the frame when column geometry changes. Media opens edge to edge in a full-viewport viewer, with one 64px toolbar row (title and pencil, reload and close), contained uncropped imagery, and metadata below the first screen. Keep the viewer opaque and stationary on opening.
 
 Place feeds use natural document flow with a consistent 16px gap between cards of different heights. Viewport proximity controls image and description loading, never card coordinates or scroll position. The phone back-to-top control is 64px and uses native smooth scrolling; reduced-motion users return immediately.
 
@@ -28,7 +28,7 @@ On desktop, the guest badge sits beneath the centered collection caption; neithe
 
 Dashboard covers are a shared brand surface for personal and followed trips. Keep the archive artwork while a preview is unavailable. Both personal and followed cards use the owner's favorite photos selected in trip management, filtered by each viewer's access window and guest visibility. Load the deck through the scoped preview queue, start at a random frame, and crossfade every eight seconds over 280ms. Stop cycling offscreen, in hidden tabs and under reduced motion; no playback button. Publication exports accept only favorite, guest-visible still photos and explain the star action when empty.
 
-Only the trip owner can open publication exports. Hide both the trigger and editor in participant and guest views, including the owner viewing a guest link. Server-side guest-link creation and retrieval remain owner-only.
+Only the trip owner can open publication exports. Hide both the trigger and editor in participant and guest views, including the owner viewing a guest link. Trip owners and managers can create and retrieve guest links in trip management.
 
 Trip management is a single ordered flow: participants, guest access, appearance, connected drives. Owners can keep all favorites as covers or save a nonempty subset; manual choices are disabled in the all-favorites mode. Persist the selection per trip, never per browser. Footer content reserves a trailing lane for the fixed back-to-top control at every viewport and safe area.
 
