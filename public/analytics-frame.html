@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="referrer" content="no-referrer">
+    <title>QuestKeeps analytics</title>
+    <script>
+      const counter = 114152227;
+      window.ym = function () { (window.ym.a ||= []).push(arguments); };
+      window.ym.l = Date.now();
+      ym(counter, 'init', {
+        defer: true, webvisor: false, clickmap: false, trackLinks: false,
+        trackHash: false, accurateTrackBounce: false, ecommerce: false,
+        sendTitle: false, disableYtm: true
+      });
+      window.addEventListener('message', (event) => {
+        if (event.origin !== 'https://questkeeps.ru' || event.source !== parent) return;
+        const data = event.data;
+        if (data?.type === 'hit')
+          ym(counter, 'hit', data.value, { title: 'QuestKeeps', referer: data.referrer });
+        if (data?.type === 'goal') ym(counter, 'reachGoal', data.value);
+      });
+    </script>
+    <script async src="https://mc.yandex.ru/metrika/tag.js?id=114152227"></script>
+  </head>
+  <body></body>
+</html>

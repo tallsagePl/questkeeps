@@ -133,7 +133,7 @@ test('friends are consensual and private, profile is a page, About works in both
     });
     await page.goto(base + '/about');
     await expect(
-      page.getByRole('heading', { name: 'Твой круг. Твои истории.' }),
+      page.getByRole('heading', { name: 'Оригиналы и доступ' }),
     ).toBeVisible();
     await expect
       .poll(() =>
@@ -150,7 +150,7 @@ test('friends are consensual and private, profile is a page, About works in both
       .click();
     await page.keyboard.press('Escape');
     await expect(
-      page.getByRole('heading', { name: 'Your people. Your stories.' }),
+      page.getByRole('heading', { name: 'Originals and access' }),
     ).toBeVisible();
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.evaluate(() => {

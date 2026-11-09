@@ -1,6 +1,6 @@
 const key = 'questkeepsNavigation';
 
-const tabs = ['gallery', 'places', 'map', 'notes', 'settings'];
+const tabs = ['gallery', 'places', 'map', 'notes', 'review', 'settings'];
 
 type Entry = { version: 1; back: boolean; tab?: string; sectionSteps?: number };
 

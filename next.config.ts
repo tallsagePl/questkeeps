@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
+import { publicHost, publicSearchPaths } from './lib/public-seo';
 
 const config: NextConfig = {
   serverExternalPackages: ['better-sqlite3', 'exifr', 'cities.json'],
@@ -13,6 +14,20 @@ const config: NextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
+      },
+      ...[...publicSearchPaths, '/robots.txt', '/sitemap.xml'].map((source) => ({
+        source,
+        has: [publicHost],
+        headers: [{ key: 'X-Robots-Tag', value: 'index, follow' }],
+      })),
+      ...['trip', 'create', 'invite'].map((key) => ({
+        source: '/',
+        has: [{ type: 'query' as const, key }],
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      })),
+      {
+        source: '/analytics-frame.html',
+        headers: [{ key: 'X-Frame-Options', value: 'SAMEORIGIN' }],
       },
     ];
   },

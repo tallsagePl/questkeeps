@@ -1,4 +1,6 @@
 import { translate } from '@/lib/i18n/translate';
+import { Suspense } from 'react';
+import Metrika from '@/components/metrika';
 import type { Metadata } from 'next';
 import './globals.css';
 import './theme.css';
@@ -28,6 +30,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <AppearanceProvider>{children}</AppearanceProvider>
+        <Suspense fallback={null}>
+          <Metrika />
+        </Suspense>
       </body>
     </html>
   );

@@ -16,6 +16,7 @@ import { useArchive } from './archive/use-archive';
 import { Icon, date, period } from './archive/shared';
 import Header from './archive/header';
 import Dashboard from './archive/dashboard';
+import FrameReviewTab from './archive/frame-review-tab';
 import GalleryTab from './archive/gallery-tab';
 import PlacesTab from './archive/places-tab';
 import JournalTab from './archive/journal-tab';
@@ -29,7 +30,9 @@ import MediaDialog from './archive/media-dialog';
 import PublishDialog from './archive/publish-dialog';
 import AuthForm from './archive/auth-form';
 
-export default function Archive(props: { share?: string; invite?: string }) {
+type ArchiveProps = { share?: string; invite?: string; publicHome?: boolean };
+
+export default function Archive(props: ArchiveProps) {
   return (
     <FeedbackProvider>
       <ArchiveContent {...props} />
@@ -37,7 +40,7 @@ export default function Archive(props: { share?: string; invite?: string }) {
   );
 }
 
-function ArchiveContent(props: { share?: string; invite?: string }) {
+function ArchiveContent(props: ArchiveProps) {
   const archive = useArchive(props);
   const { t } = useLocale();
   const {
@@ -65,6 +68,17 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
     invite,
   } = archive;
   const authForm = <AuthForm archive={archive} />;
+  const welcomeIntro = (
+    <>
+      <h1>{t('seo.home.heading')}</h1>
+      <p>{t('seo.home.description')}</p>
+      <p>
+        <a href="/guide" lang="ru">
+          {t('seo.home.guide')}
+        </a>
+      </p>
+    </>
+  );
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -74,7 +88,12 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
       <Header archive={archive} />
       <FriendLinkArrival userId={user?.id} />
       <FollowArrival userId={user?.id} />
-      {!ready ? (
+      {!ready && props.publicHome ? (
+        <main id="main-content" tabIndex={-1} className="welcome">
+          <section className="welcome-story">{welcomeIntro}</section>
+          <p role="status">{t('trip.openingTheArchive')}</p>
+        </main>
+      ) : !ready ? (
         <main id="main-content" tabIndex={-1} className="loading">
           <PageFeedback />
           <span className="spinner" />
@@ -140,12 +159,7 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
           <PageFeedback />
           <section className="welcome-story">
             <span className="eyebrow">{t('trip.yourTripsYourStories')}</span>
-            <h1>
-              {t('trip.everyPlace')}
-              <br />
-              {t('trip.hasItsOwn')} <em>{t('trip.story')}</em>
-            </h1>
-            <p>{t('trip.bringPhotosRoutesAndLittleDiscoveriesInto')}</p>
+            {welcomeIntro}
             <WelcomeSlideshow />
             <div className="welcome-details">
               <span>
@@ -260,7 +274,10 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
                 ['map', 'pin', t('trip.map')],
                 ['notes', 'book', t('trip.journal')],
                 ...(!guest
-                  ? [['settings', 'settings', t('trip.membersDrives')]]
+                  ? [
+                      ['review', 'photo', t('frameReview.title')],
+                      ['settings', 'settings', t('trip.membersDrives')],
+                    ]
                   : []),
               ].map(([key, icon, title]) => (
                 <FeedbackButton
@@ -337,6 +354,9 @@ function ArchiveContent(props: { share?: string; invite?: string }) {
           <GalleryTab archive={archive} />
           <PlacesTab archive={archive} />
           {tab === 'notes' && <JournalTab archive={archive} />}
+          {tab === 'review' && !guest && trip && data && (
+            <FrameReviewTab key={trip.id} archive={archive} />
+          )}
           <SettingsTab archive={archive} />
         </main>
       )}

@@ -7,3 +7,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+For every new user-facing feature, review its SEO impact. If it answers a public search need, update the relevant landing page or guide and its internal links, title and description as appropriate. Add new public URLs to the sitemap and verify their rendered metadata. Keep account pages, personal archives, invitations and guest links out of search.

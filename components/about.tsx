@@ -3,6 +3,7 @@
 import { useLocale } from './appearance';
 import { SocialShell, useViewer } from './social-shell';
 import AboutShowcase from './about-showcase';
+import styles from './about.module.css';
 
 export default function About() {
   const { t } = useLocale();
@@ -10,19 +11,35 @@ export default function About() {
   return (
     <SocialShell user={viewer.user} current="about">
       <main id="main-content" tabIndex={-1} className="social-page about-page">
-        <section className="about-intro">
-          <h1>
-            {t('about.heading')}
-            <span className="brand-dot">.</span>
-          </h1>
-          <p className="about-lead">
-            {t('about.thatSunsetTheStreetYouFoundBy')}
-          </p>
-          <a className="primary" href="/">
-            {t(viewer.user ? 'about.goToMyTrips' : 'about.startYourStory')}
-          </a>
+        <section className={'about-intro ' + styles.hero}>
+          <div>
+            <h1>
+              {t('about.heading')}
+              <span className="brand-dot">.</span>
+            </h1>
+            <p className="about-lead">
+              {t('about.thatSunsetTheStreetYouFoundBy')}
+            </p>
+            <div className={styles.actions}>
+              <a className="primary" href="/">
+                {t(viewer.user ? 'about.goToMyTrips' : 'about.startYourStory')}
+              </a>
+              <a className="secondary" href="/guide">
+                {t('seo.home.guideLink')}
+              </a>
+            </div>
+          </div>
+          <figure className={styles.cover}>
+            <img
+              src="/about/lisbon-overlook.webp"
+              width={1440}
+              height={960}
+              fetchPriority="high"
+              alt={t('about.lisbonCoverAlt')}
+            />
+            <figcaption>{t('about.lisbonCaption')}</figcaption>
+          </figure>
         </section>
-        <AboutShowcase />
         <div className="about-content">
           <section>
             <h2>{t('about.everythingWorthRemembering')}</h2>
@@ -41,9 +58,21 @@ export default function About() {
               </article>
             </div>
           </section>
+        </div>
+        <AboutShowcase />
+        <div className="about-content">
           <section>
             <h2>{t('about.everyoneSeesADifferentStory')}</h2>
             <div>
+              <img
+                className={styles.shareImage}
+                src="/about/lisbon-tram.webp"
+                width={960}
+                height={640}
+                loading="lazy"
+                decoding="async"
+                alt={t('about.lisbonTramAlt')}
+              />
               <p>{t('about.youPhotographedTheSeaSomeoneElseCaught')}</p>
               <p>{t('about.keepCloseToThePeopleYouAlready')}</p>
             </div>
@@ -53,6 +82,9 @@ export default function About() {
             <div>
               <p>{t('about.someMemoriesAreForAllYourPeople')}</p>
               <p>{t('about.yourPublicProfileShowsYourNameUsername')}</p>
+              <p>
+                <a href="/privacy">{t('navigation.privacy')}</a>
+              </p>
               <details className="about-privacy-detail">
                 <summary>{t('about.aboutGuestLinksAndPlaceDiscovery')}</summary>
                 <p>{t('about.anyoneWithAGuestLinkCanView')}</p>

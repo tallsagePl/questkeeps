@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import { publicMetadata } from '@/lib/public-seo';
 import PrivacyShell from '@/components/privacy-shell';
 import {
   translate,
@@ -6,12 +6,11 @@ import {
   type Language,
 } from '@/lib/i18n/translate';
 
-export const metadata: Metadata = {
-  title: 'Конфиденциальность / Privacy · QuestKeeps',
-  description:
-    'Политика конфиденциальности сайта и Telegram-бота QuestKeeps. Privacy policy in Russian and English.',
-  alternates: { canonical: '/privacy' },
-};
+export const metadata = publicMetadata(
+  '/privacy',
+  'Конфиденциальность / Privacy · QuestKeeps',
+  'Политика конфиденциальности сайта и Telegram-бота QuestKeeps. Privacy policy in Russian and English.',
+);
 
 const sections: { title: TranslationKey; paragraphs: TranslationKey[] }[] = [
   { title: 'privacy.scope.title', paragraphs: ['privacy.scope.body'] },
@@ -25,7 +24,10 @@ const sections: { title: TranslationKey; paragraphs: TranslationKey[] }[] = [
     title: 'privacy.providers.title',
     paragraphs: ['privacy.providers.body', 'privacy.providers.places'],
   },
-  { title: 'privacy.browser.title', paragraphs: ['privacy.browser.body'] },
+  {
+    title: 'privacy.browser.title',
+    paragraphs: ['privacy.browser.body', 'privacy.browser.analytics'],
+  },
   {
     title: 'privacy.bot.title',
     paragraphs: ['privacy.bot.body', 'privacy.bot.registrations'],

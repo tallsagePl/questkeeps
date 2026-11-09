@@ -1,5 +1,7 @@
 'use client';
 
+import { trackGoal } from '@/lib/analytics';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale } from './appearance';
 
@@ -18,6 +20,7 @@ export default function CopyLinkButton({
   const copy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(value);
+      trackGoal('trip_guest_link_copied');
       setFailed(false);
       setCopied(true);
       if (timer.current) clearTimeout(timer.current);

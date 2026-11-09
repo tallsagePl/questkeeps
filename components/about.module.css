@@ -1,0 +1,41 @@
+.hero.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 76px);
+  padding-block: clamp(24px, 6vw, 88px);
+  max-width: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cover {
+  margin: 0;
+}
+
+.cover img,
+.shareImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
+}
+
+.cover figcaption {
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+.shareImage {
+  margin-bottom: 24px;
+}
+
+@media (max-width: 800px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

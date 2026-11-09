@@ -1,5 +1,6 @@
 'use client';
 
+import { trackGoal, type AnalyticsGoal } from '@/lib/analytics';
 import type {
   UserProfile,
   TripSummary,
@@ -41,6 +42,14 @@ import type { LocalizedMessage } from '../../lib/i18n/translate';
 import { ApiError, useFeedback } from '../feedback';
 import { values } from './shared';
 import { hasCoordinates } from '../../lib/geo';
+
+const tabGoals: Partial<Record<string, AnalyticsGoal>> = {
+  map: 'trip_map_opened',
+  places: 'trip_places_opened',
+  journal: 'trip_journal_opened',
+  settings: 'trip_settings_opened',
+  review: 'trip_review_opened',
+};
 
 export function useArchive({
   share,
@@ -411,17 +420,22 @@ export function useArchive({
     void action(() => loadTrip(tid));
   };
   const openTab = (next: string) => {
-    const view = guest && next === 'settings' ? 'gallery' : next;
+    const view =
+      guest && (next === 'settings' || next === 'review') ? 'gallery' : next;
     const destination = new URL(window.location.href);
     destination.hash = view === 'gallery' ? '' : 'view=' + view;
     pushNavigation(destination.href, view);
     setTab(view);
+    const goal = tabGoals[view];
+    if (goal) trackGoal(goal);
     setError('');
   };
   useEffect(() => {
     initializeNavigation();
     const view = navigationTab();
-    setTab(guest && view === 'settings' ? 'gallery' : view);
+    setTab(
+      guest && (view === 'settings' || view === 'review') ? 'gallery' : view,
+    );
   }, [guest]);
   useEffect(() => {
     const restore = () => {
@@ -431,7 +445,9 @@ export function useArchive({
       setDay('');
       setError('');
       const view = navigationTab();
-      setTab(guest && view === 'settings' ? 'gallery' : view);
+      setTab(
+        guest && (view === 'settings' || view === 'review') ? 'gallery' : view,
+      );
       if (share || invite) return;
       const tid = new URLSearchParams(window.location.search).get('trip');
       if (tid) {
@@ -594,6 +610,8 @@ export function useArchive({
     focusPlace = false,
   ) => {
     if (!m) return;
+    trackGoal(m.kind === 'video' ? 'trip_video_opened' : 'trip_photo_opened');
+    if (placeUrl) trackGoal('trip_place_selected');
     setMediaPlaceUrl(placeUrl);
     setMediaFocusPlaceUrl(focusPlace ? placeUrl : null);
     setPlacesOpen(false);

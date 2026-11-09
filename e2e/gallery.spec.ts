@@ -1324,3 +1324,75 @@ test('открытые места в отдельной вкладке без д
     .click();
   await expect(page.getByText('Здесь появятся открытые места')).toBeVisible();
 });
+
+test('разбор кадров предлагает избранный дубль и учитывает недоступные превью', async ({
+  page,
+}) => {
+  const trip = {
+    id: 'frame-review',
+    title: 'Поездка',
+    destination: 'Анталья',
+    start: '2026-10-10',
+    end: '2026-10-11',
+    from: '2026-10-10',
+    to: '2026-10-11',
+    role: 'owner',
+  };
+  const media = ['copy', 'favorite', 'different', 'offline'].map((id) => ({
+    id,
+    name: id + '.jpg',
+    user_id: 'owner',
+    kind: 'photo',
+    mime: 'image/jpeg',
+    favorite: id === 'favorite',
+    taken: '2026-10-10',
+    author: 'Автор',
+    hidden: 0,
+    lat: null,
+    lon: null,
+    revision: '1',
+  }));
+  await page.setViewportSize({ width: 393, height: 852 });
+  await page.route('**/api/me', (route) =>
+    route.fulfill({ json: { user: { id: 'owner', name: 'Автор' } } }),
+  );
+  await page.route('**/api/trips', (route) =>
+    route.fulfill({ json: { trips: [trip] } }),
+  );
+  await page.route('**/api/trips/frame-review', (route) =>
+    route.fulfill({ json: { trip, media, notes: [], places: [] } }),
+  );
+  const photos = await Promise.all(
+    ['#7755aa', '#1bcb36'].map((background) =>
+      sharp({
+        create: { width: 320, height: 240, channels: 3, background },
+      })
+        .jpeg()
+        .toBuffer(),
+    ),
+  );
+  await page.route('**/api/media/*/preview*', (route) => {
+    const id = new URL(route.request().url()).pathname.split('/')[3];
+    return id === 'offline'
+      ? route.fulfill({ status: 502 })
+      : route.fulfill({
+          contentType: 'image/jpeg',
+          body: photos[id === 'different' ? 1 : 0],
+        });
+  });
+  await page.goto('/?trip=frame-review#view=review');
+  await page.getByRole('button', { name: 'Сравнить фото' }).click();
+  const result = page.locator('.frame-review');
+  await expect(result.getByRole('status')).toHaveText(
+    'Проверено: 4 из 4. Недоступно: 1.',
+  );
+  await expect(result.getByRole('listitem')).toHaveCount(2);
+  await expect(result.getByRole('listitem').first()).toContainText(
+    'favorite.jpg',
+  );
+  await expect(result.getByRole('listitem').first()).toContainText(
+    'Оставить · в избранном',
+  );
+  await result.getByRole('button', { name: /copy.jpg/ }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+});

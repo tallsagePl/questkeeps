@@ -11,6 +11,7 @@ export default function SiteFooter() {
       <p>{t('common.moreThanWhereYouWentHowIt')}</p>
       <nav className="footer-links" aria-label={t('navigation.footer')}>
         <a href="/about">{t('navigation.about')}</a>
+        <a href="/guide">{t('seo.home.guideLink')}</a>
         <a
           href="https://t.me/questkeepsbot"
           target="_blank"

@@ -1,6 +1,8 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { trackGoal } from '@/lib/analytics';
+
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ConfirmedPlace, MediaItem } from '../../lib/contracts';
 import { isAreaPlace } from '../../lib/place-kind';
 import { useLocale } from '@/components/appearance';
@@ -50,6 +52,18 @@ export default function GalleryTab({
   } = archive;
   const data = archive.data!;
   const trip = archive.trip!;
+  const lastGallery = useRef('');
+  useEffect(() => {
+    if (
+      guest ||
+      tab !== 'gallery' ||
+      !data.media.length ||
+      lastGallery.current === trip.id
+    )
+      return;
+    lastGallery.current = trip.id;
+    trackGoal('trip_gallery_ready');
+  }, [guest, tab, data.media.length, trip.id]);
   const scope = selected + ':' + filter + ':' + day;
   const groups = new Map<string, MediaItem[]>();
   if (tab === 'gallery') {
@@ -109,7 +123,10 @@ export default function GalleryTab({
                 trip.role === 'member' ? trip.participationEnd : undefined
               }
               value={day}
-              onChange={setDay}
+              onChange={(value) => {
+                setDay(value);
+                trackGoal('trip_day_selected');
+              }}
             />
           </div>
           {tab === 'map' ? (

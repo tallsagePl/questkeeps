@@ -1,5 +1,7 @@
 'use client';
 
+import { trackGoal } from '@/lib/analytics';
+
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '../appearance';
 import { api } from '../api';
@@ -149,6 +151,7 @@ export default function PublishDialog({
       }
       setLink(destination);
       setCards(result);
+      if (result.length) trackGoal('trip_selection_prepared');
       setActive(0);
       try {
         setCanShare(
@@ -374,6 +377,7 @@ export default function PublishDialog({
                     className="secondary"
                     href={card.url}
                     download={card.file.name}
+                    onClick={() => trackGoal('trip_selection_exported')}
                   >
                     {t('exports.download', { number: index + 1 })}
                   </a>

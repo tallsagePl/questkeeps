@@ -4,6 +4,7 @@ import {
 } from './browser-storage';
 import { clearPlaceClientCache } from './place-client-cache';
 import { clearPlaceSearchRequests } from './place-search-client';
+import { clearFrameReviewCache } from './frame-review-cache';
 
 const PREVIEW_STORAGE_TTL = 86400000;
 
@@ -80,6 +81,7 @@ export async function clearPreviewCache() {
   clearPrivateLocalStorage();
   clearPlaceSearchRequests();
   await clearPlaceClientCache();
+  await clearFrameReviewCache();
   timers.forEach((timer) => clearTimeout(timer));
   timers.clear();
   pruned.clear();
