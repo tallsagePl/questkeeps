@@ -11,7 +11,7 @@ import { areaWiki } from '../map-area-wiki';
 import { addAreaToPhotos } from '../map-area-suggestions';
 import { z } from 'zod';
 import { db, one, all, run, id } from '../db';
-import { fail, membership, owner, throttle } from '../access';
+import { fail, membership, owner, throttle, tripManager } from '../access';
 import { disk } from '../yandex';
 import { queueSourceSync, sourceJobStatus } from '../source-jobs';
 import { inferTrip, ownFolder } from '../infer-trip';
@@ -46,7 +46,7 @@ export async function tripRoutes({
       if (method === 'GET')
         return json({
           trips: all<TripSummary>(
-            'SELECT DISTINCT t.id,t.title,t.destination,t.start,t.end,t.description,(SELECT count(*) FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=t.id AND m.hidden=0 AND m.missing=0 AND s.approved=1 AND (t.owner_id=? OR mb.all_photos=1 OR substr(m.taken,1,10) BETWEEN mb.start AND mb.end)) media_count FROM trips t LEFT JOIN members mb ON mb.trip_id=t.id AND mb.user_id=? AND mb.active=1 WHERE t.owner_id=? OR mb.user_id=? ORDER BY t.created DESC',
+            'SELECT DISTINCT t.id,t.title,t.destination,t.start,t.end,t.description,(SELECT count(*) FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=t.id AND m.hidden=0 AND m.missing=0 AND s.approved=1 AND substr(m.taken,1,10) BETWEEN t.start AND t.end AND (t.owner_id=? OR mb.all_photos=1 OR mb.can_manage=1 OR substr(m.taken,1,10) BETWEEN mb.start AND mb.end)) media_count FROM trips t LEFT JOIN members mb ON mb.trip_id=t.id AND mb.user_id=? AND mb.active=1 WHERE t.owner_id=? OR mb.user_id=? ORDER BY t.created DESC',
             u.id,
             u.id,
             u.id,
@@ -298,18 +298,20 @@ export async function tripRoutes({
       }
     }
     if (p[2] === 'places' && p[3] && method === 'DELETE') {
-      owner(tid, u.id);
       const osm = /^osm-(way|relation)-([1-9][0-9]*)$/.exec(p[3]);
       const url = osm
         ? 'https://www.openstreetmap.org/' + osm[1] + '/' + osm[2]
         : 'https://ru.wikipedia.org/?curid=' +
           z.coerce.number().int().positive().parse(p[3]);
-      const result = run(
-        'DELETE FROM confirmed_places WHERE trip_id=? AND url=?',
-        tid,
-        url,
-      );
-      if (!result.changes) fail(404, 'messages.placeNotFound');
+      db.transaction(() => {
+        tripManager(tid, u.id);
+        const result = run(
+          'DELETE FROM confirmed_places WHERE trip_id=? AND url=?',
+          tid,
+          url,
+        );
+        if (!result.changes) fail(404, 'messages.placeNotFound');
+      }).immediate();
       return json({ ok: true });
     }
     const result = await collaborationRoutes(

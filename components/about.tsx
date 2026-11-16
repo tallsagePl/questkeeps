@@ -3,6 +3,8 @@
 import { useLocale } from './appearance';
 import { SocialShell, useViewer } from './social-shell';
 import AboutShowcase from './about-showcase';
+import TripExample from './trip-example';
+import CreateTripLink from './create-trip-link';
 import styles from './about.module.css';
 
 export default function About() {
@@ -21,12 +23,15 @@ export default function About() {
               {t('about.thatSunsetTheStreetYouFoundBy')}
             </p>
             <div className={styles.actions}>
-              <a className="primary" href="/">
-                {t(viewer.user ? 'about.goToMyTrips' : 'about.startYourStory')}
-              </a>
-              <a className="secondary" href="/guide">
-                {t('seo.home.guideLink')}
-              </a>
+              {viewer.user ? (
+                <a className="primary" href="/">
+                  {t('about.goToMyTrips')}
+                </a>
+              ) : (
+                <CreateTripLink source="about" className="primary">
+                  {t('onboarding.createTrip')}
+                </CreateTripLink>
+              )}
             </div>
           </div>
           <figure className={styles.cover}>
@@ -59,6 +64,7 @@ export default function About() {
             </div>
           </section>
         </div>
+        <TripExample />
         <AboutShowcase />
         <div className="about-content">
           <section>

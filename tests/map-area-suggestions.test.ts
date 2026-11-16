@@ -284,8 +284,23 @@ test('area discovery and atomic batch attachment enforce author, dates, visibili
     all('SELECT media_id FROM confirmed_places').map((p) => p.media_id),
     ['member-photo'],
   );
+  const customTitle = await req('media/two', 'PATCH', {
+    title: 'Название автора',
+  });
+  assert.equal(customTitle.status, 200);
   const owner = await req(path, 'POST', { areaId: 'osm-relation-100' });
-  assert.equal((await owner.json()).added, 3);
+  const ownerResult = await owner.json();
+  assert.equal(ownerResult.added, 3);
+  assert.equal(
+    ownerResult.mediaTitles.find((photo: { id: string }) => photo.id === 'one')
+      ?.title,
+    ownerResult.title,
+  );
+  assert.equal(
+    ownerResult.mediaTitles.find((photo: { id: string }) => photo.id === 'two')
+      ?.title,
+    'Название автора',
+  );
   assert.equal(
     (await (await req(path, 'POST', { areaId: 'osm-relation-100' })).json())
       .added,
@@ -310,6 +325,15 @@ test('area discovery and atomic batch attachment enforce author, dates, visibili
     200,
   );
   assert.equal(all('SELECT id FROM confirmed_places').length, 0);
+  const detail = await (await req('trips/trip')).json();
+  assert.equal(
+    detail.media.find((photo: { id: string }) => photo.id === 'one')?.title,
+    null,
+  );
+  assert.equal(
+    detail.media.find((photo: { id: string }) => photo.id === 'two')?.title,
+    'Название автора',
+  );
 });
 
 test('district proposals include Turkish level 8 neighbourhoods and exclude seas and whole cities', async () => {

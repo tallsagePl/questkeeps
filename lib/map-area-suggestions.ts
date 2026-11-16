@@ -5,7 +5,8 @@ import { closestCity } from './city-lookup';
 import { overpass, geometryFromOsm } from './place-geometry';
 import { photoInArea } from './area-membership';
 import { MemoryCache } from './memory-cache';
-import { membership, fail } from './access';
+import { mediaTitle } from './media-title';
+import { membership, canManageTrip, fail } from './access';
 
 const discovered = new MemoryCache<
   string,
@@ -244,12 +245,13 @@ export async function discoverPhotoRegion(
 
 export function accessibleAreaPhotos(tripId: string, userId: string) {
   const trip = membership(tripId, userId);
+  const canModerate = canManageTrip(trip);
   const photos = all(
     "SELECT m.id,m.lat,m.lon,m.revision,m.taken,m.user_id FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=? AND m.kind='photo' AND m.hidden=0 AND m.missing=0 AND s.approved=1 AND m.lat IS NOT NULL AND m.lon IS NOT NULL AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (?=1 OR m.user_id=?)",
     tripId,
-    trip.from,
-    trip.to,
-    Number(trip.role === 'owner'),
+    canModerate ? trip.from : (trip.participationStart ?? trip.from),
+    canModerate ? trip.to : (trip.participationEnd ?? trip.to),
+    Number(canModerate),
     userId,
   );
   return { trip, photos };
@@ -358,66 +360,62 @@ export function addAreaToPhotos(
   userId: string,
   areaId: string,
 ) {
-  const { photos } = accessibleAreaPhotos(tripId, userId);
-  const area =
-    one(
-      'SELECT a.* FROM map_areas a JOIN trip_area_candidates c ON c.area_id=a.id WHERE c.trip_id=? AND a.id=?',
-      tripId,
-      areaId,
-    ) || fail(404, 'errors.suggestionNotFound');
-  const savedWiki = one(
-    'SELECT json FROM map_area_wiki WHERE area_id=?',
-    areaId,
-  );
-  const wikiInfo = savedWiki ? JSON.parse(savedWiki.json) : null;
-  const title =
-    wikiInfo?.localizationVersion >= 2 && wikiInfo.title
-      ? wikiInfo.title
-      : russianAreaTitle(area.title, closestCity(area.lat, area.lon)?.country);
-  const summary =
-    wikiInfo?.localizationVersion >= 2 && wikiInfo.description
-      ? wikiInfo.description
-      : russianAreaDescription(title, area.kind);
-  const geometry = JSON.parse(area.geometry);
-  const matches = photos.filter((p) => photoInArea(p as any, geometry));
-  if (!matches.length) fail(400, 'errors.areaHasNoPhotos');
-  let added = 0;
-  db.transaction(() => {
-    for (const photo of matches) {
-      const result = run(
-        'INSERT INTO confirmed_places(id,trip_id,media_id,title,summary,url,lat,lon,day,distance) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(trip_id,media_id,url) DO NOTHING',
-        id(),
-        tripId,
-        photo.id,
-        title,
-        summary,
-        area.url,
-        area.lat,
-        area.lon,
-        photo.taken.slice(0, 10),
-        0,
+  return db
+    .transaction(() => {
+      const { photos } = accessibleAreaPhotos(tripId, userId);
+      const area =
+        one(
+          'SELECT a.* FROM map_areas a JOIN trip_area_candidates c ON c.area_id=a.id WHERE c.trip_id=? AND a.id=?',
+          tripId,
+          areaId,
+        ) || fail(404, 'errors.suggestionNotFound');
+      const savedWiki = one(
+        'SELECT json FROM map_area_wiki WHERE area_id=?',
+        areaId,
       );
-      if (result.changes) {
-        added++;
-        run(
-          'INSERT INTO media_titles VALUES (?,?) ON CONFLICT(media_id) DO UPDATE SET title=excluded.title',
+      const wikiInfo = savedWiki ? JSON.parse(savedWiki.json) : null;
+      const title =
+        wikiInfo?.localizationVersion >= 2 && wikiInfo.title
+          ? wikiInfo.title
+          : russianAreaTitle(
+              area.title,
+              closestCity(area.lat, area.lon)?.country,
+            );
+      const summary =
+        wikiInfo?.localizationVersion >= 2 && wikiInfo.description
+          ? wikiInfo.description
+          : russianAreaDescription(title, area.kind);
+      const geometry = JSON.parse(area.geometry);
+      const matches = photos.filter((p) => photoInArea(p as any, geometry));
+      if (!matches.length) fail(400, 'errors.areaHasNoPhotos');
+      let added = 0;
+      for (const photo of matches) {
+        const result = run(
+          'INSERT INTO confirmed_places(id,trip_id,media_id,title,summary,url,lat,lon,day,distance) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(trip_id,media_id,url) DO NOTHING',
+          id(),
+          tripId,
           photo.id,
-          title.slice(0, 160),
+          title,
+          summary,
+          area.url,
+          area.lat,
+          area.lon,
+          photo.taken.slice(0, 10),
+          0,
         );
+        added += result.changes;
       }
-    }
-  })();
-  const visibleIds = new Set(matches.map((photo) => photo.id));
-  const places = all(
-    'SELECT p.*,m.lat photo_lat,m.lon photo_lon FROM confirmed_places p JOIN media m ON m.id=p.media_id WHERE p.trip_id=? AND p.url=?',
-    tripId,
-    area.url,
-  ).filter((place) => visibleIds.has(place.media_id));
-  const mediaTitles = matches.map((photo) => ({
-    id: photo.id,
-    title:
-      one('SELECT title FROM media_titles WHERE media_id=?', photo.id)?.title ||
-      null,
-  }));
-  return { added, matched: matches.length, title, places, mediaTitles };
+      const visibleIds = new Set(matches.map((photo) => photo.id));
+      const places = all(
+        'SELECT p.*,m.lat photo_lat,m.lon photo_lon FROM confirmed_places p JOIN media m ON m.id=p.media_id WHERE p.trip_id=? AND p.url=?',
+        tripId,
+        area.url,
+      ).filter((place) => visibleIds.has(place.media_id));
+      const mediaTitles = matches.map((photo) => ({
+        id: photo.id,
+        title: mediaTitle(photo.id),
+      }));
+      return { added, matched: matches.length, title, places, mediaTitles };
+    })
+    .immediate();
 }

@@ -3,8 +3,35 @@ import { oauthErrorReason, oauthReturnPath } from '../oauth-errors';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db, one, run, id, token, hash, encrypt } from '../db';
-import { fail, currentUser, session, cookie } from '../access';
+import { fail, currentUser, session, cookie, HttpError } from '../access';
 import { appURL } from './http';
+import { oauthRegistrationHash } from '../trip-entry';
+
+const callbackErrors: Record<string, string> = {
+  'messages.authorizationExpiredPleaseSignInAgain': 'session_expired',
+  'errors.linkExistingAccount': 'account_link_required',
+  'messages.disconnectYourCurrentYandexAccountInYour': 'account_already_linked',
+};
+
+type OAuthState = {
+  browser_hash: string;
+  user_id: string | null;
+  intent: 'link' | 'login';
+  verifier: string;
+  return_path: string | null;
+};
+
+export function oauthCallbackFailure(
+  error: unknown,
+  intent: string,
+  returnPath = '/',
+) {
+  const reason =
+    error instanceof HttpError
+      ? callbackErrors[error.translation?.key || ''] || 'unknown'
+      : 'unknown';
+  return oauthFailure(reason, intent, returnPath);
+}
 
 export function oauthFailure(
   reason: string,
@@ -35,13 +62,9 @@ export async function oauth(req: NextRequest, p: string[]) {
     const intent =
       req.nextUrl.searchParams.get('intent') === 'link' ? 'link' : 'login';
     if (intent === 'link' && !user) fail(401, 'messages.signInFirst');
-    const requestedReturn = req.nextUrl.searchParams.get('returnTo') || '/';
-    const returnTo =
-      /^\/(?:join\/[A-Za-z0-9_-]+|\?(?:trip=[A-Za-z0-9_-]+|create=1))?$/.test(
-        requestedReturn,
-      )
-        ? requestedReturn
-        : '/';
+    const returnTo = oauthReturnPath(
+      req.nextUrl.searchParams.get('returnTo') || '/',
+    );
     const state = token();
     const browser = token();
     const verifier = token();
@@ -83,7 +106,7 @@ export async function oauth(req: NextRequest, p: string[]) {
   }
   if (p[1] === 'callback') {
     const state = req.nextUrl.searchParams.get('state') || '';
-    const s = one(
+    const s = one<OAuthState>(
       'SELECT * FROM oauth_states WHERE hash=? AND expires>?',
       hash(state),
       Date.now(),
@@ -91,130 +114,138 @@ export async function oauth(req: NextRequest, p: string[]) {
     if (!s || s.browser_hash !== hash(cookie(req, 'ta_oauth')))
       fail(400, 'messages.authorizationExpiredPleaseSignInAgain');
     run('DELETE FROM oauth_states WHERE hash=?', hash(state));
-    if (s.intent === 'link' && currentUser(req)?.id !== s.user_id)
-      fail(403, 'messages.theSignedInAccountHasChanged');
-    if (req.nextUrl.searchParams.has('error'))
-      return oauthFailure(
-        req.nextUrl.searchParams.get('error') || 'unknown',
-        s.intent,
-        s.return_path,
-      );
-    const code =
-      req.nextUrl.searchParams.get('code') ||
-      fail(400, 'messages.authorizationCodeIsMissing');
-    const result = await fetch('https://oauth.yandex.ru/token', {
-      method: 'POST',
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        client_id: process.env.YANDEX_CLIENT_ID!,
-        client_secret: process.env.YANDEX_CLIENT_SECRET || '',
-        code_verifier: s.verifier,
-        redirect_uri: appURL() + '/api/auth/callback',
-      }),
-      signal: AbortSignal.timeout(20000),
-    });
-    if (!result.ok)
-      return oauthFailure('exchange_failed', s.intent, s.return_path);
-    const creds = await result.json();
-    const profile = await fetch('https://login.yandex.ru/info?format=json', {
-      headers: { Authorization: 'OAuth ' + creds.access_token },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!profile.ok) fail(502, 'messages.couldNotReadYourYandexProfile');
-    const info = await profile.json();
-    if (!info.id || typeof info.login !== 'string')
-      fail(502, 'errors.invalidYandexProfile');
-    const providerEmail = z.email().safeParse(
-      String(info.default_email || '')
-        .trim()
-        .toLowerCase(),
+    return finishOAuth(req, s).catch((error: unknown) =>
+      oauthCallbackFailure(error, s.intent, s.return_path || '/'),
     );
-    const existing = one(
-      'SELECT * FROM accounts WHERE yandex_id=?',
-      String(info.id),
+  }
+  return undefined;
+}
+
+async function finishOAuth(req: NextRequest, s: OAuthState) {
+  if (s.intent === 'link' && currentUser(req)?.id !== s.user_id)
+    fail(403, 'messages.theSignedInAccountHasChanged');
+  if (req.nextUrl.searchParams.has('error'))
+    return oauthFailure(
+      req.nextUrl.searchParams.get('error') || 'unknown',
+      s.intent,
+      s.return_path || '/',
     );
-    let userId = s.user_id || existing?.user_id;
-    db.transaction(() => {
-      if (
-        s.intent === 'link' &&
-        one(
-          'SELECT id FROM accounts WHERE user_id=? AND disk_enabled=1 AND yandex_id<>?',
-          userId,
-          String(info.id),
-        )
+  const code =
+    req.nextUrl.searchParams.get('code') ||
+    fail(400, 'messages.authorizationCodeIsMissing');
+  const result = await fetch('https://oauth.yandex.ru/token', {
+    method: 'POST',
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      client_id: process.env.YANDEX_CLIENT_ID!,
+      client_secret: process.env.YANDEX_CLIENT_SECRET || '',
+      code_verifier: s.verifier,
+      redirect_uri: appURL() + '/api/auth/callback',
+    }),
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!result.ok)
+    return oauthFailure('exchange_failed', s.intent, s.return_path || '/');
+  const creds = await result.json();
+  const profile = await fetch('https://login.yandex.ru/info?format=json', {
+    headers: { Authorization: 'OAuth ' + creds.access_token },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!profile.ok) fail(502, 'messages.couldNotReadYourYandexProfile');
+  const info = await profile.json();
+  if (!info.id || typeof info.login !== 'string')
+    fail(502, 'errors.invalidYandexProfile');
+  const providerEmail = z.email().safeParse(
+    String(info.default_email || '')
+      .trim()
+      .toLowerCase(),
+  );
+  const existing = one(
+    'SELECT * FROM accounts WHERE yandex_id=?',
+    String(info.id),
+  );
+  let userId = s.user_id || existing?.user_id;
+  let created = false;
+  db.transaction(() => {
+    if (
+      s.intent === 'link' &&
+      one(
+        'SELECT id FROM accounts WHERE user_id=? AND disk_enabled=1 AND yandex_id<>?',
+        userId,
+        String(info.id),
       )
-        fail(409, 'messages.disconnectYourCurrentYandexAccountInYour');
-      if (s.intent === 'link' && existing && existing.user_id !== userId)
-        fail(409, 'messages.thisYandexAccountIsAlreadyLinkedTo');
-      if (!userId) {
-        userId = id();
-        const email = providerEmail.success ? providerEmail.data : null;
-        if (email && one('SELECT id FROM users WHERE email=?', email))
-          fail(409, 'errors.linkExistingAccount');
-        run(
-          'INSERT INTO users VALUES (?,?,?,?,?)',
-          userId,
-          email,
-          info.display_name || info.login || 'Путешественник',
-          null,
-          Date.now(),
-        );
-        queueTelegramRegistration(userId);
-      }
-      if (existing && s.intent === 'link')
-        run(
-          'UPDATE accounts SET token=?,refresh=?,expires=?,label=?,provider_email=?,disk_enabled=1 WHERE id=?',
-          encrypt(creds.access_token),
-          creds.refresh_token ? encrypt(creds.refresh_token) : existing.refresh,
-          creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
-          info.login,
-          providerEmail.success ? providerEmail.data : null,
-          existing.id,
-        );
-      else if (!existing)
-        run(
-          'INSERT INTO accounts (id,user_id,yandex_id,label,token,refresh,expires,disk_enabled,provider_email) VALUES (?,?,?,?,?,?,?,?,?)',
-          id(),
-          userId,
-          String(info.id),
-          info.login,
-          encrypt(creds.access_token),
-          creds.refresh_token ? encrypt(creds.refresh_token) : null,
-          creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
-          Number(s.intent === 'link'),
-          providerEmail.success ? providerEmail.data : null,
-        );
-    })();
-    // Login uses the already linked owner's id without replacing the Disk token
-    // with a token that only grants login scopes.
-    if (existing && s.intent === 'login')
+    )
+      fail(409, 'messages.disconnectYourCurrentYandexAccountInYour');
+    if (s.intent === 'link' && existing && existing.user_id !== userId)
+      fail(409, 'messages.thisYandexAccountIsAlreadyLinkedTo');
+    if (!userId) {
+      userId = id();
+      const email = providerEmail.success ? providerEmail.data : null;
+      if (email && one('SELECT id FROM users WHERE email=?', email))
+        fail(409, 'errors.linkExistingAccount');
       run(
-        'UPDATE accounts SET provider_email=? WHERE id=?',
+        'INSERT INTO users VALUES (?,?,?,?,?)',
+        userId,
+        email,
+        info.display_name || info.login || 'Путешественник',
+        null,
+        Date.now(),
+      );
+      queueTelegramRegistration(userId);
+      created = true;
+    }
+    if (existing && s.intent === 'link')
+      run(
+        'UPDATE accounts SET token=?,refresh=?,expires=?,label=?,provider_email=?,disk_enabled=1 WHERE id=?',
+        encrypt(creds.access_token),
+        creds.refresh_token ? encrypt(creds.refresh_token) : existing.refresh,
+        creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
+        info.login,
         providerEmail.success ? providerEmail.data : null,
         existing.id,
       );
-    const response = NextResponse.redirect(
-      new URL(s.return_path || '/', appURL()),
+    else if (!existing)
+      run(
+        'INSERT INTO accounts (id,user_id,yandex_id,label,token,refresh,expires,disk_enabled,provider_email) VALUES (?,?,?,?,?,?,?,?,?)',
+        id(),
+        userId,
+        String(info.id),
+        info.login,
+        encrypt(creds.access_token),
+        creds.refresh_token ? encrypt(creds.refresh_token) : null,
+        creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
+        Number(s.intent === 'link'),
+        providerEmail.success ? providerEmail.data : null,
+      );
+  })();
+  // Login uses the already linked owner's id without replacing the Disk token
+  // with a token that only grants login scopes.
+  if (existing && s.intent === 'login')
+    run(
+      'UPDATE accounts SET provider_email=? WHERE id=?',
+      providerEmail.success ? providerEmail.data : null,
+      existing.id,
     );
-    if (s.intent === 'login')
-      response.cookies.set('ta_session', session(userId), {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: appURL().startsWith('https:'),
-        path: '/',
-        maxAge: 30 * 86400,
-      });
-    // Use one cookie API: mixing a raw Set-Cookie header and cookies.delete
-    // caused NextResponse to overwrite the newly issued login session.
-    response.cookies.set('ta_oauth', '', {
+  const destination = new URL(s.return_path || '/', appURL());
+  if (created && s.intent === 'login') destination.hash = oauthRegistrationHash;
+  const response = NextResponse.redirect(destination);
+  if (s.intent === 'login')
+    response.cookies.set('ta_session', session(userId), {
       httpOnly: true,
       sameSite: 'lax',
       secure: appURL().startsWith('https:'),
-      path: '/api/auth',
-      maxAge: 0,
+      path: '/',
+      maxAge: 30 * 86400,
     });
-    return response;
-  }
-  return undefined;
+  // Use one cookie API: mixing a raw Set-Cookie header and cookies.delete
+  // caused NextResponse to overwrite the newly issued login session.
+  response.cookies.set('ta_oauth', '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: appURL().startsWith('https:'),
+    path: '/api/auth',
+    maxAge: 0,
+  });
+  return response;
 }

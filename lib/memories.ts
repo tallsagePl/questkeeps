@@ -22,7 +22,7 @@ export function anniversaryMemories(userId: string, date: string) {
   JOIN sources s ON s.id=m.source_id JOIN trips t ON t.id=m.trip_id LEFT JOIN members mb ON mb.trip_id=t.id AND mb.user_id=? AND mb.active=1
   WHERE m.kind='photo' AND m.hidden=0 AND m.missing=0 AND s.approved=1 AND substr(m.taken,6,5)=? AND substr(m.taken,1,4)<?
    AND substr(m.taken,1,10) BETWEEN t.start AND t.end
-   AND (t.owner_id=? OR mb.user_id IS NOT NULL AND (mb.all_photos=1 OR substr(m.taken,1,10) BETWEEN mb.start AND mb.end))
+   AND (t.owner_id=? OR mb.user_id IS NOT NULL AND (mb.all_photos=1 OR mb.can_manage=1 OR substr(m.taken,1,10) BETWEEN mb.start AND mb.end))
   ORDER BY m.taken DESC,m.id LIMIT 6`,
     userId,
     match[2],

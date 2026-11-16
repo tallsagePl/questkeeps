@@ -1,6 +1,6 @@
 .questkeeps-video-player {
   --media-accent-color: var(--accent);
-  --media-accent-text-color: white;
+  --media-accent-text-color: var(--on-accent);
   --media-font-family: var(--sans);
   --media-border-radius: 0px;
   --media-object-fit: contain;
@@ -70,5 +70,8 @@
   height: calc(100dvh - var(--viewer-header-height));
   display: flex;
   flex-direction: column;
+  padding-inline: var(--safe-left) var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+  background: #000;
 }
 .modal.fullscreen .compatible-video .video-viewer { flex: 1; height: auto; min-height: 0; }

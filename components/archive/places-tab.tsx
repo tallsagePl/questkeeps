@@ -15,7 +15,8 @@ export default function PlacesTab({ archive }: { archive: ArchiveController }) {
     tab,
     day,
     setDay,
-    isOwner,
+    canManageTrip,
+    contributionRange,
     guest,
     discoveredPlaces,
     placePhotoGroups,
@@ -70,7 +71,8 @@ export default function PlacesTab({ archive }: { archive: ArchiveController }) {
               media={data!.media}
               places={data!.places}
               userId={user!.id}
-              isOwner={isOwner}
+              canManagePlaces={canManageTrip}
+              contributionRange={contributionRange}
               scope={'user:' + user?.id}
               previewPath={(photo) =>
                 mediaPath(photo, 'preview') +
@@ -103,14 +105,14 @@ export default function PlacesTab({ archive }: { archive: ArchiveController }) {
             scope={share ? 'guest:' + share : 'user:' + user?.id}
             places={discoveredPlaces}
             tripId={trip.id}
-            canDelete={isOwner && !guest}
+            canDelete={canManageTrip}
             onDeleted={(place) => {
               void invalidateMapResource(
                 '/api/trips/' + trip.id + '/area-suggestions',
                 archive.mapResourceScope,
               );
               setData((old) =>
-                old
+                old?.trip.id === trip.id
                   ? {
                       ...old,
                       places: old.places.filter(
@@ -119,6 +121,7 @@ export default function PlacesTab({ archive }: { archive: ArchiveController }) {
                     }
                   : old,
               );
+              void archive.action(archive.refresh);
             }}
             geometryPath={(place) =>
               mediaPath(

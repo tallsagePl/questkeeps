@@ -5,6 +5,7 @@ import SiteFooter from './site-footer';
 import { HeaderBrand } from './brand';
 import { useLocale, AppearanceControls } from './appearance';
 import { oauthErrors, type OAuthErrorReason } from '@/lib/oauth-errors';
+import { createTripEntry, createTripSignInEntry } from '@/lib/trip-entry';
 
 export default function OAuthError({
   reason,
@@ -18,6 +19,10 @@ export default function OAuthError({
   const { t } = useLocale();
   const retry =
     '/api/auth/yandex?' + new URLSearchParams({ intent, returnTo: returnPath });
+  const signIn =
+    returnPath === createTripEntry || returnPath === createTripSignInEntry
+      ? createTripSignInEntry
+      : '/';
 
   return (
     <>
@@ -39,7 +44,7 @@ export default function OAuthError({
             {t('oauth.reason')}: {reason}
           </p>
           <a
-            href={reason === 'account_link_required' ? '/' : retry}
+            href={reason === 'account_link_required' ? signIn : retry}
             className="primary"
           >
             {t(

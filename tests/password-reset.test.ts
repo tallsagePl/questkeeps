@@ -78,6 +78,7 @@ test('requests are generic, verified-only and rate limited; email uses a one-tim
     const accepted = await post('auth/forgot-password', {
       email: verified.email,
       language: 'en',
+      createTrip: true,
     });
     const unknown = await post('auth/forgot-password', {
       email: randomUUID() + '@fixture.invalid',
@@ -95,7 +96,9 @@ test('requests are generic, verified-only and rate limited; email uses a one-tim
       0,
     );
     const { job, payload, token } = lastLink(verified.id);
-    assert.equal(new URL(payload.url).search, '');
+    const url = new URL(payload.url);
+    assert.equal(url.search, '');
+    assert.equal(new URLSearchParams(url.hash.slice(1)).get('create'), '1');
     assert.equal(
       one('SELECT hash FROM password_resets WHERE user_id=?', verified.id)!
         .hash,

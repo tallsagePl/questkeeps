@@ -10,13 +10,14 @@
   --brand-logo: #3448f5;
   --line: #d9deea;
   --soft: #f0f2f8;
-  --control-line: #8791a6;
+  --control-line: #788398;
   --on-accent: #ffffff;
   --accent-hover: #2535d4;
   --selection: #eef0ff;
   --danger: #b62b3c;
   --danger-bg: #fff0f2;
   --success-bg: #eef0ff;
+  --success-ink: #176437;
   --warning: #805419;
   --warning-bg: #fff2d9;
   --focus: #3448f5;
@@ -41,6 +42,7 @@
   --danger: #ffb3bd;
   --danger-bg: #39232c;
   --success-bg: #2b3152;
+  --success-ink: #a5e5bf;
   --warning: #f4d497;
   --warning-bg: #3a3023;
   --focus: #b0b9ff;
@@ -192,7 +194,6 @@ small,
 .creation-source-heading > span,
 .source small,
 .place a,
-.trip-number,
 .trip-meta,
 .map-caption,
 .note-label,
@@ -1004,6 +1005,7 @@ a:any-link:focus-visible,
 .photo-card .photo-overlay {
   z-index: 1;
   padding-top: 62px;
+  background: linear-gradient(transparent, #10131b 60%);
   pointer-events: none;
 }
 .photo-card .video-badge {
@@ -2561,7 +2563,7 @@ a:any-link:focus-visible,
 }
 .note-thread p {
   overflow-wrap: anywhere;
-  max-width: 100%;
+  max-width: min(68ch, 100%);
 }
 .note-reply-meta > strong {
   min-width: 0;
@@ -3324,6 +3326,9 @@ a:any-link:focus-visible,
   column-gap: 64px;
   padding: 48px 0;
   border-bottom: 1px solid var(--line);
+}
+.about-content:has(+ #trip-example) > section:last-child {
+  border-bottom: 0;
 }
 .about-content > section > h2 {
   grid-column: 1;
@@ -4090,37 +4095,6 @@ a:any-link:focus-visible,
   }
 }
 
-.welcome-slideshow {
-  background: #172238;
-}
-.welcome-slide {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 900ms var(--ease-out);
-}
-.welcome-slide.is-active {
-  opacity: 1;
-}
-.welcome-slideshow::after {
-  pointer-events: none;
-  background: linear-gradient(transparent 35%, rgb(9 16 32 / 0.88));
-}
-.welcome-slideshow .landscape-label {
-  max-width: calc(100% - 32px);
-  font-size: 0.8rem;
-  line-height: 1.5;
-  letter-spacing: 0.2px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .welcome-slide {
-    transition: none;
-  }
-}
-
 .friend-discovery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4341,3 +4315,16 @@ a:any-link:focus-visible,
 
 .reset-password-page { max-width: 560px; }
 .reset-password-page form { margin-block: 24px; }
+
+@media (prefers-contrast: more) {
+  :root {
+    --muted: #343d50;
+    --control-line: #505d76;
+    --line: #69768e;
+  }
+  :root[data-theme='dark'] {
+    --muted: #e1e5f0;
+    --control-line: #c5cce0;
+    --line: #a1acc6;
+  }
+}

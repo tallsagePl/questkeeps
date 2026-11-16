@@ -1,10 +1,13 @@
 'use client';
 
+import { useId } from 'react';
+import ConfirmAction from './confirm-action';
 import CoverSettings from './cover-settings';
 import { useLocale } from '@/components/appearance';
 import { PersonAvatar } from '../friends';
 import { api } from '../api';
 import { FeedbackButton } from '../feedback';
+import { openSourcePicker } from './source-actions';
 import { type ArchiveController } from './use-archive';
 import { date, period, Icon } from './shared';
 
@@ -21,11 +24,9 @@ export default function SettingsTab({
     members,
     tripOwner,
     sources,
-    setAccount,
-    setFolder,
-    setFolders,
     setGenerated,
     isOwner,
+    canManageTrip,
     user,
     guest,
     setNotice,
@@ -34,7 +35,7 @@ export default function SettingsTab({
     reloadSettings,
   } = archive;
   const trip = archive.trip!;
-  const canManage = isOwner || trip.canManage;
+  const guestLinkButton = useId();
   return (
     <>
       {tab === 'settings' && !guest && (
@@ -79,21 +80,25 @@ export default function SettingsTab({
                     </small>
                   )}
                 </div>
-                {canManage && !!m.active && m.id !== user?.id && (
-                  <FeedbackButton
-                    className="text-button"
-                    onClick={() => {
-                      setGenerated('');
-                      setModal('member:' + m.id);
-                    }}
-                  >
-                    {t('trip.edit')}
-                  </FeedbackButton>
-                )}
+                {canManageTrip &&
+                  !!m.active &&
+                  m.id !== user?.id &&
+                  (isOwner || !m.can_manage) && (
+                    <FeedbackButton
+                      className="text-button"
+                      onClick={() => {
+                        setGenerated('');
+                        setModal('member:' + m.id);
+                      }}
+                    >
+                      {t('trip.edit')}
+                    </FeedbackButton>
+                  )}
               </div>
             ))}
-            {canManage && (
+            {canManageTrip && (
               <FeedbackButton
+                id="trip-invite-member"
                 className="secondary"
                 onClick={() => {
                   setGenerated('');
@@ -113,7 +118,7 @@ export default function SettingsTab({
               </FeedbackButton>
             )}
           </section>
-          {canManage && (
+          {canManageTrip && (
             <section className="panel share-panel">
               <div>
                 <span className="eyebrow">{t('trip.shareYourMemories')}</span>
@@ -121,7 +126,11 @@ export default function SettingsTab({
                 <p className="muted">
                   {t('trip.anyoneWithTheSecretLinkCanView')}
                 </p>
-                <span className="status">
+                <span
+                  className="status guest-link-status"
+                  data-active={trip.sharing}
+                  role="status"
+                >
                   {trip.sharing
                     ? t('trip.linkIsActive')
                     : t('trip.linkAccessIsOff')}
@@ -129,6 +138,7 @@ export default function SettingsTab({
               </div>
               <div className="stack">
                 <FeedbackButton
+                  id={guestLinkButton}
                   className="secondary"
                   disabled={busy}
                   onClick={() =>
@@ -136,8 +146,14 @@ export default function SettingsTab({
                       const r = await api(
                         'trips/' + trip.id + '/share',
                         trip.sharing ? 'GET' : 'POST',
-                        trip.sharing ? undefined : { enabled: true },
+                        trip.sharing
+                          ? undefined
+                          : { enabled: true, rotate: false },
                       );
+                      if (!r.url) {
+                        await refresh();
+                        throw Error('exports.guestLinkUnavailable');
+                      }
                       setGenerated(r.url);
                       setModal('share');
                       await refresh();
@@ -170,21 +186,24 @@ export default function SettingsTab({
                   </FeedbackButton>
                 )}
                 {trip.sharing && (
-                  <FeedbackButton
-                    className="text-button danger"
-                    disabled={busy}
-                    onClick={() =>
+                  <ConfirmAction
+                    label={t('trip.revokeAccess')}
+                    message={t('trip.revokeGuestLinkConfirm')}
+                    confirmLabel={t('trip.revokeGuestLink')}
+                    busy={busy}
+                    onConfirm={() =>
                       void action(async () => {
                         await api('trips/' + trip.id + '/share', 'POST', {
                           enabled: false,
                         });
                         await refresh();
+                        requestAnimationFrame(() =>
+                          document.getElementById(guestLinkButton)?.focus(),
+                        );
                         setNotice('trip.guestLinkRevoked');
                       })
                     }
-                  >
-                    {t('trip.revokeAccess')}
-                  </FeedbackButton>
+                  />
                 )}
               </div>
             </section>
@@ -194,7 +213,9 @@ export default function SettingsTab({
             <div className="panel-title">
               <div>
                 <span className="eyebrow">{t('trip.sourcesOfMemories')}</span>
-                <h2>{t('tripCover.drives')}</h2>
+                <h2 id="trip-sources-heading" tabIndex={-1}>
+                  {t('tripCover.drives')}
+                </h2>
               </div>
               <Icon name="cloud" size={28} />
             </div>
@@ -290,12 +311,7 @@ export default function SettingsTab({
             </div>
             <FeedbackButton
               className="secondary"
-              onClick={() => {
-                setModal('source');
-                setFolders([]);
-                setAccount('');
-                setFolder('disk:/');
-              }}
+              onClick={() => openSourcePicker(archive)}
             >
               <Icon name="plus" />
               {t('trip.connectFolder')}

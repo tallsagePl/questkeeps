@@ -5,6 +5,7 @@ import { PersonAvatar, type Person } from '../friends';
 import { useLocale } from '@/components/appearance';
 import { api } from '../api';
 import Modal from '../modal';
+import ConfirmAction from './confirm-action';
 import { FeedbackForm, FeedbackButton, Field } from '../feedback';
 import { type ArchiveController } from './use-archive';
 import { values } from './shared';
@@ -25,6 +26,7 @@ export default function InviteDialog({
     action,
     reloadSettings,
     copy,
+    isOwner,
   } = archive;
   const trip = archive.trip!;
   const [mode, setMode] = useState<'link' | 'person'>('link');
@@ -126,7 +128,7 @@ export default function InviteDialog({
                   await api('trips/' + trip.id + '/members', 'PATCH', {
                     ...input,
                     userId: modal.split(':')[1],
-                    canManage: fields.canManage === 'on',
+                    ...(isOwner && { canManage: fields.canManage === 'on' }),
                   });
                   await reloadSettings();
                   setModal('');
@@ -231,7 +233,7 @@ export default function InviteDialog({
               <span>{t('invitations.allPhotos')}</span>
             </label>
             <p className="fine">{t('invitations.visibilityHint')}</p>
-            {modal.startsWith('member:') && (
+            {modal.startsWith('member:') && isOwner && (
               <>
                 <label className="invite-all-photos">
                   <input
@@ -263,11 +265,12 @@ export default function InviteDialog({
                 : t('common.save')}
             </FeedbackButton>
             {modal.startsWith('member:') && (
-              <FeedbackButton
-                type="button"
-                className="text-button danger"
-                disabled={busy}
-                onClick={() =>
+              <ConfirmAction
+                label={t('trip.endParticipation')}
+                message={t('trip.endParticipationConfirm')}
+                confirmLabel={t('trip.removeParticipant')}
+                busy={busy}
+                onConfirm={() =>
                   void action(async () => {
                     await api('trips/' + trip.id + '/members', 'PATCH', {
                       userId: modal.split(':')[1],
@@ -275,11 +278,12 @@ export default function InviteDialog({
                     });
                     await reloadSettings();
                     setModal('');
+                    requestAnimationFrame(() =>
+                      document.getElementById('trip-invite-member')?.focus(),
+                    );
                   })
                 }
-              >
-                {t('trip.endParticipation')}
-              </FeedbackButton>
+              />
             )}
           </FeedbackForm>
         )}

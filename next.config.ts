@@ -2,6 +2,24 @@ import type { NextConfig } from 'next';
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
 import { publicHost, publicSearchPaths } from './lib/public-seo';
 
+const publicSearchAssets = [
+  '/icon.svg',
+  '/apple-icon.png',
+  '/opengraph-image.png',
+  '/about/lisbon-overlook.webp',
+  '/about/lisbon-tram.webp',
+  '/about/lisbon-share.jpg',
+  '/about/galata-view.webp',
+  '/about/galata-tower.webp',
+  ...['en', 'ru'].flatMap((language) =>
+    ['dark', 'light'].flatMap((theme) =>
+      ['trips', 'map', 'journal'].map(
+        (screen) => `/about/screenshots/${language}-${theme}-${screen}.webp`,
+      ),
+    ),
+  ),
+];
+
 const config: NextConfig = {
   serverExternalPackages: ['better-sqlite3', 'exifr', 'cities.json'],
   async headers() {
@@ -12,10 +30,23 @@ const config: NextConfig = {
           { key: 'Referrer-Policy', value: 'no-referrer' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       },
-      ...[...publicSearchPaths, '/robots.txt', '/sitemap.xml'].map((source) => ({
+      {
+        source: '/:path+',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      {
+        source: '/',
+        missing: [publicHost],
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      ...[
+        ...publicSearchPaths.filter((path) => path !== '/'),
+        '/robots.txt',
+        '/sitemap.xml',
+        ...publicSearchAssets,
+      ].map((source) => ({
         source,
         has: [publicHost],
         headers: [{ key: 'X-Robots-Tag', value: 'index, follow' }],

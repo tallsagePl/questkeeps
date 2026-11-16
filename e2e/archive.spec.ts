@@ -79,8 +79,26 @@ test('регистрация, поездка, дневник, гостевая �
   await expect(
     guest.getByRole('button', { name: 'Управление поездкой', exact: true }),
   ).toHaveCount(0);
-  await page
-    .getByRole('button', { name: 'Отозвать доступ', exact: true })
+  const revoke = page.getByRole('button', {
+    name: 'Отозвать доступ',
+    exact: true,
+  });
+  const confirmation = page.getByRole('group', {
+    name: 'Отозвать ссылку',
+    exact: true,
+  });
+  await revoke.click();
+  const cancel = confirmation.getByRole('button', {
+    name: 'Отмена',
+    exact: true,
+  });
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(revoke).toBeFocused();
+  await expect(page.getByText('Ссылка активна', { exact: true })).toBeVisible();
+  await revoke.click();
+  await confirmation
+    .getByRole('button', { name: 'Отозвать ссылку', exact: true })
     .click();
   await expect(
     page.getByText('Доступ по ссылке выключен', { exact: true }),

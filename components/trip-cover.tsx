@@ -130,6 +130,7 @@ export default function TripCover({
     <div
       ref={ref}
       className={'trip-art art-' + (index % 4) + (active ? ' has-cover' : '')}
+      aria-hidden="true"
     >
       {previous && (
         <div className="trip-cover-photo" aria-hidden="true">
@@ -153,11 +154,12 @@ export default function TripCover({
           />
         </div>
       )}
-      <span className="trip-number">
-        {String(index + 1).padStart(2, '0')} / ARCHIVE
-      </span>
-      <Icon name="compass" size={80} />
-      <span className="destination-art">{destination}</span>
+      {!active && (
+        <>
+          <Icon name="compass" size={80} />
+          <span className="destination-art">{destination}</span>
+        </>
+      )}
     </div>
   );
 }

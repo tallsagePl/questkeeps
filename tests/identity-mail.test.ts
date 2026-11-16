@@ -75,10 +75,10 @@ test('numbered migrations preserve legacy records, apply once, and reject newer 
     ],
   );
 
-  assert.equal(legacy.pragma('user_version', { simple: true }), 16);
+  assert.equal(legacy.pragma('user_version', { simple: true }), 17);
   assert.equal(
     (legacy.prepare('SELECT count(*) n FROM schema_migrations').get() as any).n,
-    16,
+    17,
   );
   assert.equal(
     (legacy.prepare('SELECT password FROM users').get() as any).password,
@@ -90,7 +90,7 @@ test('numbered migrations preserve legacy records, apply once, and reject newer 
   legacy.close();
   const fresh = new Database(':memory:');
   migrate(fresh);
-  assert.equal(fresh.pragma('user_version', { simple: true }), 16);
+  assert.equal(fresh.pragma('user_version', { simple: true }), 17);
   fresh.close();
 });
 
@@ -137,6 +137,7 @@ test('required verification creates no session; encrypted queue, retries, one-us
     const response = await request('auth/register', {
       email: 'pending@example.invalid',
       password: 'Abc123',
+      createTrip: true,
     });
     assert.equal(response.status, 200);
     assert.equal(response.headers.has('set-cookie'), false);
@@ -157,8 +158,10 @@ test('required verification creates no session; encrypted queue, retries, one-us
     )!;
     assert.ok(!job.payload.includes('pending@example.invalid'));
     const payload = JSON.parse(decrypt(job.payload));
-    const raw = payload.url.split('#token=')[1];
+    const fragment = new URLSearchParams(new URL(payload.url).hash.slice(1));
+    const raw = fragment.get('token')!;
     assert.ok(raw);
+    assert.equal(fragment.get('create'), '1');
     assert.ok(!payload.url.includes('?token='));
     assert.equal(
       one('SELECT hash FROM email_verifications WHERE user_id=?', user.id)!
@@ -201,14 +204,17 @@ test('required verification creates no session; encrypted queue, retries, one-us
       ).headers.has('set-cookie'),
     );
     queueVerification(user.id, 'pending@example.invalid');
-    const old = JSON.parse(
+    const oldLink = JSON.parse(
       decrypt(
         one(
           'SELECT payload FROM delivery_jobs WHERE user_id=? AND finished IS NULL',
           user.id,
         )!.payload,
       ),
-    ).url.split('#token=')[1];
+    ).url;
+    const old = new URLSearchParams(new URL(oldLink).hash.slice(1)).get(
+      'token',
+    )!;
     queueVerification(user.id, 'pending@example.invalid');
     assert.equal(confirmEmail(old), false);
     assert.equal(
@@ -235,17 +241,19 @@ test('linked Yandex login returns to the password account and keeps private extr
   const cookie = sessionCookie(created);
   const owner = (await created.json()).user;
   const original = globalThis.fetch;
+  let providerId = 'provider-stable-id';
+  let providerEmail = 'game@example.invalid';
   globalThis.fetch = (async (input: any) =>
     String(input).includes('oauth.yandex.ru')
       ? Response.json({ access_token: 'fixture-token', expires_in: 3600 })
       : Response.json({
-          id: 'provider-stable-id',
+          id: providerId,
           login: 'game',
-          default_email: 'game@example.invalid',
+          default_email: providerEmail,
         })) as typeof fetch;
-  async function oauth(intent: string, cookie = '') {
+  async function oauth(intent: string, cookie = '', returnTo = '/') {
     const start = await request(
-      'auth/yandex?intent=' + intent,
+      'auth/yandex?' + new URLSearchParams({ intent, returnTo }),
       undefined,
       cookie,
     );
@@ -262,11 +270,20 @@ test('linked Yandex login returns to the password account and keeps private extr
     );
   }
   try {
-    assert.equal((await oauth('link', cookie)).status, 307);
+    const linkedDisk = await oauth('link', cookie, '/?trip=fixture&source=1');
+    assert.equal(linkedDisk.status, 307);
+    assert.equal(
+      linkedDisk.headers.get('location'),
+      'http://localhost:3000/?trip=fixture&source=1',
+    );
     const account = one('SELECT * FROM accounts WHERE user_id=?', owner.id)!;
     assert.equal(account.provider_email, 'game@example.invalid');
-    const linked = await oauth('login');
+    const linked = await oauth('login', '', '/?create=1&mode=login');
     assert.equal(linked.status, 307);
+    assert.equal(
+      linked.headers.get('location'),
+      'http://localhost:3000/?create=1&mode=login',
+    );
     const me = await request('me', undefined, sessionCookie(linked));
     const profile = (await me.json()).user;
     assert.equal(profile.id, owner.id);
@@ -295,6 +312,18 @@ test('linked Yandex login returns to the password account and keeps private extr
       one('SELECT user_id FROM accounts WHERE id=?', account.id)!.user_id,
       owner.id,
     );
+    providerId = 'new-yandex-traveller';
+    providerEmail = 'new-yandex@example.invalid';
+    const signup = await oauth('login', '', '/?create=1');
+    assert.equal(
+      signup.headers.get('location'),
+      'http://localhost:3000/?create=1#signup-confirmed',
+    );
+    const repeat = await oauth('login', '', '/?create=1');
+    assert.equal(
+      repeat.headers.get('location'),
+      'http://localhost:3000/?create=1',
+    );
   } finally {
     globalThis.fetch = original;
     process.env.YANDEX_CLIENT_ID = '';
@@ -314,7 +343,7 @@ test('unlinked Yandex with an existing primary email cannot create a duplicate o
         })) as typeof fetch;
   try {
     const before = one('SELECT count(*) n FROM users')!.n;
-    const start = await request('auth/yandex');
+    const start = await request('auth/yandex?returnTo=%2F%3Fcreate%3D1');
     const state = new URL(start.headers.get('location')!).searchParams.get(
       'state',
     );
@@ -329,6 +358,10 @@ test('unlinked Yandex with an existing primary email cannot create a duplicate o
     assert.equal(
       new URL(response.headers.get('location')!).searchParams.get('reason'),
       'account_link_required',
+    );
+    assert.equal(
+      new URL(response.headers.get('location')!).searchParams.get('returnTo'),
+      '/?create=1',
     );
     assert.equal(
       response.headers.get('set-cookie')?.includes('ta_session='),

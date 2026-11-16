@@ -3,15 +3,12 @@
 import type { ReactNode } from 'react';
 import HeaderDropdown from './header-dropdown';
 import { AppearanceControls, useLocale } from './appearance';
-import BackButton from './back-button';
 
 export default function HeaderMenu({
   logout,
-  back = false,
   guest = false,
 }: {
   logout?: ReactNode;
-  back?: boolean;
   guest?: boolean;
 }) {
   const { t } = useLocale();
@@ -38,16 +35,12 @@ export default function HeaderMenu({
         className="header-menu-links"
         aria-label={t('navigation.mainNavigation')}
         onClick={(event) => {
-          if (
-            event.target instanceof Element &&
-            event.target.closest('a, .page-back')
-          )
+          if (event.target instanceof Element && event.target.closest('a'))
             event.currentTarget
               .closest<HTMLElement>('[popover]')
               ?.hidePopover();
         }}
       >
-        {back && <BackButton />}
         <a href="/">{t('navigation.trips')}</a>
         <a href="/about">{t('navigation.about')}</a>
       </nav>

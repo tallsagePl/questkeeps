@@ -251,9 +251,10 @@ export default function TripDescription({
       </div>
     </div>
   );
+  if (!value.trim() && !editable) return null;
   return (
     <div className="trip-description">
-      {editing ? (
+      {editing && editable ? (
         <form
           onSubmit={(e) => {
             e.preventDefault();

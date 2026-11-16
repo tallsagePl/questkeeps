@@ -459,6 +459,35 @@ test('ограниченная лента сдвигается в обе сто�
   await expect(
     page.locator('[data-media-index="0"] .photo-card'),
   ).toBeFocused();
+  // Focus without scrolling so the next item stays outside the rendered window.
+  const cells = grid.locator('[data-media-index]:not([hidden])');
+  const focusCellControl = (cell: Locator, control: string) =>
+    cell.evaluate((element, selector) => {
+      element.querySelector<HTMLButtonElement>(selector)!.focus({
+        preventScroll: true,
+      });
+      return Number(element.getAttribute('data-media-index'));
+    }, control);
+  const lastCard = await focusCellControl(cells.last(), '.photo-card');
+  await page.keyboard.press('Tab');
+  await expect(
+    grid.locator(`[data-media-index="${lastCard}"] .favorite-button`),
+  ).toBeFocused();
+  const lastAction = await focusCellControl(cells.last(), '.favorite-button');
+  await page.keyboard.press('Tab');
+  await expect(
+    grid.locator(`[data-media-index="${lastAction + 1}"] .photo-card`),
+  ).toBeFocused();
+  const firstCard = await focusCellControl(cells.first(), '.photo-card');
+  expect(firstCard).toBeGreaterThan(0);
+  await page.keyboard.press('Shift+Tab');
+  await expect(
+    grid.locator(`[data-media-index="${firstCard - 1}"] .favorite-button`),
+  ).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(
+    page.locator('[data-media-index="0"] .photo-card'),
+  ).toBeFocused();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect
     .poll(async () =>
@@ -571,6 +600,7 @@ test('HEIC использует кеш, сбой оригинала не скр�
     title: '',
   }));
   const places: any[] = [];
+  const heicTitle = () => media[0].title || places.at(-1)?.title || null;
   const suggestions = [
     { pageid: 11, title: 'Ворота Адриана', dist: 11 },
     { pageid: 12, title: 'Музей', dist: 155 },
@@ -587,7 +617,7 @@ test('HEIC использует кеш, сбой оригинала не скр�
     r.fulfill({
       json: {
         trip,
-        media,
+        media: [{ ...media[0], title: heicTitle() }, media[1]],
         places,
         notes: [],
         importStatus: { sourceCount: 1 },
@@ -615,7 +645,7 @@ test('HEIC использует кеш, сбой оригинала не скр�
     const placeId = new URL(r.request().url()).pathname.split('/').at(-1);
     const index = places.findIndex((p) => p.id === placeId);
     if (index >= 0) places.splice(index, 1);
-    return r.fulfill({ json: { ok: true } });
+    return r.fulfill({ json: { ok: true, title: heicTitle() } });
   });
   let confirmations = 0;
   await page.route('**/api/media/heic/places', async (r) => {
@@ -640,7 +670,7 @@ test('HEIC использует кеш, сбой оригинала не скр�
       lon: 44.8,
     };
     places.push(place);
-    return r.fulfill({ json: { place } });
+    return r.fulfill({ json: { place, title: heicTitle() } });
   });
   const image = await sharp({
     create: { width: 640, height: 480, channels: 3, background: '#3448f5' },
@@ -817,6 +847,9 @@ test('HEIC использует кеш, сбой оригинала не скр�
     .getByRole('button', { name: 'Удалить', exact: true })
     .click();
   await expect(confirmed.locator('article')).toHaveCount(1);
+  await expect(dialog.getByRole('heading').first()).toContainText(
+    'Ворота Адриана',
+  );
   expect(deletes).toBe(1);
 
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
@@ -827,6 +860,9 @@ test('HEIC использует кеш, сбой оригинала не скр�
       .getByRole('region', { name: 'Места на фотографии' })
       .locator('article'),
   ).toHaveCount(1);
+  await expect(dialog.getByRole('heading').first()).toContainText(
+    'Ворота Адриана',
+  );
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
   await page.locator('.photo-card').nth(1).click();
   await expect(dialog.locator('.media-preview')).toHaveAttribute(

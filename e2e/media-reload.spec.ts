@@ -115,6 +115,10 @@ test('MOV is attempted in the player; individual photo and video reload preserve
   const cb = await close.boundingBox();
   expect(rb!.x + rb!.width).toBeLessThanOrEqual(cb!.x);
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.addStyleTag({
+    content:
+      ':root { --safe-left: 12px; --safe-right: 18px; --safe-bottom: 20px; }',
+  });
   await expect(reload).toBeVisible();
   await page.screenshot({ path: 'test-results/media-reload-mobile.png' });
   await close.click();
@@ -193,10 +197,10 @@ test('MOV is attempted in the player; individual photo and video reload preserve
   await dialog.locator('.questkeeps-video-player').click();
   await dialog.locator('.questkeeps-video-player').press('ArrowRight');
   await expect(dialog.locator('video')).toHaveAttribute('src', /movie/);
-  const width = await dialog
-    .locator('.questkeeps-video-player')
-    .evaluate((el) => el.getBoundingClientRect().width);
-  expect(width).toBeLessThanOrEqual(390);
+  const player = await dialog.locator('.questkeeps-video-player').boundingBox();
+  expect(player!.x).toBeGreaterThanOrEqual(12);
+  expect(player!.x + player!.width).toBeLessThanOrEqual(390 - 18);
+  expect(player!.y + player!.height).toBeLessThanOrEqual(844 - 20);
   await page.screenshot({ path: 'test-results/media-reload-video.png' });
   await dialog.locator('.video-compatibility-controls button').click();
   await expect(dialog.locator('video')).toHaveAttribute(

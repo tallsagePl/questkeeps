@@ -76,7 +76,7 @@ export async function followRoutes({
       Omit<FollowedTrip, 'url'> & { share_hash: string; owner_id: string }
     >(
       `SELECT t.id,t.title,t.destination,t.start,t.end,t.share_hash,t.owner_id,
-      (SELECT count(*) FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=t.id AND m.hidden=0 AND m.hidden_from_guests=0 AND m.missing=0 AND s.approved=1) media_count
+      (SELECT count(*) FROM media m JOIN sources s ON s.id=m.source_id WHERE m.trip_id=t.id AND m.hidden=0 AND m.hidden_from_guests=0 AND m.missing=0 AND s.approved=1 AND substr(m.taken,1,10) BETWEEN t.start AND t.end) media_count
       FROM trip_follows f JOIN trips t ON t.id=f.trip_id
       WHERE f.user_id=? AND t.share_hash IS NOT NULL AND f.share_hash=t.share_hash ORDER BY f.created DESC,t.id`,
       user.id,

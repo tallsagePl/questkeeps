@@ -15,7 +15,7 @@ export default function PlaceDelete({
   mediaId: string;
   placeId: string;
   title: string;
-  onDelete: () => void;
+  onDelete: (result: { title?: string | null }) => void;
 }) {
   const { t } = useLocale();
   const [confirming, setConfirming] = useState(false);
@@ -94,11 +94,11 @@ export default function PlaceDelete({
                 setBusy(true);
                 setError('');
                 try {
-                  await api(
+                  const result = await api<{ title?: string | null }>(
                     deletePath || 'media/' + mediaId + '/places/' + placeId,
                     'DELETE',
                   );
-                  onDelete();
+                  onDelete(result);
                 } catch {
                   setError('messages.couldNotRemoveThePlacePleaseTry');
                 } finally {

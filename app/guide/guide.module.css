@@ -1,0 +1,56 @@
+.guide {
+  max-width: 72ch;
+  margin-inline: auto;
+  padding: clamp(24px, 5vw, 64px) clamp(16px, 4vw, 32px);
+  overflow-wrap: anywhere;
+}
+
+.guide h1 {
+  margin: 4px 0 18px;
+  font-size: clamp(1.875rem, 5vw, 2.75rem);
+  text-wrap: balance;
+}
+
+.guide h2 {
+  font-size: clamp(1.375rem, 3vw, 1.75rem);
+}
+
+.guide a {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.home,
+.action,
+.guide nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.guide nav ul {
+  padding-inline-start: 1.25rem;
+}
+
+.guide section {
+  margin-top: clamp(28px, 5vw, 44px);
+  scroll-margin-top: calc(16px + var(--safe-top));
+}
+
+.guide figure {
+  margin: 20px 0;
+}
+
+.guide figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+}
+
+.guide figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}

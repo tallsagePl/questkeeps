@@ -3,6 +3,7 @@
 import NoteThread from '../note-thread';
 import { useLocale } from '@/components/appearance';
 import { api } from '../api';
+import { includesDate } from '../../lib/date-selection';
 import { FeedbackForm, FeedbackButton, Field } from '../feedback';
 import { type ArchiveController } from './use-archive';
 import { values, Icon } from './shared';
@@ -30,7 +31,9 @@ export default function JournalTab({
                 )}
                 tripId={trip.id}
                 userId={user?.id}
-                guest={!!guest}
+                readOnly={
+                  guest || !includesDate(n.day, archive.contributionRange)
+                }
                 onChange={refresh}
               />
             ))

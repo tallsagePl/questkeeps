@@ -78,11 +78,25 @@ test('friends are consensual and private, profile is a page, About works in both
       page.getByRole('heading', { name: bob.name, exact: true }),
     ).toBeVisible();
     await expect(page.getByText(bobEmail, { exact: true })).toHaveCount(0);
-    await a.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.evaluate(() => {
+      let copiedLink = '';
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            copiedLink = text;
+          },
+          readText: async () => copiedLink,
+        },
+      });
+    });
     await expect(page.locator('.public-profile-handle')).toHaveText(
       '@' + bob.username,
     );
     await page.locator('.public-profile-handle').click();
+    await expect(
+      page.locator('.public-person-identity').getByRole('status'),
+    ).toHaveText('Ссылка скопирована');
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       base + '/@' + bob.username,
     );

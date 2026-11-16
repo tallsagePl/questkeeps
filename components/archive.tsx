@@ -4,7 +4,9 @@ import SiteFooter from './site-footer';
 import TripFollow, { FollowArrival } from './trip-follow';
 
 import { FriendLinkArrival } from './friend-link';
-import WelcomeSlideshow from './welcome-slideshow';
+import TripExample from './trip-example';
+import CreateTripLink from './create-trip-link';
+import { trackGoal } from '@/lib/analytics';
 import { useLocale } from '@/components/appearance';
 import { api } from './api';
 import TripDescription from './trip-description';
@@ -29,6 +31,9 @@ import ShareDialog from './archive/share-dialog';
 import MediaDialog from './archive/media-dialog';
 import PublishDialog from './archive/publish-dialog';
 import AuthForm from './archive/auth-form';
+import { retryTripImport } from './archive/source-actions';
+import OnboardingMilestones from './onboarding-milestones';
+import welcomeStyles from './archive/welcome.module.css';
 
 type ArchiveProps = { share?: string; invite?: string; publicHome?: boolean };
 
@@ -58,27 +63,21 @@ function ArchiveContent(props: ArchiveProps) {
     trip,
     isOwner,
     guest,
-    setNotice,
+    canManageTrip,
     action,
-    refresh,
     openTab,
     resourceScope,
     mapResourceScope,
     share,
     invite,
+    setRegister,
+    verificationEmail,
+    setVerificationEmail,
   } = archive;
   const authForm = <AuthForm archive={archive} />;
-  const welcomeIntro = (
-    <>
-      <h1>{t('seo.home.heading')}</h1>
-      <p>{t('seo.home.description')}</p>
-      <p>
-        <a href="/guide" lang="ru">
-          {t('seo.home.guide')}
-        </a>
-      </p>
-    </>
-  );
+  const showWelcome =
+    ((!ready || bootFailed) && props.publicHome) ||
+    (ready && !bootFailed && !invite && !guest && !user);
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -86,12 +85,88 @@ function ArchiveContent(props: ArchiveProps) {
       </a>
       <BackToTop />
       <Header archive={archive} />
+      {!guest && !invite && ready && (
+        <OnboardingMilestones
+          userId={user?.id}
+          hasTrips={archive.trips.length > 0}
+          hasMedia={
+            isOwner &&
+            !!data?.media.some(
+              (item) => !item.hidden && item.user_id === user?.id,
+            )
+          }
+        />
+      )}
       <FriendLinkArrival userId={user?.id} />
       <FollowArrival userId={user?.id} />
-      {!ready && props.publicHome ? (
-        <main id="main-content" tabIndex={-1} className="welcome">
-          <section className="welcome-story">{welcomeIntro}</section>
-          <p role="status">{t('trip.openingTheArchive')}</p>
+      {showWelcome ? (
+        <main id="main-content" tabIndex={-1} className={welcomeStyles.page}>
+          <PageFeedback />
+          <div className={welcomeStyles.hero}>
+            <div>
+              <h1>{t('onboarding.homeHeading')}</h1>
+              <p className={welcomeStyles.lead}>{t('onboarding.homeLead')}</p>
+              <div className={welcomeStyles.actions}>
+                <CreateTripLink source="home" className="primary">
+                  {t('onboarding.createTrip')}
+                </CreateTripLink>
+                <a
+                  className="secondary"
+                  href="#trip-example"
+                  onClick={() => trackGoal('onboarding_example_opened')}
+                >
+                  {t('onboarding.viewExample')}
+                </a>
+                <a
+                  className="text-button"
+                  href="#welcome-auth"
+                  onClick={() => {
+                    setVerificationEmail('');
+                    setRegister(false);
+                  }}
+                >
+                  {t('auth.signIn')}
+                </a>
+              </div>
+              <a className={welcomeStyles.guide} href="/guide" hrefLang="ru">
+                {t('seo.home.guide')}
+              </a>
+            </div>
+            <TripExample />
+          </div>
+          <section
+            id="welcome-auth"
+            tabIndex={-1}
+            className={`auth panel ${welcomeStyles.auth}`}
+          >
+            {bootFailed ? (
+              <>
+                <h2>{t('trip.couldNotOpenTheArchive')}</h2>
+                <p>{t('trip.couldNotReachTheServerYourSign')}</p>
+                <button
+                  className="secondary"
+                  onClick={() => window.location.reload()}
+                >
+                  {t('common.retry')}
+                </button>
+              </>
+            ) : ready ? (
+              <>
+                <LogoMark className="auth-logo" />
+                <h2>{register ? t('trip.welcome') : t('trip.goodToSeeYou')}</h2>
+                {!verificationEmail && (
+                  <p className="muted">
+                    {register
+                      ? t('trip.soManyPlacesStillToDiscover')
+                      : t('trip.signInToReturnToYourStories')}
+                  </p>
+                )}
+                {authForm}
+              </>
+            ) : (
+              <p role="status">{t('trip.openingTheArchive')}</p>
+            )}
+          </section>
         </main>
       ) : !ready ? (
         <main id="main-content" tabIndex={-1} className="loading">
@@ -116,6 +191,12 @@ function ArchiveContent(props: ArchiveProps) {
           <PageFeedback />
           <span className="eyebrow">{t('trip.goodJourneysAreShared')}</span>
           <h1>{invitation?.title || t('trip.tripInvitation')}</h1>
+          {!invitation && (
+            <>
+              <p>{t('onboarding.inviteUnavailable')}</p>
+              <a href="/">{t('trip.goHome')}</a>
+            </>
+          )}
           {invitation && (
             <p>
               {t(
@@ -153,36 +234,6 @@ function ArchiveContent(props: ArchiveProps) {
               </div>
             </>
           )}
-        </main>
-      ) : !user && !guest ? (
-        <main id="main-content" tabIndex={-1} className="welcome">
-          <PageFeedback />
-          <section className="welcome-story">
-            <span className="eyebrow">{t('trip.yourTripsYourStories')}</span>
-            {welcomeIntro}
-            <WelcomeSlideshow />
-            <div className="welcome-details">
-              <span>
-                <Icon name="cloud" />
-                {t('trip.originalsStayOnYourDrive')}
-              </span>
-              <span>
-                <Icon name="users" />
-                {t('trip.travelTogether')}
-              </span>
-            </div>
-          </section>
-          <section className="auth panel">
-            <LogoMark className="auth-logo" />
-            <span className="eyebrow">{t('trip.startYourCollection')}</span>
-            <h2>{register ? t('trip.welcome') : t('trip.goodToSeeYou')}</h2>
-            <p className="muted">
-              {register
-                ? t('trip.soManyPlacesStillToDiscover')
-                : t('trip.signInToReturnToYourStories')}
-            </p>
-            {authForm}
-          </section>
         </main>
       ) : guest && !trip ? (
         <main id="main-content" tabIndex={-1} className="invite-page">
@@ -232,6 +283,7 @@ function ArchiveContent(props: ArchiveProps) {
               />
               {trip.role === 'member' && (
                 <span className="pill">
+                  {trip.canManage && <>{t('trip.manager')} · </>}
                   {t('trip.yourDates')}{' '}
                   {date(trip.participationStart || trip.from)} —{' '}
                   {date(trip.participationEnd || trip.to)}
@@ -239,7 +291,7 @@ function ArchiveContent(props: ArchiveProps) {
               )}
             </div>
             <div className="trip-heading-side">
-              {isOwner && (
+              {canManageTrip && (
                 <button
                   type="button"
                   className="secondary trip-publish-button"
@@ -298,22 +350,7 @@ function ArchiveContent(props: ArchiveProps) {
                 <FeedbackButton
                   className="text-button"
                   disabled={busy || archive.importing}
-                  onClick={() =>
-                    void action(async () => {
-                      const result = await api(
-                        'trips/' + trip.id + '/sync',
-                        'POST',
-                      );
-                      await refresh();
-                      setNotice(
-                        t(
-                          result.failed
-                            ? 'trip.somePhotosCouldNotBeLoadedPlease'
-                            : 'sync.queued',
-                        ),
-                      );
-                    })
-                  }
+                  onClick={() => retryTripImport(archive)}
                 >
                   <Icon name="refresh" size={16} />
                   {t('trip.loadNewPhotos')}
@@ -358,6 +395,13 @@ function ArchiveContent(props: ArchiveProps) {
             <FrameReviewTab key={trip.id} archive={archive} />
           )}
           <SettingsTab archive={archive} />
+          {guest && (
+            <div className={welcomeStyles.guestAction}>
+              <CreateTripLink source="guest">
+                {t('onboarding.createOwnTrip')}
+              </CreateTripLink>
+            </div>
+          )}
         </main>
       )}
       <SiteFooter />
@@ -368,7 +412,7 @@ function ArchiveContent(props: ArchiveProps) {
       )}
       {modal === 'share' && <LeaveDialog archive={archive} />}
       {modal === 'leave' && <ShareDialog archive={archive} />}
-      {modal === 'publish' && trip && isOwner && (
+      {modal === 'publish' && trip && canManageTrip && (
         <PublishDialog archive={archive} />
       )}
       {activeMedia && <MediaDialog archive={archive} />}

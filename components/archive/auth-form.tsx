@@ -1,6 +1,16 @@
 'use client';
 
-import { registrationPasswordPattern } from '../../lib/password-policy';
+import {
+  registrationPasswordErrors,
+  registrationPasswordMaxLength,
+  registrationPasswordMinLength,
+  registrationPasswordPattern,
+} from '../../lib/password-policy';
+import {
+  createTripEntry,
+  createTripResetEntry,
+  createTripSignInEntry,
+} from '../../lib/trip-entry';
 import { useLocale } from '@/components/appearance';
 import { api } from '../api';
 import { FeedbackForm, FeedbackButton, Field } from '../feedback';
@@ -20,7 +30,16 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
     action,
     auth,
     invite,
+    createTripIntent,
+    startRegistration,
   } = archive;
+  const oauthReturn = invite
+    ? '/join/' + invite
+    : createTripIntent
+      ? register
+        ? createTripEntry
+        : createTripSignInEntry
+      : '/';
 
   if (verificationEmail)
     return (
@@ -30,8 +49,15 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
           <p>
             <strong>{verificationEmail}</strong>
           </p>
-          <p>{t('trip.verifyYourEmailUsingTheLinkIn')}</p>
+          <p>
+            {t(
+              createTripIntent
+                ? 'auth.verifyEmailToCreateTrip'
+                : 'trip.verifyYourEmailUsingTheLinkIn',
+            )}
+          </p>
         </div>
+        <p className="fine">{t('auth.verificationResendHint')}</p>
         <FeedbackButton
           type="button"
           className="secondary"
@@ -40,6 +66,7 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
             void action(async () => {
               const result = await api('auth/resend-verification', 'POST', {
                 email: verificationEmail,
+                ...(createTripIntent && { createTrip: true }),
               });
               setNotice(result.message);
             })
@@ -66,6 +93,13 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
         key={register ? 'register' : 'login'}
         onSubmit={auth}
         className="stack"
+        validateField={(input) => {
+          if (!register || input.name !== 'password') return undefined;
+          if (!input.value) return '';
+          return registrationPasswordErrors(input.value)
+            .map(({ key, params }) => t(key, params) + '.')
+            .join(' ');
+        }}
       >
         {register && (
           <Field
@@ -90,8 +124,8 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
           label={t('auth.password')}
           name="password"
           type="password"
-          minLength={register ? 6 : undefined}
-          maxLength={register ? 72 : 128}
+          minLength={register ? registrationPasswordMinLength : undefined}
+          maxLength={register ? registrationPasswordMaxLength : 128}
           pattern={register ? registrationPasswordPattern : undefined}
           hint={
             register
@@ -107,7 +141,7 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
             name="passwordConfirmation"
             type="password"
             autoComplete="new-password"
-            maxLength={72}
+            maxLength={registrationPasswordMaxLength}
             required
           />
         )}
@@ -129,7 +163,10 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
             : t('trip.newHereCreateAnAccount')}
         </FeedbackButton>
         {!register && (
-          <a className="text-button centered" href="/reset-password">
+          <a
+            className="text-button centered"
+            href={createTripIntent ? createTripResetEntry : '/reset-password'}
+          >
             {t('reset.forgot')}
           </a>
         )}
@@ -137,9 +174,9 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
           <a
             className="secondary centered"
             href={
-              '/api/auth/yandex?returnTo=' +
-              encodeURIComponent(invite ? '/join/' + invite : '/')
+              '/api/auth/yandex?returnTo=' + encodeURIComponent(oauthReturn)
             }
+            onClick={register ? startRegistration : undefined}
           >
             {t('trip.signInWithYandexId')}
           </a>

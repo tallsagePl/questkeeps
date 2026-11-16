@@ -6,7 +6,7 @@ import { hash, id } from './db';
 import { HttpError, fail, currentUser, requireUser } from './access';
 import { queueDueSync } from './source-jobs';
 import { json, appURL } from './api/http';
-import { oauthFailure } from './api/oauth';
+import { oauthCallbackFailure } from './api/oauth';
 import type { RequestContext } from './api/context';
 import { authRoutes } from './api/auth';
 import { followRoutes } from './api/follows';
@@ -16,6 +16,7 @@ import { friendRoutes } from './api/friends';
 import { profileRoutes } from './api/profile';
 import { accountRoutes } from './api/accounts';
 import { tripRoutes } from './api/trips';
+import { claimOnboardingGoals } from './onboarding-goals';
 
 export async function handle(
   req: NextRequest,
@@ -93,6 +94,8 @@ async function dispatch(
       if (result) return result;
     }
     const u = requireUser(req);
+    if (p[0] === 'onboarding-goals' && !p[1] && method === 'POST')
+      return json({ goals: claimOnboardingGoals(u.id) });
     {
       const result = await invitationRoutes({ ...context, u });
       if (result) return result;
@@ -115,19 +118,8 @@ async function dispatch(
     }
     fail(404, 'messages.routeNotFound');
   } catch (error) {
-    if (p[0] === 'auth' && p[1] === 'callback') {
-      const reasons: Record<string, string> = {
-        'messages.authorizationExpiredPleaseSignInAgain': 'session_expired',
-        'errors.linkExistingAccount': 'account_link_required',
-        'messages.disconnectYourCurrentYandexAccountInYour':
-          'account_already_linked',
-      };
-      const reason =
-        error instanceof HttpError
-          ? reasons[error.translation?.key || ''] || 'unknown'
-          : 'unknown';
-      return oauthFailure(reason, currentUser(req) ? 'link' : 'login');
-    }
+    if (p[0] === 'auth' && p[1] === 'callback')
+      return oauthCallbackFailure(error, currentUser(req) ? 'link' : 'login');
     if (req.signal.aborted && req.signal.reason?.name !== 'TimeoutError')
       return new Response(null, { status: 499 });
     if (error instanceof Error && error.name === 'TimeoutError')

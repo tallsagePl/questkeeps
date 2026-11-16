@@ -2,7 +2,7 @@
 
 import { trackGoal } from '@/lib/analytics';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { ConfirmedPlace, MediaItem } from '../../lib/contracts';
 import { isAreaPlace } from '../../lib/place-kind';
 import { useLocale } from '@/components/appearance';
@@ -12,8 +12,126 @@ import MediaPreview from '../media-preview';
 import TripDayCalendar from '../trip-day-calendar';
 import { FavoriteButton } from '../media-controls';
 import { FeedbackButton } from '../feedback';
+import { openSourcePicker, retryTripImport } from './source-actions';
 import { type ArchiveController } from './use-archive';
 import { date, Icon, TravelMap } from './shared';
+
+function GalleryEmpty({ archive }: { archive: ArchiveController }) {
+  const { t } = useLocale();
+  const { filter, guest, importing, isOwner, busy, yandex } = archive;
+  const data = archive.data!;
+  const status = data.importStatus;
+  let title = t('trip.everyStoryStartsWithAFirstPhoto');
+  let description = t('trip.connectAYandexDiskFolderPhotosAnd');
+  let next: ReactNode;
+
+  if (filter === 'favorites') {
+    title = t('trip.noFavoritesYet');
+    description = t('trip.starFramesToCollectThemHereAlso');
+  } else if (data.media.length) {
+    title = t('trip.noPhotosMatchTheseFiltersYet');
+    description = t('trip.changeTheFilterOrChooseAnotherDay');
+  } else if (guest) {
+    description = t('trip.thisTripHasNoPublishedPhotosYet');
+  } else if (importing || status?.metadataWaiting) {
+    title = t('trip.gatheringYourTripPhotos');
+    description = t('trip.yourFolderIsConnectedPhotosAndVideos');
+    next = (
+      <p className="analysis-status" role="status">
+        {importing && <span className="spinner" />}
+        {t(importing ? 'trip.synchronizing' : 'sync.metadataRetry')}
+      </p>
+    );
+  } else if (status?.pendingApproval) {
+    title = t('trip.waitingForOwnerApproval');
+    description = t(
+      isOwner
+        ? 'archive.approveImportHint'
+        : 'trip.theFolderHasBeenAddedPhotosWill',
+    );
+    if (isOwner)
+      next = (
+        <FeedbackButton
+          className="secondary"
+          onClick={() => {
+            archive.openTab('settings');
+            requestAnimationFrame(() =>
+              document.getElementById('trip-sources-heading')?.focus(),
+            );
+          }}
+        >
+          {t('archive.reviewFolders')}
+        </FeedbackButton>
+      );
+  } else if (status?.disconnected) {
+    const canReconnect = status.canReconnect && yandex;
+    title = t('common.yandexAccountDisconnected');
+    description = t(
+      canReconnect
+        ? 'archive.reconnectImportHint'
+        : 'archive.disconnectedImportHint',
+    );
+    if (canReconnect)
+      next = (
+        <a
+          className="secondary"
+          href={
+            '/api/auth/yandex?' +
+            new URLSearchParams({
+              intent: 'link',
+              returnTo: '/?trip=' + data.trip.id,
+            })
+          }
+        >
+          {t('messages.reconnectYourYandexAccount')}
+        </a>
+      );
+  } else if (status?.failed) {
+    const canRetry = status.canRetry ?? isOwner;
+    title = t('trip.couldNotSynchronizeTheFolder');
+    description = t(
+      canRetry ? 'archive.retryImportHint' : 'archive.failedImportHint',
+    );
+    if (canRetry)
+      next = (
+        <FeedbackButton
+          className="secondary"
+          disabled={busy}
+          onClick={() => retryTripImport(archive)}
+        >
+          <Icon name="refresh" />
+          {t('archive.retryImport')}
+        </FeedbackButton>
+      );
+  } else {
+    if (status?.sourceCount) {
+      title = t('trip.folderConnected');
+      description = t('trip.noPhotosWereFoundInTheFolder');
+    }
+    next = (
+      <FeedbackButton
+        className="secondary"
+        onClick={() => openSourcePicker(archive)}
+      >
+        <Icon name="cloud" />
+        {t(
+          status?.sourceCount
+            ? 'createTrip.chooseAYandexDiskFolder'
+            : 'trip.connectFolder',
+        )}
+      </FeedbackButton>
+    );
+  }
+
+  return (
+    <div className="empty panel">
+      <Icon name="photo" size={46} />
+      <h2>{title}</h2>
+      <p>{description}</p>
+      {next}
+    </div>
+  );
+}
 
 export default function GalleryTab({
   archive,
@@ -39,7 +157,6 @@ export default function GalleryTab({
     setDay,
     guest,
     loadTrip,
-    importing,
     openTab,
     visible,
     discoveredPlaces,
@@ -395,69 +512,7 @@ export default function GalleryTab({
               })}
             </div>
           ) : (
-            <div className="empty panel">
-              <Icon name="photo" size={46} />
-              <h2>
-                {filter === 'favorites'
-                  ? t('trip.noFavoritesYet')
-                  : data?.media.length
-                    ? t('trip.noPhotosMatchTheseFiltersYet')
-                    : !guest && data?.importStatus?.sourceCount
-                      ? t(
-                          importing
-                            ? 'trip.gatheringYourTripPhotos'
-                            : data.importStatus.disconnected
-                              ? 'common.yandexAccountDisconnected'
-                              : data.importStatus.failed
-                                ? 'trip.couldNotSynchronizeTheFolder'
-                                : data.importStatus.pendingApproval
-                                  ? 'trip.waitingForOwnerApproval'
-                                  : 'trip.folderConnected',
-                        )
-                      : t('trip.everyStoryStartsWithAFirstPhoto')}
-              </h2>
-              <p>
-                {filter === 'favorites'
-                  ? t('trip.starFramesToCollectThemHereAlso')
-                  : data?.media.length
-                    ? t('trip.changeTheFilterOrChooseAnotherDay')
-                    : guest
-                      ? t('trip.thisTripHasNoPublishedPhotosYet')
-                      : data?.importStatus?.sourceCount
-                        ? t(
-                            importing
-                              ? 'trip.yourFolderIsConnectedPhotosAndVideos'
-                              : data.importStatus.disconnected
-                                ? 'trip.reconnectYandexInYourProfileToAccess'
-                                : data.importStatus.failed
-                                  ? 'trip.theFolderIsConnectedButSynchronizationFailed'
-                                  : data.importStatus.pendingApproval
-                                    ? 'trip.theFolderHasBeenAddedPhotosWill'
-                                    : 'trip.noPhotosWereFoundInTheFolder',
-                          )
-                        : t('trip.connectAYandexDiskFolderPhotosAnd')}
-              </p>
-              {!guest &&
-                !data?.media.length &&
-                (importing ? (
-                  <p className="analysis-status" role="status">
-                    <span className="spinner" />
-                    {t('trip.synchronizing')}
-                  </p>
-                ) : (
-                  <FeedbackButton
-                    className="secondary"
-                    onClick={() => openTab('settings')}
-                  >
-                    <Icon name="cloud" />
-                    {t(
-                      data?.importStatus?.sourceCount
-                        ? 'trip.checkSynchronization'
-                        : 'trip.connectFolder',
-                    )}
-                  </FeedbackButton>
-                ))}
-            </div>
+            <GalleryEmpty archive={archive} />
           )}
         </>
       )}

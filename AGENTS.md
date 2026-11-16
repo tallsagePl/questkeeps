@@ -8,4 +8,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## QuestKeeps team
+
+For substantial work, select the relevant profiles in `.codex/agents/` and follow [the team workflow](docs/TEAM.md). Use a current local Graphify index for cross-cutting code navigation when available, then verify important links in the source.
+
 For every new user-facing feature, review its SEO impact. If it answers a public search need, update the relevant landing page or guide and its internal links, title and description as appropriate. Add new public URLs to the sitemap and verify their rendered metadata. Keep account pages, personal archives, invitations and guest links out of search.

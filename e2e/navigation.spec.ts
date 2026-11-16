@@ -48,6 +48,13 @@ test('back returns from own public profile to settings, then previous page; dire
   await direct.getByRole('button', { name: 'Назад', exact: true }).click();
   await expect(direct).toHaveURL('/');
   await direct.close();
+
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto('/profile');
+  await page.getByRole('button', { name: 'Меню', exact: true }).click();
+  const menu = page.getByRole('region', { name: 'Меню', exact: true });
+  await expect(menu.getByRole('link', { name: 'Путешествия' })).toBeVisible();
+  await expect(menu.locator('.page-back')).toHaveCount(0);
 });
 
 test('trip tabs restore back, forward and after reload; main has no back button', async ({
@@ -59,6 +66,7 @@ test('trip tabs restore back, forward and after reload; main has no back button'
     data: {
       title: 'Navigation trip',
       destination: 'Fixture',
+      description: 'A walk through the city and along the coast.',
       start: '2026-10-10',
       end: '2026-10-18',
     },
@@ -113,22 +121,42 @@ test('trip tabs restore back, forward and after reload; main has no back button'
   await expect(
     nav.getByRole('button', { name: 'Дневник', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 375, height: 667 });
+  const heading = page.locator('.trip-heading');
+  await expect(heading.locator('h1')).toHaveCSS('text-align', 'center');
+  await expect(heading.locator('.trip-description p')).toHaveCSS(
+    'text-align',
+    'center',
+  );
+  await expect(heading.locator('.eyebrow')).toHaveCSS(
+    'justify-content',
+    'center',
+  );
+  await expect(
+    nav.getByRole('button', { name: 'Галерея', exact: true }),
+  ).toHaveCSS('justify-content', 'center');
+  const [hero, share] = await Promise.all([
+    heading.boundingBox(),
+    heading.locator('.trip-publish-button').boundingBox(),
+  ]);
+  const heroCenter = hero!.x + hero!.width / 2;
+  const shareCenter = share!.x + share!.width / 2;
+  expect(Math.abs(heroCenter - shareCenter)).toBeLessThan(1);
   await page.getByRole('button', { name: 'Меню', exact: true }).click();
-  await expect(back).toBeVisible();
+  const menu = page.getByRole('region', { name: 'Меню', exact: true });
+  await expect(menu).toBeVisible();
+  await expect(menu.locator('.page-back')).toHaveCount(0);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
   await page.screenshot({
-    path: 'test-results/header-section-back-mobile.png',
+    path: 'test-results/trip-header-mobile-menu.png',
     fullPage: true,
   });
-  await back.click();
-  await expect(
-    page.getByRole('region', { name: 'Меню', exact: true }),
-  ).toBeHidden();
+  await menu.getByRole('link', { name: 'Путешествия' }).click();
+  await expect(menu).toBeHidden();
   await expect(
     page.getByRole('heading', { name: 'Ваши путешествия.' }),
   ).toBeVisible();

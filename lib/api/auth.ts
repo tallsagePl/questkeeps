@@ -39,6 +39,7 @@ export async function authRoutes({
         .object({
           email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
           language: z.enum(['ru', 'en']).optional(),
+          createTrip: z.boolean().optional(),
         })
         .strict()
         .parse(await body(req));
@@ -57,6 +58,7 @@ export async function authRoutes({
         input.email,
         input.language ||
           (req.headers.get('X-QuestKeeps-Language') === 'en' ? 'en' : 'ru'),
+        input.createTrip,
       );
       return json({ message: 'reset.sent' }, 202);
     }
@@ -116,7 +118,10 @@ export async function authRoutes({
     }
     if (p[1] === 'resend-verification') {
       const input = z
-        .object({ email: z.email().max(254) })
+        .object({
+          email: z.email().max(254),
+          createTrip: z.boolean().optional(),
+        })
         .parse(await body(req));
       const email = input.email.toLowerCase();
       throttle('email:resend:' + hash(email), 3, 3600000);
@@ -126,6 +131,7 @@ export async function authRoutes({
           user.id,
           email,
           req.headers.get('X-QuestKeeps-Language') === 'en' ? 'en' : 'ru',
+          input.createTrip,
         );
       return json({
         message: 'messages.ifTheAddressIsAwaitingVerificationWe',
@@ -162,6 +168,7 @@ export async function authRoutes({
           password: z.string().min(1, 'messages.enterYourPassword').max(128),
           passwordConfirmation: z.string().max(128).optional(),
           name: z.string().trim().min(1).max(80).optional(),
+          createTrip: z.boolean().optional(),
         })
         .parse(await body(req));
       if (
@@ -227,6 +234,7 @@ export async function authRoutes({
               userId,
               input.email,
               req.headers.get('X-QuestKeeps-Language') === 'en' ? 'en' : 'ru',
+              input.createTrip,
             );
         }).immediate();
         u = one('SELECT * FROM users WHERE id=?', userId);

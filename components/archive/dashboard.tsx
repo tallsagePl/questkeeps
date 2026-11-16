@@ -5,7 +5,6 @@ import { useLocale } from '@/components/appearance';
 import Friends from '../friends';
 import TripCover from '../trip-cover';
 import FollowedTrips from '../followed-trips';
-import { LogoMark } from '../brand';
 import { FeedbackButton, PageFeedback } from '../feedback';
 import { type ArchiveController } from './use-archive';
 import { period, Icon } from './shared';
@@ -31,7 +30,13 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
               {t('trip.yourTravels')}
               <span className="brand-dot">.</span>
             </h1>
-            <p>{t('trip.longJourneysAndLittleDiscoveriesAllIn')}</p>
+            <p>
+              {t(
+                trips.length
+                  ? 'trip.longJourneysAndLittleDiscoveriesAllIn'
+                  : 'archive.firstTripHint',
+              )}
+            </p>
           </div>
           <FeedbackButton
             className="primary"
@@ -41,14 +46,13 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
             {t('trip.newTrip')}
           </FeedbackButton>
         </div>
-        {user && <Memories key={'memories:' + user.id} userId={user.id} />}
-        {user && <Friends key={user.id} viewerId={user.id} compact />}
-        {user && <FollowedTrips key={'follows:' + user.id} userId={user.id} />}
-        <div className="section-line">
-          <span>{t('trip.allTrips')}</span>
-          <span>{String(trips.length).padStart(2, '0')}</span>
-        </div>
-        {trips.length ? (
+        {trips.length > 0 && (
+          <div className="section-line">
+            <span>{t('trip.allTrips')}</span>
+            <span>{String(trips.length).padStart(2, '0')}</span>
+          </div>
+        )}
+        {trips.length > 0 && (
           <div className="trip-grid">
             {trips.map((trip, index) => (
               <FeedbackButton
@@ -80,31 +84,10 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
               </FeedbackButton>
             ))}
           </div>
-        ) : (
-          <section className="empty-collection">
-            <div className="empty-art">
-              <LogoMark className="empty-logo" />
-              <span className="orbit orbit-one" />
-              <span className="orbit orbit-two" />
-            </div>
-            <span className="eyebrow">
-              {t('trip.theFirstPageOfYourArchive')}
-            </span>
-            <h2>{t('trip.whereShallWeGo')}</h2>
-            <p>
-              {t('trip.createATripChooseAYandexDisk')}
-              <br />
-              {t('trip.andInviteThePeopleYouWantTo')}
-            </p>
-            <FeedbackButton
-              className="secondary"
-              onClick={() => setModal('create')}
-            >
-              {t('trip.createYourFirstTrip')}
-              <Icon name="arrow" />
-            </FeedbackButton>
-          </section>
         )}
+        {user && <Memories key={'memories:' + user.id} userId={user.id} />}
+        {user && <Friends key={user.id} viewerId={user.id} compact />}
+        {user && <FollowedTrips key={'follows:' + user.id} userId={user.id} />}
         <aside className="archive-note">
           <Icon name="cloud" />
           <div>

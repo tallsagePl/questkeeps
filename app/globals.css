@@ -639,13 +639,6 @@ select {
   background: #e2dedf;
   color: #a38e98;
 }
-.trip-number {
-  position: absolute;
-  top: 19px;
-  left: 23px;
-  font-size: 0.875rem;
-  letter-spacing: 2px;
-}
 .destination-art {
   position: absolute;
   bottom: 20px;
@@ -2002,9 +1995,6 @@ footer > span:last-child {
 .trip-art > svg {
   opacity: 0.8;
 }
-.trip-number {
-  font-size: 0.875rem;
-}
 .trip-card-body .eyebrow {
   letter-spacing: 0.6px;
 }
@@ -2048,6 +2038,14 @@ footer > span:last-child {
 }
 .status.approved {
   color: var(--accent);
+  background: var(--success-bg);
+}
+.status.guest-link-status {
+  color: var(--muted);
+  background: var(--soft);
+}
+.status.guest-link-status[data-active='true'] {
+  color: var(--success-ink);
   background: var(--success-bg);
 }
 .danger,
@@ -2320,18 +2318,6 @@ footer > span:last-child {
   }
   .viewer-meta > .text-button {
     margin-left: 0;
-  }
-}
-@media (prefers-contrast: more) {
-  :root {
-    --muted: #344b39;
-    --control-line: #365e49;
-    --line: #70856d;
-  }
-  :root[data-theme='dark'] {
-    --muted: #e0eddb;
-    --control-line: #c2d5b8;
-    --line: #a0b797;
   }
 }
 @media (prefers-reduced-transparency: reduce) {

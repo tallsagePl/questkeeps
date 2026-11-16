@@ -12,7 +12,7 @@ import {
   membership,
   owner,
   tripManager,
-  assertDay,
+  assertParticipationDay,
   throttle,
 } from '../access';
 import { disk, normalizePath } from '../yandex';
@@ -48,21 +48,26 @@ export async function collaborationRoutes(
           end: day.optional(),
         })
         .parse(await body(req));
-      const access = tripManager(tid, u.id);
-      const m =
-        one(
-          'SELECT * FROM members WHERE trip_id=? AND user_id=?',
-          tid,
-          input.userId,
-        ) || fail(404, 'messages.memberNotFound');
-      const range = dates.parse({
-        start: input.start || m.start,
-        end: input.end || m.end,
-      });
-      bounds(range, access);
-      const active = input.active ?? !!m.active;
-      const canManage = active && (input.canManage ?? !!m.can_manage);
       db.transaction(() => {
+        const access = tripManager(tid, u.id);
+        const m =
+          one(
+            'SELECT * FROM members WHERE trip_id=? AND user_id=?',
+            tid,
+            input.userId,
+          ) || fail(404, 'messages.memberNotFound');
+        if (
+          access.role !== 'owner' &&
+          (m.can_manage || input.canManage !== undefined)
+        )
+          fail(403, 'messages.thisActionIsOnlyAvailableToThe');
+        const range = dates.parse({
+          start: input.start ?? m.start,
+          end: input.end ?? m.end,
+        });
+        bounds(range, access);
+        const active = input.active ?? !!m.active;
+        const canManage = active && (input.canManage ?? !!m.can_manage);
         run(
           'UPDATE members SET start=?,end=?,active=?,all_photos=?,can_manage=? WHERE trip_id=? AND user_id=?',
           range.start,
@@ -75,31 +80,31 @@ export async function collaborationRoutes(
           tid,
           input.userId,
         );
-      })();
+      }).immediate();
       return json({ ok: true });
     }
   }
   if (p[2] === 'leave' && method === 'POST') {
-    const t = membership(tid, u.id);
-    if (t.role === 'owner')
-      fail(400, 'messages.theOwnerCannotLeaveTheirOwnTrip');
     db.transaction(() => {
+      const access = membership(tid, u.id);
+      if (access.role === 'owner')
+        fail(400, 'messages.theOwnerCannotLeaveTheirOwnTrip');
       run(
         'UPDATE members SET active=0,can_manage=0 WHERE trip_id=? AND user_id=?',
         tid,
         u.id,
       );
-    })();
+    }).immediate();
     return json({ ok: true });
   }
   if (p[2] === 'invitees' && method === 'GET') {
-    tripManager(tid, u.id);
+    const access = tripManager(tid, u.id);
     throttle('trip-invite-search:' + u.id, 60, 60000);
     return json({
       users: findInvitees(
         new URL(req.url).searchParams.get('q') || '',
         tid,
-        u.id,
+        access.owner_id,
       ),
     });
   }
@@ -108,23 +113,30 @@ export async function collaborationRoutes(
     const t = tripManager(tid, u.id);
     bounds(input, t);
     throttle('trip-invite:' + u.id, 30, 60000);
-    if (input.recipientId) {
-      if (input.recipientId === t.owner_id)
-        fail(400, 'messages.youAlreadyOwnThisTrip');
-      sendTripInvitation(tid, u.id, input.recipientId, input);
-      return json({ sent: true });
-    }
-    const raw = token();
-    run(
-      'INSERT INTO invites(hash,trip_id,start,end,expires,used,all_photos) VALUES (?,?,?,?,?,0,?)',
-      hash(raw),
-      tid,
-      input.start,
-      input.end,
-      Date.now() + 7 * 86400000,
-      Number(input.allPhotos),
-    );
-    return json({ url: appURL() + '/join/' + raw });
+    const result = db
+      .transaction(() => {
+        const current = tripManager(tid, u.id);
+        bounds(input, current);
+        if (input.recipientId) {
+          if (input.recipientId === current.owner_id)
+            fail(400, 'messages.youAlreadyOwnThisTrip');
+          sendTripInvitation(tid, u.id, input.recipientId, input);
+          return { sent: true };
+        }
+        const raw = token();
+        run(
+          'INSERT INTO invites(hash,trip_id,start,end,expires,used,all_photos) VALUES (?,?,?,?,?,0,?)',
+          hash(raw),
+          tid,
+          input.start,
+          input.end,
+          Date.now() + 7 * 86400000,
+          Number(input.allPhotos),
+        );
+        return { url: appURL() + '/join/' + raw };
+      })
+      .immediate();
+    return json(result);
   }
   if (p[2] === 'share' && method === 'GET') {
     const trip = tripManager(tid, u.id);
@@ -132,28 +144,24 @@ export async function collaborationRoutes(
     return json({ url: raw ? appURL() + '/s/' + raw : null });
   }
   if (p[2] === 'share' && method === 'POST') {
-    const input = z.object({ enabled: z.boolean() }).parse(await body(req));
-    tripManager(tid, u.id);
-    const raw = input.enabled ? token() : null;
-    run(
-      'UPDATE trips SET share_hash=? WHERE id=?',
-      raw ? hash(raw) : null,
-      tid,
-    );
-    const shared = guestToken({ id: tid, share_hash: raw ? hash(raw) : null });
+    const input = z
+      .object({ enabled: z.boolean(), rotate: z.boolean().optional() })
+      .parse(await body(req));
+    const shared = db
+      .transaction(() => {
+        const trip = tripManager(tid, u.id);
+        if (input.enabled && input.rotate === false && trip.share_hash)
+          return guestToken(trip);
+        const shareHash = input.enabled ? hash(token()) : null;
+        run('UPDATE trips SET share_hash=? WHERE id=?', shareHash, tid);
+        return guestToken({ id: tid, share_hash: shareHash });
+      })
+      .immediate();
     return json({ url: shared ? appURL() + '/s/' + shared : null });
   }
   if (p[2] === 'notes') {
-    const t = membership(tid, u.id);
-    if (method !== 'GET' && t.role === 'member') {
-      t.from = t.participationStart!;
-      t.to = t.participationEnd!;
-    }
     if (p[3] && p[4] === 'replies') {
-      const note =
-        one('SELECT * FROM notes WHERE id=? AND trip_id=?', p[3], tid) ||
-        fail(404, 'messages.entryNotFound');
-      assertDay(note.day, t);
+      const noteId = p[3];
       if (method === 'POST' && !p[5]) {
         const input = z
           .object({
@@ -164,15 +172,16 @@ export async function collaborationRoutes(
           .parse(await body(req));
         const replyId = id();
         db.transaction(() => {
+          const access = membership(tid, u.id);
           const currentNote =
-            one('SELECT * FROM notes WHERE id=? AND trip_id=?', note.id, tid) ||
+            one('SELECT * FROM notes WHERE id=? AND trip_id=?', noteId, tid) ||
             fail(404, 'messages.entryNotFound');
-          assertDay(currentNote.day, t);
+          assertParticipationDay(currentNote.day, access);
           const parent = input.parentId
             ? one(
                 'SELECT * FROM note_replies WHERE id=? AND note_id=?',
                 input.parentId,
-                note.id,
+                noteId,
               )
             : currentNote;
           if (!parent) fail(404, 'errors.replyNotFound');
@@ -182,7 +191,7 @@ export async function collaborationRoutes(
           run(
             'INSERT INTO note_replies(id,note_id,parent_id,user_id,text,created) VALUES (?,?,?,?,?,?)',
             replyId,
-            note.id,
+            noteId,
             input.parentId || null,
             u.id,
             input.text,
@@ -200,14 +209,21 @@ export async function collaborationRoutes(
         );
       }
       if (method === 'DELETE' && p[5] && !p[6]) {
-        const reply =
-          one(
-            'SELECT * FROM note_replies WHERE id=? AND note_id=?',
-            p[5],
-            note.id,
-          ) || fail(404, 'errors.replyNotFound');
-        if (reply.user_id !== u.id) fail(403, 'errors.deleteOwnReplies');
-        run("UPDATE note_replies SET text='',deleted=1 WHERE id=?", reply.id);
+        db.transaction(() => {
+          const access = membership(tid, u.id);
+          const note =
+            one('SELECT * FROM notes WHERE id=? AND trip_id=?', noteId, tid) ||
+            fail(404, 'messages.entryNotFound');
+          assertParticipationDay(note.day, access);
+          const reply =
+            one(
+              'SELECT * FROM note_replies WHERE id=? AND note_id=?',
+              p[5],
+              noteId,
+            ) || fail(404, 'errors.replyNotFound');
+          if (reply.user_id !== u.id) fail(403, 'errors.deleteOwnReplies');
+          run("UPDATE note_replies SET text='',deleted=1 WHERE id=?", reply.id);
+        }).immediate();
         return json({ ok: true });
       }
     }
@@ -215,25 +231,28 @@ export async function collaborationRoutes(
       const input = z
         .object({ day, text: z.string().trim().min(1).max(5000) })
         .parse(await body(req));
-      assertDay(input.day, t);
-      run(
-        'INSERT INTO notes VALUES (?,?,?,?,?)',
-        id(),
-        tid,
-        u.id,
-        input.day,
-        input.text,
-      );
+      db.transaction(() => {
+        assertParticipationDay(input.day, membership(tid, u.id));
+        run(
+          'INSERT INTO notes VALUES (?,?,?,?,?)',
+          id(),
+          tid,
+          u.id,
+          input.day,
+          input.text,
+        );
+      }).immediate();
       return json({ ok: true }, 201);
     }
     if (method === 'DELETE' && p[3] && !p[4]) {
-      const n =
-        one('SELECT * FROM notes WHERE id=? AND trip_id=?', p[3], tid) ||
-        fail(404, 'messages.entryNotFound');
-      assertDay(n.day, t);
-      if (n.user_id !== u.id)
-        fail(403, 'messages.youCanOnlyDeleteYourOwnEntries');
       db.transaction(() => {
+        const access = membership(tid, u.id);
+        const n =
+          one('SELECT * FROM notes WHERE id=? AND trip_id=?', p[3], tid) ||
+          fail(404, 'messages.entryNotFound');
+        assertParticipationDay(n.day, access);
+        if (n.user_id !== u.id)
+          fail(403, 'messages.youCanOnlyDeleteYourOwnEntries');
         // Keep other participants' replies when the author removes the original text.
         if (one('SELECT id FROM note_replies WHERE note_id=? LIMIT 1', n.id))
           run("UPDATE notes SET text='' WHERE id=?", n.id);

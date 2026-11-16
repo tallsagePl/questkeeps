@@ -548,7 +548,7 @@ test('new media and accepted friendship notifications survive sessions and are a
   );
 });
 
-test('a manager can delegate trip administration and loses it immediately on revocation', async () => {
+test('only owners delegate trip management and revocation immediately removes manager rights', async () => {
   const f = fixture();
   const trip = 'trips/' + f.trip;
   for (const user of [f.person, f.other]) {
@@ -575,8 +575,20 @@ test('a manager can delegate trip administration and loses it immediately on rev
   );
   assert.equal(
     (await changeManager(f.personCookie, f.other, true)).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(
+        trip + '/members',
+        f.personCookie,
+        { userId: f.other, allPhotos: true },
+        'PATCH',
+      )
+    ).status,
     200,
   );
+  assert.equal((await changeManager(f.ownerCookie, f.other, true)).status, 200);
   assert.equal(
     (await request(trip + '/invite', f.otherCookie, dates)).status,
     200,
@@ -591,6 +603,28 @@ test('a manager can delegate trip administration and loses it immediately on rev
 
   assert.equal(
     (await changeManager(f.personCookie, f.other, false)).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(
+        trip + '/members',
+        f.personCookie,
+        { userId: f.other, active: false },
+        'PATCH',
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(
+        trip + '/members',
+        f.ownerCookie,
+        { userId: f.other, canManage: false, allPhotos: false },
+        'PATCH',
+      )
+    ).status,
     200,
   );
   assert.equal(
@@ -601,4 +635,16 @@ test('a manager can delegate trip administration and loses it immediately on rev
   const member = await (await request(trip, f.otherCookie)).json();
   assert.equal(member.trip.canManage, false);
   assert.equal(member.trip.from, dates.start);
+  assert.equal(
+    (
+      await request(
+        trip + '/members',
+        f.personCookie,
+        { userId: f.other, active: false },
+        'PATCH',
+      )
+    ).status,
+    200,
+  );
+  assert.equal((await request(trip, f.otherCookie)).status, 403);
 });

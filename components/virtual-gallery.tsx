@@ -24,6 +24,12 @@ type Layout = {
   totalHeight: number;
 };
 
+function cellActions(cell: HTMLElement | null | undefined) {
+  return Array.from(
+    cell?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') || [],
+  ).filter((button) => button.tabIndex >= 0);
+}
+
 export default function VirtualGallery<T>({
   items,
   itemKey,
@@ -52,7 +58,9 @@ export default function VirtualGallery<T>({
   } | null>(null);
   const pendingScroll = useRef(0);
   const retainedKeys = useRef(new Set<string>());
-  const pendingFocus = useRef<number | null>(null);
+  const pendingFocus = useRef<{ index: number; lastAction: boolean } | null>(
+    null,
+  );
   const requestedJump = useRef<string | null>(null);
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
   useLayoutEffect(() => {
@@ -153,10 +161,10 @@ export default function VirtualGallery<T>({
       cancelAnimationFrame(frame);
     };
   }, [items.length, resetKey]);
-  function jumpTo(target: number) {
+  function jumpTo(target: number, lastAction = false) {
     if (!layout || !root.current) return;
     setHighlightedKey(itemKey(items[target]));
-    pendingFocus.current = target;
+    pendingFocus.current = { index: target, lastAction };
     const pitch = layout.height + layout.gap;
     const rows = Math.ceil(items.length / layout.columns);
     const row = Math.floor(target / layout.columns);
@@ -199,10 +207,14 @@ export default function VirtualGallery<T>({
       window.scrollBy({ top: pendingScroll.current, behavior: 'instant' });
       pendingScroll.current = 0;
     }
-    if (pendingFocus.current === null) return;
-    const button = root.current?.querySelector<HTMLElement>(
-      '[data-media-index="' + pendingFocus.current + '"] .photo-card',
+    const target = pendingFocus.current;
+    if (!target) return;
+    const cell = root.current?.querySelector<HTMLElement>(
+      '[data-media-index="' + target.index + '"]',
     );
+    const button = target.lastAction
+      ? cellActions(cell).at(-1)
+      : cell?.querySelector<HTMLButtonElement>('.photo-card');
     if (button) {
       button.focus({ preventScroll: true });
       pendingFocus.current = null;
@@ -255,7 +267,7 @@ export default function VirtualGallery<T>({
                       ? -1
                       : 1
                     : 0;
-        let target =
+        const target =
           event.key === 'Home'
             ? 0
             : event.key === 'End'
@@ -263,10 +275,14 @@ export default function VirtualGallery<T>({
               : index + delta;
         if (!delta && event.key !== 'Home' && event.key !== 'End') return;
         if (target < 0 || target >= items.length) return;
-        // Normal Tab navigation can handle neighbors that are already mounted.
-        if (event.key === 'Tab' && target >= first && target < last) return;
+        if (event.key === 'Tab') {
+          if (target >= first && target < last) return;
+          const actions = cellActions(cell);
+          const edge = event.shiftKey ? actions[0] : actions.at(-1);
+          if (event.target !== edge) return;
+        }
         event.preventDefault();
-        jumpTo(target);
+        jumpTo(target, event.key === 'Tab' && event.shiftKey);
       }}
     >
       {mountedIndices.map((index) => {

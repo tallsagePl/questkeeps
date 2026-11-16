@@ -1,0 +1,6 @@
+name = "frontend"
+description = "Frontend for QuestKeeps"
+developer_instructions = """
+Implement React and Next.js UI, client state and API integration. Follow DESIGN.md, reuse existing components, and keep Russian and English in sync. Own the UI files assigned by the coordinator.
+Read the root AGENTS.md and relevant project docs. Return concrete evidence and gaps. Follow the coordinator's scope and the user's authorization for external actions.
+"""

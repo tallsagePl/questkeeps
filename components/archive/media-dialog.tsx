@@ -46,7 +46,8 @@ export default function MediaDialog({
     setSuggestions,
     placesOpen,
     setPlacesOpen,
-    isOwner,
+    canManageTrip,
+    contributionRange,
     guest,
     setNotice,
     action,
@@ -66,6 +67,10 @@ export default function MediaDialog({
   } = archive;
   const data = archive.data!;
   const activeMedia = archive.activeMedia!;
+  const isAuthor = !guest && activeMedia.user_id === user?.id;
+  const canEditMedia =
+    isAuthor && includesDate(activeMedia.taken, contributionRange);
+  const canManagePlaces = canManageTrip || canEditMedia;
   const reload = useMediaReload(activeMedia.id);
   return (
     <>
@@ -77,7 +82,7 @@ export default function MediaDialog({
             title={
               activeMedia.title || activeMedia.name.replace(/\.[^.]+$/, '')
             }
-            editable={!guest && activeMedia.user_id === user?.id}
+            editable={canEditMedia && !activeMedia.hidden}
             onSave={(title) => {
               setActiveMedia((old) => (old ? { ...old, title } : old));
               setData((old) =>
@@ -96,9 +101,7 @@ export default function MediaDialog({
         wide
         fullscreen
         headerCenter={
-          !guest &&
-          activeMedia.user_id === user?.id &&
-          activeMedia.kind === 'photo' ? (
+          canEditMedia && activeMedia.kind === 'photo' ? (
             <MediaRotationControls
               disabled={busy}
               onRotate={(step) =>
@@ -280,7 +283,7 @@ export default function MediaDialog({
                 {t('common.downloadOriginal')}
               </a>
             )}
-            {activeMedia.user_id === user?.id && !guest && (
+            {isAuthor && (
               <MediaVisibilityControls
                 feedback
                 hidden={activeMedia.hidden}
@@ -303,7 +306,7 @@ export default function MediaDialog({
                 }
               />
             )}
-            {!guest && activeMedia.user_id === user?.id && (
+            {canEditMedia && (
               <MediaArchiveDelete
                 key={activeMedia.id}
                 disabled={busy}
@@ -352,63 +355,76 @@ export default function MediaDialog({
                         >
                           <div className="confirmed-place-heading">
                             <strong>{place.title}</strong>
-                            {!guest &&
-                              (isOwner || activeMedia.user_id === user?.id) && (
-                                <PlaceDelete
-                                  mediaId={activeMedia.id}
-                                  placeId={place.id}
-                                  title={place.title}
-                                  onDelete={() => {
-                                    setData((old) =>
-                                      old
-                                        ? {
-                                            ...old,
-                                            places: old.places.filter(
-                                              (item) => item.id !== place.id,
-                                            ),
-                                          }
+                            {canManagePlaces && (
+                              <PlaceDelete
+                                mediaId={activeMedia.id}
+                                placeId={place.id}
+                                title={place.title}
+                                onDelete={({ title }) => {
+                                  setData((old) =>
+                                    old
+                                      ? {
+                                          ...old,
+                                          media:
+                                            title === undefined
+                                              ? old.media
+                                              : old.media.map((photo) =>
+                                                  photo.id === activeMedia.id
+                                                    ? { ...photo, title }
+                                                    : photo,
+                                                ),
+                                          places: old.places.filter(
+                                            (item) => item.id !== place.id,
+                                          ),
+                                        }
+                                      : old,
+                                  );
+                                  if (title !== undefined)
+                                    setActiveMedia((old) =>
+                                      old?.id === activeMedia.id
+                                        ? { ...old, title }
                                         : old,
                                     );
-                                    const pageId = Number(
-                                      new URL(place.url).searchParams.get(
-                                        'curid',
-                                      ),
+                                  const pageId = Number(
+                                    new URL(place.url).searchParams.get(
+                                      'curid',
+                                    ),
+                                  );
+                                  if (pageId)
+                                    setSuggestions((old) =>
+                                      old.some(
+                                        (item) =>
+                                          Number(item.pageid) === pageId,
+                                      )
+                                        ? old
+                                        : [
+                                            ...old,
+                                            {
+                                              pageid: pageId,
+                                              title: place.title,
+                                              dist:
+                                                place.distance ??
+                                                (hasCoordinates(activeMedia)
+                                                  ? distanceMeters(
+                                                      activeMedia.lat,
+                                                      activeMedia.lon,
+                                                      place.lat,
+                                                      place.lon,
+                                                    )
+                                                  : Number.POSITIVE_INFINITY),
+                                            },
+                                          ],
                                     );
-                                    if (pageId)
-                                      setSuggestions((old) =>
-                                        old.some(
-                                          (item) =>
-                                            Number(item.pageid) === pageId,
-                                        )
-                                          ? old
-                                          : [
-                                              ...old,
-                                              {
-                                                pageid: pageId,
-                                                title: place.title,
-                                                dist:
-                                                  place.distance ??
-                                                  (hasCoordinates(activeMedia)
-                                                    ? distanceMeters(
-                                                        activeMedia.lat,
-                                                        activeMedia.lon,
-                                                        place.lat,
-                                                        place.lon,
-                                                      )
-                                                    : Number.POSITIVE_INFINITY),
-                                              },
-                                            ],
-                                      );
-                                    requestAnimationFrame(() =>
-                                      document
-                                        .querySelector<HTMLElement>(
-                                          '.place-tools-toggle',
-                                        )
-                                        ?.focus(),
-                                    );
-                                  }}
-                                />
-                              )}
+                                  requestAnimationFrame(() =>
+                                    document
+                                      .querySelector<HTMLElement>(
+                                        '.place-tools-toggle',
+                                      )
+                                      ?.focus(),
+                                  );
+                                }}
+                              />
+                            )}
                           </div>
                           {activeMedia.lat !== null &&
                             activeMedia.lon !== null && (
@@ -564,8 +580,7 @@ export default function MediaDialog({
                                   {t('common.mFromThePhoto')}
                                 </small>
                               </span>
-                              {(isOwner ||
-                                activeMedia.user_id === user?.id) && (
+                              {canManagePlaces && (
                                 <FeedbackButton
                                   className="text-button"
                                   disabled={busy}
@@ -605,7 +620,7 @@ export default function MediaDialog({
                   </Collapse>
                 </>
               ) : (
-                activeMedia.user_id === user?.id && (
+                canEditMedia && (
                   <LocationForm
                     key={activeMedia.id}
                     busy={busy}
@@ -625,8 +640,16 @@ export default function MediaDialog({
                     })()}
                     onSave={(point) => {
                       void action(async () => {
-                        await api('media/' + activeMedia.id, 'PATCH', point);
-                        setActiveMedia({ ...activeMedia, ...point });
+                        const { title } = await api<{ title?: string | null }>(
+                          'media/' + activeMedia.id,
+                          'PATCH',
+                          point,
+                        );
+                        setActiveMedia((old) =>
+                          old?.id === activeMedia.id
+                            ? { ...old, ...point, title }
+                            : old,
+                        );
                         await refresh();
                       });
                     }}

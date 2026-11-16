@@ -22,7 +22,11 @@ export function resetPending(
   );
 }
 
-export function queuePasswordReset(email: string, language: 'ru' | 'en') {
+export function queuePasswordReset(
+  email: string,
+  language: 'ru' | 'en',
+  createTrip = false,
+) {
   const origin = new URL(process.env.APP_URL || 'http://localhost:3000').origin;
   if (
     !origin.startsWith('https://') &&
@@ -61,7 +65,11 @@ export function queuePasswordReset(email: string, language: 'ru' | 'en') {
         JSON.stringify({
           userId: user.id,
           to: email,
-          url: origin + '/reset-password#token=' + raw,
+          url:
+            origin +
+            '/reset-password#token=' +
+            raw +
+            (createTrip ? '&create=1' : ''),
           resetHash,
           expires,
           language,

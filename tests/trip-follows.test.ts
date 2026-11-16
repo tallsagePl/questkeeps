@@ -154,7 +154,7 @@ test('revocation and rotation end followed access until a new valid link is supp
   );
 });
 
-test('followed media counts exclude hidden, guest-hidden, missing and unapproved media', async () => {
+test('followed media counts match guest date, visibility and source rules', async () => {
   const f = fixture();
   const account = id();
   const source = id();
@@ -180,7 +180,7 @@ test('followed media counts exclude hidden, guest-hidden, missing and unapproved
       'disk:/' + sid,
       approved,
     );
-  for (let n = 0; n < 5; n++)
+  for (let n = 0; n < 6; n++)
     run(
       'INSERT INTO media(id,source_id,trip_id,user_id,resource_id,path,name,mime,kind,taken,date_basis,hidden,hidden_from_guests,missing) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       id(),
@@ -192,7 +192,7 @@ test('followed media counts exclude hidden, guest-hidden, missing and unapproved
       'Photo',
       'image/jpeg',
       'photo',
-      '2026-10-11',
+      n === 5 ? '2026-10-19' : '2026-10-11',
       'manual',
       n === 1 ? 1 : 0,
       n === 2 ? 1 : 0,

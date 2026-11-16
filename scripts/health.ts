@@ -38,6 +38,7 @@ const required = [
   'friend_links',
   'trip_follows',
   'trip_invitations',
+  'onboarding_goals',
   'telegram_state',
   'telegram_feedback',
   'telegram_outbox',

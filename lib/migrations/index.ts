@@ -1,3 +1,4 @@
+import { onboardingGoals } from './017-onboarding-goals';
 import { tripManagers } from './016-trip-managers';
 import { passwordRecovery } from './015-password-recovery';
 import { serviceQueues } from './014-service-queues';
@@ -33,6 +34,7 @@ export const migrations = [
   { version: 14, name: 'service-queues', up: serviceQueues },
   { version: 15, name: 'password-recovery', up: passwordRecovery },
   { version: 16, name: 'trip-managers', up: tripManagers },
+  { version: 17, name: 'onboarding-goals', up: onboardingGoals },
 ];
 
 export function migrate(db: Database.Database) {

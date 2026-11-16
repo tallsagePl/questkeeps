@@ -1,7 +1,7 @@
 import { translate } from '@/lib/i18n/translate';
 import { Suspense } from 'react';
 import Metrika from '@/components/metrika';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './theme.css';
 import './responsive.css';
@@ -15,6 +15,12 @@ export const metadata: Metadata = {
   title: translate('app.title', 'ru'),
   description: translate('app.description', 'ru'),
   robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {

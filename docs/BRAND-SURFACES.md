@@ -15,6 +15,7 @@ Use this inventory whenever changing the logo, colors, typography or product voi
 - Landing/login, About and its screenshot stack, trip gallery, map, journal, participants, profile/friends, guest trip, invitation, verification and error screens all use the shared visual system.
 - `app/privacy/page.tsx`: public RU + EN policy, readable without sign-in or JavaScript. Footer wording is localized, while both policy versions remain visible.
 - `app/icon.svg`, `app/apple-icon.png`, `app/opengraph-image.png`, `app/manifest.webmanifest`: favicon, Apple icon, social preview and install metadata. Check the actual route source when replacing an export.
+- The Bosphorus example uses two CC0 1.0 photographs saved as WebP. [View from Galata Tower by RndmCrs](https://commons.wikimedia.org/wiki/File:View_of_Istanbul_from_Galata_Tower.jpg). [Galata Tower from the waterfront by xxoktayxx](https://commons.wikimedia.org/wiki/File:Galata_tower_view.jpg).
 - `lib/i18n/ru.json` and `en.json`: product copy, navigation and privacy text. Keep keys and meaning aligned.
 
 ## Transactional email

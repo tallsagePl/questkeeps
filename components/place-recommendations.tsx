@@ -53,7 +53,8 @@ export default function PlaceRecommendations({
   places,
   scope,
   userId,
-  isOwner,
+  canManagePlaces,
+  contributionRange,
   previewPath,
   onSelect,
   onAdded,
@@ -67,7 +68,8 @@ export default function PlaceRecommendations({
   places: Place[];
   scope: string;
   userId: string;
-  isOwner: boolean;
+  canManagePlaces: boolean;
+  contributionRange: string;
   previewPath: (photo: Photo) => string;
   onSelect: (id: string) => void;
   onAdded: (place: Place, title?: string) => void;
@@ -199,9 +201,11 @@ export default function PlaceRecommendations({
           !photo.hidden &&
           photo.kind !== 'video' &&
           hasCoordinates(photo) &&
-          (isOwner || photo.user_id === userId),
+          (canManagePlaces ||
+            (photo.user_id === userId &&
+              includesDate(photo.taken, contributionRange))),
       ),
-    [media, isOwner, userId],
+    [media, canManagePlaces, contributionRange, userId],
   );
   const photos = useMemo(
     () => allPhotos.filter((photo) => includesDate(photo.taken, dayRange)),

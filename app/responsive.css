@@ -1,3 +1,30 @@
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+body {
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+body > .social-shell {
+  min-height: 0;
+}
+.skip-link {
+  left: calc(8px + var(--safe-left));
+}
+.skip-link:focus {
+  top: calc(8px + var(--safe-top));
+}
+.welcome-phone-actions {
+  display: none;
+}
+dialog.modal:not(.fullscreen) {
+  inset: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+  width: calc(100% - var(--safe-left) - var(--safe-right) - 32px);
+  max-height: min(90dvh, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 16px));
+}
+
 /* Three density tiers: phone, tablet, laptop. Geometry is also read by virtual feeds. */
 .photo-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -105,6 +132,40 @@
   }
 }
 @media (max-width: 700px) {
+  .welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 24px;
+    padding: 24px 16px 32px;
+  }
+  .welcome-story h1 {
+    font-size: clamp(1.875rem, 7.5vw, 2.5rem);
+    text-wrap: balance;
+  }
+  .welcome-story > .eyebrow {
+    display: none;
+  }
+  .welcome-story > p {
+    margin-block: 14px;
+    font-size: 1rem;
+  }
+  .welcome-phone-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-block: 20px 12px;
+  }
+  .welcome-phone-actions > a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-inline: 14px;
+    text-align: center;
+  }
+  #welcome-auth {
+    scroll-margin-top: calc(12px + var(--safe-top));
+  }
   .topbar {
     height: auto;
     min-height: 0;
@@ -151,6 +212,17 @@
   .trip-heading {
     margin-bottom: 20px;
     gap: 16px;
+    padding-inline: 12px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .trip-heading > div:first-child {
+    width: 100%;
+  }
+  .trip-heading .trip-description,
+  .trip-heading p {
+    margin-inline: auto;
   }
   .trip-heading h1 {
     font-size: clamp(1.875rem, 7.5vw, 2.25rem);
@@ -161,46 +233,70 @@
     line-height: 1.6;
   }
   .trip-heading .eyebrow {
+    justify-content: center;
     font-size: 0.75rem;
     line-height: 1.6;
     letter-spacing: 0.04em;
+  }
+  .trip-heading-side {
+    align-items: center;
+    margin-top: 0;
+  }
+  .trip-heading-side:not(:has(.trip-follow-control, .trip-publish-button)),
+  .trip-heading-side .trip-summary {
+    display: none;
   }
   .tabbar {
     gap: 4px;
     margin-block: 16px;
   }
   .tabbar nav {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 4px;
-    overflow-x: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 134px), 1fr));
+    gap: 0 8px;
     width: 100%;
-    padding-bottom: 4px;
-    scrollbar-width: thin;
-    overscroll-behavior-x: contain;
+    padding-inline: 8px;
+    overflow: visible;
   }
   .tabbar nav button {
-    flex: 0 0 auto;
     min-height: 44px;
-    padding: 10px 12px;
-    white-space: nowrap;
+    padding: 10px 4px;
+    white-space: normal;
+    text-align: center;
+    justify-content: center;
+    overflow-wrap: anywhere;
     font-size: 0.875rem;
     line-height: 1.4;
   }
   .tabbar > .text-button {
+    align-self: center;
     min-height: 44px;
     padding: 8px 0;
     font-size: 0.875rem;
   }
   .archive-refresh {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     width: 100%;
+    text-align: center;
   }
 
   .gallery-toolbar {
+    flex-direction: column;
     gap: 12px 8px;
     margin-block: 16px;
+  }
+  .gallery-toolbar .segmented {
+    justify-content: center;
+  }
+  .gallery-toolbar .trip-day-calendar {
+    margin-inline: 0;
+  }
+  .gallery-toolbar .trip-calendar-popover {
+    inset-inline-start: 50%;
+    inset-inline-end: auto;
+    translate: -50% 0;
+    transform-origin: top center;
   }
   .segmented {
     max-width: 100%;
@@ -358,6 +454,9 @@
     padding: 16px;
     border-radius: 18px;
   }
+  dialog.modal:not(.fullscreen) {
+    width: calc(100% - var(--safe-left) - var(--safe-right) - 16px);
+  }
   .modal-head {
     gap: 12px;
   }
@@ -386,19 +485,8 @@
     gap: 12px 20px;
   }
 
-  .trip-heading-side:not(:has(.trip-follow-control)) {
-    display: none;
-  }
-
   .photo-overlay .photo-caption {
     font-size: 0.8125rem;
-  }
-  .topbar {
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
-  }
-  footer {
-    padding-bottom: max(24px, env(safe-area-inset-bottom));
   }
 }
 @media (pointer: coarse) {
@@ -414,6 +502,9 @@
     min-width: 44px;
     min-height: 44px;
   }
+  .photo-map-trigger {
+    min-height: 44px;
+  }
   .photo-card:hover img {
     transform: none;
   }
@@ -423,13 +514,9 @@
     box-shadow: none;
   }
 }
-@supports (padding: env(safe-area-inset-bottom)) {
-  .back-to-top {
-    bottom: max(20px, env(safe-area-inset-bottom));
-  }
-  .modal {
-    scroll-padding-bottom: max(24px, env(safe-area-inset-bottom));
-  }
+.back-to-top {
+  right: calc(24px + var(--safe-right));
+  bottom: calc(20px + var(--safe-bottom));
 }
 
 /* Header popovers are anchored, non-modal and never dim or lock the page. */
@@ -442,7 +529,7 @@
   top: var(--dropdown-top, 76px);
   margin: 0;
   width: min(380px, calc(100vw - 24px));
-  max-height: calc(100dvh - var(--dropdown-top, 76px) - 12px);
+  max-height: calc(100dvh - var(--dropdown-top, 76px) - var(--safe-bottom) - 12px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 16px;
@@ -496,8 +583,7 @@
   gap: 4px;
   margin-bottom: 16px;
 }
-.header-menu-links a,
-.header-menu-links .page-back {
+.header-menu-links a {
   min-height: 44px;
   padding: 10px 12px;
   color: var(--ink);
@@ -624,7 +710,7 @@
 /* Media owns the viewport; details remain available beneath the full-size frame. */
 .media-title-actions svg { display: none; }
 dialog.modal.fullscreen[open] {
-  --viewer-header-height: calc(64px + env(safe-area-inset-top, 0px));
+  --viewer-header-height: calc(64px + var(--safe-top));
   inset: 0;
   animation: none;
   transition: none;
@@ -646,7 +732,7 @@ dialog.modal.fullscreen[open] {
   flex: 0 0 var(--viewer-header-height);
   height: var(--viewer-header-height);
   min-height: 0;
-  padding: env(safe-area-inset-top, 0px) max(8px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px));
+  padding: var(--safe-top) max(8px, var(--safe-right)) 0 max(12px, var(--safe-left));
   gap: 8px;
   margin: 0;
   border-bottom: 1px solid var(--line);
@@ -733,7 +819,7 @@ dialog.modal.fullscreen[open] {
   object-fit: contain;
 }
 .modal.fullscreen .media-details {
-  padding: 20px max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  padding: 20px max(16px, var(--safe-right)) calc(24px + var(--safe-bottom)) max(16px, var(--safe-left));
 }
 
 /* Desktop gutters scale with the viewport instead of centering a capped column. */
@@ -751,7 +837,7 @@ dialog.modal.fullscreen[open] {
   .trip-page {
     max-width: none;
     width: 100%;
-    padding-inline: max(4px, env(safe-area-inset-left, 0px)) max(4px, env(safe-area-inset-right, 0px));
+    padding-inline: 4px;
   }
   /* Text and standalone actions need breathing room; travel cards stay wide. */
   .dashboard > .page-intro,
@@ -786,7 +872,7 @@ dialog.modal.fullscreen[open] {
   .back-to-top {
     width: 64px;
     height: 64px;
-    right: max(16px, env(safe-area-inset-right));
+    right: calc(16px + var(--safe-right));
   }
   .back-to-top svg { width: 30px; height: 30px; }
 }
@@ -849,7 +935,6 @@ dialog.modal.fullscreen[open] {
   .dashboard-compact .empty-collection p { font-size: 0.9375rem; line-height: 1.5; }
   .dashboard-compact .empty-collection > button { justify-self: start; }
   .dashboard-compact .trip-art { height: clamp(96px, 16dvh, 180px); }
-  .dashboard-compact .trip-number { top: 12px; left: 14px; font-size: 0.75rem; }
   .dashboard-compact .destination-art {
     left: 14px;
     bottom: 12px;
@@ -905,11 +990,11 @@ dialog.modal.fullscreen[open] {
   top: calc((100dvh - var(--viewer-header-height)) / 2 - 22px);
   z-index: 2;
 }
-.modal.fullscreen .place-photo-previous { left: max(8px, env(safe-area-inset-left, 0px)); }
-.modal.fullscreen .place-photo-next { right: max(8px, env(safe-area-inset-right, 0px)); }
+.modal.fullscreen .place-photo-previous { left: max(8px, var(--safe-left)); }
+.modal.fullscreen .place-photo-next { right: max(8px, var(--safe-right)); }
 .modal.fullscreen .place-photo-counter {
   position: absolute;
-  bottom: 12px;
+  bottom: calc(12px + var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%);
   padding: 4px 8px;
@@ -950,7 +1035,7 @@ dialog.modal.fullscreen[open] {
 .profile-settings-panel .profile-identity { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px 20px; align-items: center; }
 .profile-settings-panel .profile-identity > .profile-email { grid-column: 1 / -1; margin: 0; font-size: 14px; }
 
-.public-profile-handle[data-copied="true"] { color: #187346; }
+.public-profile-copy-status { color: var(--success-ink); margin: 0; }
 
 /* Keep shared baselines while allowing generated links and results to grow. */
 @media (min-width: 701px) {
@@ -996,20 +1081,14 @@ dialog.modal.fullscreen[open] {
 .publish-preview textarea { width: 100%; resize: vertical; }
 @media (max-width: 700px) {
   .publish-editor { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .trip-heading-side .trip-publish-button { align-self: flex-start; }
   .publish-preview-empty { min-height: 180px; }
-}
-
-@media (max-width: 700px) {
-  .trip-heading-side:not(:has(.trip-follow-control)):has(.trip-publish-button) { display: flex; align-items: flex-start; }
-  .trip-heading-side .trip-summary { display: none; }
 }
 
 /* Desktop header has its own compact gutters, independent of page content. */
 @media (min-width: 701px) {
   .topbar.site-header {
     position: relative;
-    padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+    padding: 16px;
     min-height: 84px;
     height: auto;
     box-sizing: border-box;
@@ -1074,10 +1153,7 @@ dialog.modal.fullscreen[open] {
 .trip-cover-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .trip-cover-current { animation: trip-cover-fade 280ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
 @keyframes trip-cover-fade { from { opacity: 0; } to { opacity: 1; } }
-.trip-art.has-cover::before { display: none; }
-.trip-art.has-cover::after { inset: 0; width: auto; height: auto; border: 0; border-radius: 0; transform: none; opacity: 1; background: linear-gradient(180deg, #11131a40, transparent 35%, #11131acc); }
-.trip-art.has-cover .trip-number, .trip-art.has-cover .destination-art { color: #fff; z-index: 1; }
-.trip-art.has-cover > svg { display: none; }
+.trip-art.has-cover::before, .trip-art.has-cover::after { display: none; }
 .followed-card.trip-card { padding: 0; }
 .followed-card > a { height: auto; }
 .followed-card .trip-card-body h3 { margin: 0 0 12px; }
@@ -1120,7 +1196,7 @@ dialog.modal.fullscreen[open] {
 @media (max-width:700px) { .cover-photo-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; } .cover-modes label { padding: 10px; } }
 
 /* Keep a clear lane for the fixed back-to-top button, including safe areas. */
-footer.site-footer { padding-inline-end: max(104px, calc(env(safe-area-inset-right, 0px) + 80px)); }
+footer.site-footer { padding-inline-end: 104px; }
 
 .cover-settings .action-status { display: block; margin-top: 12px; }
 

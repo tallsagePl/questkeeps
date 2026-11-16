@@ -20,7 +20,13 @@ import {
 } from 'react';
 import { localizeMessage, type LocalizedMessage } from '@/lib/i18n/translate';
 
-type Fields = Record<string, string | LocalizedMessage>;
+type FieldMessage = string | LocalizedMessage;
+
+type Fields = Record<string, FieldMessage>;
+
+type FieldControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+type ValidateField = (input: FieldControl) => FieldMessage | undefined;
 
 type Failure = {
   scope: string;
@@ -176,9 +182,12 @@ export function FeedbackButton({
 }
 
 function fieldValidation(
-  input: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
-): string | LocalizedMessage {
+  input: FieldControl,
+  validateField?: ValidateField,
+): FieldMessage {
   if (input.disabled || !input.name) return '';
+  const customMessage = input.value ? validateField?.(input) : undefined;
+  if (customMessage !== undefined) return customMessage;
   if (input.required && !input.value.trim())
     return 'validation.fillInThisField';
   if (input instanceof HTMLInputElement) {
@@ -216,8 +225,9 @@ export function FeedbackForm({
   children,
   onSubmit,
   onChange,
+  validateField,
   ...props
-}: FormHTMLAttributes<HTMLFormElement>) {
+}: FormHTMLAttributes<HTMLFormElement> & { validateField?: ValidateField }) {
   const { m } = useLocale();
   const id = useId();
   const feedback = useFeedback();
@@ -280,20 +290,24 @@ export function FeedbackForm({
         id={id}
         noValidate
         onChange={(event) => {
-          const target = event.target as unknown;
-          const name =
+          const target = event.target;
+          const control =
             target instanceof HTMLInputElement ||
             target instanceof HTMLTextAreaElement ||
             target instanceof HTMLSelectElement
-              ? target.name
-              : '';
+              ? target
+              : null;
+          const name = control?.name || '';
           if (feedback.failure?.scope === id) {
+            const message =
+              control && fields[name] ? validateField?.(control) : undefined;
             feedback.setFailure((previous) => {
               if (!previous || previous.scope !== id) return previous;
               const next = {
                 ...previous.fields,
               };
-              delete next[name];
+              if (message) next[name] = message;
+              else delete next[name];
               return Object.keys(next).length
                 ? {
                     ...previous,
@@ -315,7 +329,7 @@ export function FeedbackForm({
               control instanceof HTMLSelectElement ||
               control instanceof HTMLTextAreaElement
             ) {
-              const message = fieldValidation(control);
+              const message = fieldValidation(control, validateField);
               if (message) errors[control.name] = message;
             }
           }

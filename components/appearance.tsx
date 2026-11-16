@@ -78,9 +78,6 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     media.addEventListener('change', changed);
     return () => media.removeEventListener('change', changed);
   }, [theme]);
-  useEffect(() => {
-    document.title = translate('app.title', language);
-  }, [language]);
   const t = useCallback<Translator>(
     (key, params) => translate(key, language, params),
     [language],

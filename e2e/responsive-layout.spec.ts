@@ -174,6 +174,22 @@ for (const screen of screens) {
         page.locator('.photo-card .media-preview[data-state=loaded]').first(),
       ).toBeVisible();
       await capture('header');
+      if (screen.name === 'iphone') {
+        const toolbar = page.locator('.gallery-toolbar');
+        const calendar = toolbar.locator('.calendar-trigger');
+        await expect(toolbar.locator('.trip-day-calendar')).toHaveCSS(
+          'margin-left',
+          '0px',
+        );
+        await calendar.click();
+        const popup = toolbar.getByRole('dialog');
+        await expect(popup).toBeVisible();
+        const bounds = (await popup.boundingBox())!;
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(screen.width);
+        await page.keyboard.press('Escape');
+        await expect(popup).toBeHidden();
+      }
       const grid = page.locator('.virtual-gallery');
       await grid.evaluate((el) =>
         window.scrollTo({

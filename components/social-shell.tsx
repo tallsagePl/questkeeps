@@ -14,6 +14,7 @@ import UserAvatar, { type ProfileUser } from './user-avatar';
 import { api } from './api';
 import { clearPreviewCache } from '../lib/preview-cache';
 import { migratePrivateStorage } from '../lib/browser-storage';
+import { createTripSignInEntry } from '../lib/trip-entry';
 
 export function useViewer() {
   const [user, setUser] = useState<ProfileUser | null>(null);
@@ -46,14 +47,16 @@ export function useViewer() {
   return { user, setUser, ready, error };
 }
 
-export async function signOut() {
+export async function signOut(
+  destination: '/' | typeof createTripSignInEntry = '/',
+) {
   await api('auth/logout', 'POST', {});
   window.dispatchEvent(new Event('questkeeps:session-ending'));
   announceSessionChange();
   try {
     await clearPreviewCache();
   } finally {
-    window.location.replace('/');
+    window.location.replace(destination);
   }
 }
 
@@ -76,7 +79,6 @@ export function SocialShell({
       </a>
       <header className="topbar social-topbar site-header">
         <HeaderMenu
-          back
           logout={
             user ? (
               <button

@@ -21,6 +21,7 @@ export function queueVerification(
   userId: string,
   email: string,
   language: 'ru' | 'en' = 'ru',
+  createTrip = false,
 ) {
   const raw = token();
   const expires = Date.now() + 86400000;
@@ -53,7 +54,11 @@ export function queueVerification(
           userId,
           language,
           to: email,
-          url: origin + '/verify-email#token=' + raw,
+          url:
+            origin +
+            '/verify-email#token=' +
+            raw +
+            (createTrip ? '&create=1' : ''),
           expires,
         }),
       ),

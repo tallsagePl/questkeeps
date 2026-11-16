@@ -4,9 +4,11 @@ import SmoothDetails, { Collapse } from './smooth-details';
 import { routeLabel, type RouteCity } from '@/lib/route-label';
 import { useLocale } from '@/components/appearance';
 import type { ApplicationMessage } from '../lib/contracts';
-import { useState, useEffect, useRef, useId } from 'react';
+import { useState, useEffect, useRef, useId, useCallback } from 'react';
 import { api } from './api';
-import DestinationPicker from './destination-picker';
+import DestinationPicker, {
+  type DestinationSelection,
+} from './destination-picker';
 import {
   readFolderPages,
   mergeFolders,
@@ -25,6 +27,25 @@ type Source = {
   path: string;
 };
 
+type CreateTripDraft = {
+  title: string;
+  description: string;
+  start: string;
+  end: string;
+  destination?: DestinationSelection;
+  autoDates: boolean;
+  autoDestination: boolean;
+};
+
+function readDraft(key: string): CreateTripDraft | undefined {
+  try {
+    const saved = sessionStorage.getItem(key);
+    return saved ? JSON.parse(saved) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 type Inference = {
   photoCount: number;
   videoCount?: number;
@@ -41,16 +62,20 @@ type Inference = {
 export default function CreateTrip({
   busy,
   yandexEnabled,
+  draftKey,
   onCreate,
 }: {
   busy: boolean;
   yandexEnabled: boolean;
+  draftKey: string;
   onCreate: (input: Record<string, unknown>) => Promise<void>;
 }) {
   const { t, m, language } = useLocale();
+  const [draft] = useState(() => readDraft(draftKey));
+  const destinationSelection = useRef(draft?.destination);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
-  const [picker, setPicker] = useState(false);
+  const [picker, setPicker] = useState(!!draft);
   const [accountId, setAccountId] = useState('');
   const [folder, setFolder] = useState('disk:/');
   const [folders, setFolders] = useState<
@@ -64,11 +89,20 @@ export default function CreateTrip({
   const [source, setSource] = useState<Source | null>(null);
   const [sourceError, setSourceError] = useState('');
   const [folderStatus, setFolderStatus] = useState('');
-  const [autoDates, setAutoDates] = useState(false);
-  const [autoDestination, setAutoDestination] = useState(false);
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+  const [autoDates, setAutoDates] = useState(draft?.autoDates || false);
+  const [autoDestination, setAutoDestination] = useState(
+    draft?.autoDestination || false,
+  );
+  const [start, setStart] = useState(draft?.start || '');
+  const [end, setEnd] = useState(draft?.end || '');
   const [destination, setDestination] = useState('');
+  const updateDestination = useCallback(
+    (value: string, selection: DestinationSelection) => {
+      setDestination(value);
+      destinationSelection.current = selection;
+    },
+    [],
+  );
   const [analyzing, setAnalyzing] = useState(false);
   const [dateHint, setDateHint] = useState<ApplicationMessage>('');
   const [inferredYears, setInferredYears] = useState<string[]>([]);
@@ -270,6 +304,118 @@ export default function CreateTrip({
         {t('createTrip.bringYourPhotosTogetherIntoOneStory')}
       </p>
 
+      <Field
+        label={t('createTrip.tripName')}
+        name="title"
+        defaultValue={draft?.title}
+        required
+        maxLength={120}
+        placeholder={t('createTrip.forExampleAutumnInGeorgia')}
+      />
+      <div className="auto-field-group">
+        <DestinationPicker
+          onChange={updateDestination}
+          initialSelection={draft?.destination}
+          inferredRoute={autoDestination ? inferredRoute : []}
+          onManualChange={() => {
+            setAutoDestination(false);
+            setDestinationHint('');
+          }}
+          disabled={busy}
+          hint={
+            autoDestination && !source
+              ? t('createTrip.chooseAPhotoFolderFirst')
+              : m(destinationHint)
+          }
+        />
+        <label className="auto-toggle">
+          <input
+            type="checkbox"
+            checked={autoDestination}
+            onChange={(event) => {
+              setAutoDestination(event.target.checked);
+              setDestinationHint('');
+              if (event.target.checked && !source) setPicker(true);
+            }}
+          />
+          <span>
+            <strong>{t('createTrip.detectDestinationFromPhotos')}</strong>
+          </span>
+        </label>
+        {autoDestination && source && destination && (
+          <p className="fine geodata-attribution">
+            {t('createTrip.towns')}{' '}
+            <a
+              href="https://www.geonames.org/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              GeoNames
+            </a>{' '}
+            /{' '}
+            <a
+              href="https://github.com/lutangar/cities.json"
+              target="_blank"
+              rel="noreferrer"
+            >
+              cities.json
+            </a>{' '}
+            · CC BY 4.0
+          </p>
+        )}
+      </div>
+      <div className="auto-field-group">
+        <div className="form-row">
+          <Field
+            label={t('dates.start')}
+            name="start"
+            type="date"
+            required
+            value={start}
+            onChange={(event) => {
+              setStart(event.target.value);
+              setAutoDates(false);
+              setDateHint('');
+            }}
+          />
+          <Field
+            label={t('dates.end')}
+            name="end"
+            type="date"
+            required
+            value={end}
+            onChange={(event) => {
+              setEnd(event.target.value);
+              setAutoDates(false);
+              setDateHint('');
+            }}
+          />
+        </div>
+        <label className="auto-toggle">
+          <input
+            type="checkbox"
+            checked={autoDates}
+            onChange={(event) => {
+              setAutoDates(event.target.checked);
+              setDateHint('');
+              if (event.target.checked && !source) setPicker(true);
+            }}
+          />
+          <span>
+            <strong>{t('createTrip.detectDatesFromPhotosAndVideos')}</strong>
+          </span>
+        </label>
+        <p className="field-hint" role="status">
+          {autoDates && !source
+            ? t('createTrip.chooseAPhotoFolderFirst')
+            : inferredYears.length > 1
+              ? t('inference.yearsHint', {
+                  years: inferredYears.join(', '),
+                  hint: m(dateHint),
+                })
+              : m(dateHint)}
+        </p>
+      </div>
       <section className="creation-source" aria-labelledby={folderId}>
         <div className="creation-source-heading">
           <strong id={folderId}>{t('gallery.photos')}</strong>
@@ -452,6 +598,25 @@ export default function CreateTrip({
               <a
                 className="text-button"
                 href="/api/auth/yandex?intent=link&returnTo=%2F%3Fcreate%3D1"
+                onClick={(event) => {
+                  const form = event.currentTarget.closest('form');
+                  if (!form) return;
+                  const fields = new FormData(form);
+                  const next: CreateTripDraft = {
+                    title: String(fields.get('title') ?? ''),
+                    description: String(fields.get('description') ?? ''),
+                    start,
+                    end,
+                    destination: destinationSelection.current,
+                    autoDates,
+                    autoDestination,
+                  };
+                  try {
+                    sessionStorage.setItem(draftKey, JSON.stringify(next));
+                  } catch {
+                    // Linking remains available when storage is disabled.
+                  }
+                }}
               >
                 {t('disk.connectAccountExternal')}
               </a>
@@ -483,122 +648,13 @@ export default function CreateTrip({
           </p>
         )}
       </section>
-      <Field
-        label={t('createTrip.tripName')}
-        name="title"
-        required
-        maxLength={120}
-        placeholder={t('createTrip.forExampleAutumnInGeorgia')}
-      />
-      <div className="auto-field-group">
-        <DestinationPicker
-          onChange={setDestination}
-          inferredRoute={autoDestination ? inferredRoute : []}
-          onManualChange={() => {
-            setAutoDestination(false);
-            setDestinationHint('');
-          }}
-          disabled={busy}
-          hint={
-            autoDestination && !source
-              ? t('createTrip.chooseAPhotoFolderFirst')
-              : m(destinationHint)
-          }
-        />
-        <label className="auto-toggle">
-          <input
-            type="checkbox"
-            checked={autoDestination}
-            onChange={(event) => {
-              setAutoDestination(event.target.checked);
-              setDestinationHint('');
-              if (event.target.checked && !source) setPicker(true);
-            }}
-          />
-          <span>
-            <strong>{t('createTrip.detectDestinationFromPhotos')}</strong>
-          </span>
-        </label>
-        {autoDestination && source && destination && (
-          <p className="fine geodata-attribution">
-            {t('createTrip.towns')}{' '}
-            <a
-              href="https://www.geonames.org/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GeoNames
-            </a>{' '}
-            /{' '}
-            <a
-              href="https://github.com/lutangar/cities.json"
-              target="_blank"
-              rel="noreferrer"
-            >
-              cities.json
-            </a>{' '}
-            · CC BY 4.0
-          </p>
-        )}
-      </div>
-      <div className="auto-field-group">
-        <div className="form-row">
-          <Field
-            label={t('dates.start')}
-            name="start"
-            type="date"
-            required
-            value={start}
-            onChange={(event) => {
-              setStart(event.target.value);
-              setAutoDates(false);
-              setDateHint('');
-            }}
-          />
-          <Field
-            label={t('dates.end')}
-            name="end"
-            type="date"
-            required
-            value={end}
-            onChange={(event) => {
-              setEnd(event.target.value);
-              setAutoDates(false);
-              setDateHint('');
-            }}
-          />
-        </div>
-        <label className="auto-toggle">
-          <input
-            type="checkbox"
-            checked={autoDates}
-            onChange={(event) => {
-              setAutoDates(event.target.checked);
-              setDateHint('');
-              if (event.target.checked && !source) setPicker(true);
-            }}
-          />
-          <span>
-            <strong>{t('createTrip.detectDatesFromPhotosAndVideos')}</strong>
-          </span>
-        </label>
-        <p className="field-hint" role="status">
-          {autoDates && !source
-            ? t('createTrip.chooseAPhotoFolderFirst')
-            : inferredYears.length > 1
-              ? t('inference.yearsHint', {
-                  years: inferredYears.join(', '),
-                  hint: m(dateHint),
-                })
-              : m(dateHint)}
-        </p>
-      </div>
-      <SmoothDetails className="trip-description">
+      <SmoothDetails className="trip-description" open={!!draft?.description}>
         <summary>{t('createTrip.addADescription')}</summary>
         <label className="field">
           <span>{t('createTrip.aFewWordsAboutTheTrip')}</span>
           <textarea
             name="description"
+            defaultValue={draft?.description}
             rows={3}
             maxLength={3000}
             placeholder={t('createTrip.whatWouldYouLikeToRemember')}

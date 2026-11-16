@@ -19,7 +19,6 @@ export default function Header({ archive }: { archive: ArchiveController }) {
     <>
       <header className="topbar site-header" tabIndex={-1}>
         <HeaderMenu
-          back={!!(selected || share || invite)}
           guest={guest}
           logout={
             user ? (

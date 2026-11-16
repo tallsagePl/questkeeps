@@ -127,8 +127,10 @@ export type TripData = {
     waiting: boolean;
     syncing: boolean;
     failed: boolean;
+    canRetry?: boolean;
     pendingApproval: boolean;
     disconnected: boolean;
+    canReconnect?: boolean;
     lastSync: number;
   };
 };

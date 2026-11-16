@@ -30,17 +30,17 @@ export default function NoteThread({
   replies,
   tripId,
   userId,
-  guest,
+  readOnly,
   onChange,
 }: {
   note: Note;
   replies: NoteReply[];
   tripId: string;
   userId?: string;
-  guest: boolean;
+  readOnly: boolean;
   onChange: () => Promise<void>;
 }) {
-  const { t, language } = useLocale();
+  const { t, m, language } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [target, setTarget] = useState<{
     id: string | null;
@@ -120,7 +120,7 @@ export default function NoteThread({
     }
   };
   const composer = (parentId: string | null) =>
-    target?.id === parentId ? (
+    !readOnly && target?.id === parentId ? (
       <form
         className="note-reply-form"
         onSubmit={async (event) => {
@@ -189,7 +189,7 @@ export default function NoteThread({
       </form>
     ) : null;
   const actions = (item: Note | NoteReply, replyId?: string) =>
-    !guest &&
+    !readOnly &&
     !item.deleted && (
       <div className="note-actions">
         {item.user_id === userId ? (
@@ -219,10 +219,12 @@ export default function NoteThread({
   return (
     <article className="note-entry note-thread" data-note-id={note.id}>
       <span className="eyebrow">
-        {new Date(note.day + 'T12:00:00').toLocaleDateString(
-          language === 'en' ? 'en-GB' : 'ru-RU',
-          { day: 'numeric', month: 'short' },
-        )}{' '}
+        <time dateTime={note.day}>
+          {new Date(note.day + 'T12:00:00').toLocaleDateString(
+            language === 'en' ? 'en-GB' : 'ru-RU',
+            { day: 'numeric', month: 'short' },
+          )}
+        </time>{' '}
         · {note.author}
       </span>
       <p className={note.deleted ? 'note-deleted' : ''}>
@@ -293,7 +295,7 @@ export default function NoteThread({
       )}
       {error && (
         <p className="field-error" role="alert">
-          {error}
+          {m(error)}
         </p>
       )}
     </article>

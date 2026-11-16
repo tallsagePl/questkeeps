@@ -37,9 +37,7 @@ export default function PublishDialog({
   const [caption, setCaption] = useState(
     t('exports.caption', { title: trip.title }),
   );
-  const [includeLink, setIncludeLink] = useState(
-    !!archive.share || (archive.isOwner && !!trip.sharing),
-  );
+  const [linkMode, setLinkMode] = useState<'existing' | 'create' | null>(null);
   const [fit, setFit] = useState<'contain' | 'cover'>('contain');
   const [cards, setCards] = useState<ShareCard[]>([]);
   const [active, setActive] = useState(0);
@@ -89,45 +87,19 @@ export default function PublishDialog({
     const run = new AbortController();
     controller.current?.abort();
     controller.current = run;
+    let generated: ShareCard[] = [];
     try {
       const chosen = selected
         .map((id) => photos.find((photo) => photo.id === id))
         .filter((photo) => !!photo);
       if (!chosen.length || (format === 'stories' && chosen.length !== amount))
         throw Error('exports.choosePhotos');
-      let destination = 'https://questkeeps.ru/';
-      if (includeLink && archive.share)
-        destination = location.origin + '/s/' + archive.share;
-      else if (includeLink && archive.isOwner) {
-        const existing = trip.sharing
-          ? await api(
-              'trips/' + trip.id + '/share',
-              'GET',
-              undefined,
-              run.signal,
-            )
-          : null;
-        const result = existing?.url
-          ? existing
-          : await api(
-              'trips/' + trip.id + '/share',
-              'POST',
-              { enabled: true },
-              run.signal,
-            );
-        destination = result.url;
-        archive.setData((old) =>
-          old ? { ...old, trip: { ...old.trip, sharing: true } } : old,
-        );
-      }
-      run.signal.throwIfAborted();
-
       const date = (value: string) =>
         new Date(value.slice(0, 10) + 'T12:00:00').toLocaleDateString(
           language === 'ru' ? 'ru-RU' : 'en-GB',
           { day: 'numeric', month: 'short', year: 'numeric' },
         );
-      const result = await createShareCards({
+      generated = await createShareCards({
         format,
         photos: chosen.map((photo) => ({
           src: archive.mediaPath(photo, 'preview'),
@@ -145,22 +117,50 @@ export default function PublishDialog({
         onProgress: (current, total) =>
           setProgress(t('exports.progress', { current, total })),
       });
-      if (run.signal.aborted) {
-        result.forEach((card) => URL.revokeObjectURL(card.url));
-        return;
+      run.signal.throwIfAborted();
+      let destination = 'https://questkeeps.ru/';
+      if (linkMode) {
+        const path = 'trips/' + trip.id + '/share';
+        // The choice to attach an existing link cannot reopen revoked access.
+        const result =
+          linkMode === 'existing'
+            ? await api(path, 'GET', undefined, run.signal)
+            : await api(
+                path,
+                'POST',
+                { enabled: true, rotate: false },
+                run.signal,
+              );
+        if (!result.url) {
+          archive.setData((old) =>
+            old?.trip.id === trip.id
+              ? { ...old, trip: { ...old.trip, sharing: false } }
+              : old,
+          );
+          setLinkMode(null);
+          throw Error('exports.guestLinkUnavailable');
+        }
+        destination = result.url;
+        archive.setData((old) =>
+          old?.trip.id === trip.id
+            ? { ...old, trip: { ...old.trip, sharing: true } }
+            : old,
+        );
       }
+      run.signal.throwIfAborted();
       setLink(destination);
-      setCards(result);
-      if (result.length) trackGoal('trip_selection_prepared');
+      setCards(generated);
+      if (generated.length) trackGoal('trip_selection_prepared');
       setActive(0);
       try {
         setCanShare(
-          !!navigator.canShare?.({ files: result.map((card) => card.file) }),
+          !!navigator.canShare?.({ files: generated.map((card) => card.file) }),
         );
       } catch {
         setCanShare(false);
       }
     } catch (e) {
+      generated.forEach((card) => URL.revokeObjectURL(card.url));
       if (!run.signal.aborted) setError((e as Error).message);
     } finally {
       if (!run.signal.aborted) setBusy(false);
@@ -305,20 +305,19 @@ export default function PublishDialog({
                 </button>
               )}
             </details>
-            {(archive.isOwner || archive.share) && (
-              <label className="publish-link-option">
-                <input
-                  type="checkbox"
-                  checked={includeLink}
-                  onChange={(event) => {
-                    setIncludeLink(event.target.checked);
-                    invalidate();
-                  }}
-                />
-                <span>{t('exports.includeTripLink')}</span>
-              </label>
-            )}
-            {includeLink && archive.isOwner && !trip.sharing && (
+            <label className="publish-link-option">
+              <input
+                type="checkbox"
+                checked={!!linkMode}
+                onChange={(event) => {
+                  const mode = trip.sharing ? 'existing' : 'create';
+                  setLinkMode(event.target.checked ? mode : null);
+                  invalidate();
+                }}
+              />
+              <span>{t('exports.includeTripLink')}</span>
+            </label>
+            {linkMode === 'create' && (
               <p className="fine">{t('exports.enableGuestNotice')}</p>
             )}
             <button

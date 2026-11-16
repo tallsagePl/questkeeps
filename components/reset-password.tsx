@@ -8,6 +8,11 @@ import { Field } from './feedback';
 import { registrationPasswordPattern } from '../lib/password-policy';
 import { announceSessionChange } from '../lib/browser-session';
 import { clearPreviewCache } from '../lib/preview-cache';
+import {
+  createTripRequested,
+  createTripResetEntry,
+  createTripSignInEntry,
+} from '../lib/trip-entry';
 
 export default function ResetPassword() {
   const { t, m, language } = useLocale();
@@ -20,10 +25,20 @@ export default function ResetPassword() {
   const [done, setDone] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [createTrip, setCreateTrip] = useState(false);
   useEffect(() => {
     const readLink = () => {
-      const raw = new URLSearchParams(location.hash.slice(1)).get('token');
-      history.replaceState(history.state, '', location.pathname);
+      const fragment = new URLSearchParams(location.hash.slice(1));
+      const raw = fragment.get('token');
+      const create =
+        createTripRequested(fragment) ||
+        createTripRequested(new URLSearchParams(location.search));
+      setCreateTrip(create);
+      history.replaceState(
+        history.state,
+        '',
+        create ? createTripResetEntry : location.pathname,
+      );
       setStatus('');
       setError('');
       setDone(false);
@@ -79,7 +94,11 @@ export default function ResetPassword() {
                         password: form.get('password'),
                         passwordConfirmation: form.get('passwordConfirmation'),
                       }
-                    : { email: form.get('email'), language },
+                    : {
+                        email: form.get('email'),
+                        language,
+                        ...(createTrip && { createTrip: true }),
+                      },
                 );
                 setStatus(result.message);
                 setDone(true);
@@ -152,19 +171,40 @@ export default function ResetPassword() {
           </form>
         )}
         {status && <p role="status">{m(status)}</p>}
+        {!resetMode && done && (
+          <>
+            <p className="fine">{t('reset.resendHint')}</p>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                setStatus('');
+                setDone(false);
+              }}
+            >
+              {t('reset.requestAgain')}
+            </button>
+          </>
+        )}
         {error && (
           <p className="form-error" role="alert">
             {m(error)}
           </p>
         )}
         {resetMode && error === 'reset.invalid' && (
-          <a className="text-button" href="/reset-password">
+          <a
+            className="text-button"
+            href={createTrip ? createTripResetEntry : '/reset-password'}
+          >
             {t('reset.request')}
           </a>
         )}
         <p>
-          <a href="/" className="text-button">
-            {t('auth.backToSignIn')}
+          <a
+            href={createTrip ? createTripSignInEntry : '/'}
+            className="text-button"
+          >
+            {t(createTrip ? 'auth.signInToCreateTrip' : 'auth.backToSignIn')}
           </a>
         </p>
       </main>

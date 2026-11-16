@@ -34,18 +34,20 @@ export default function HeaderDropdown({
       popup.hidePopover();
       return;
     }
-    const width = Math.min(380, window.innerWidth - 24);
+    const body = getComputedStyle(document.body);
+    const left = parseFloat(body.paddingLeft) + 12;
+    const right =
+      document.documentElement.clientWidth - parseFloat(body.paddingRight) - 12;
+    const width = Math.min(380, right - left);
     const top = Math.max(
       12,
       (button.closest('header')?.getBoundingClientRect().bottom ||
         bounds.bottom) + 8,
     );
     popup.style.setProperty('--dropdown-top', top + 'px');
+    popup.style.width = width + 'px';
     popup.style.left =
-      Math.max(
-        12,
-        Math.min(bounds.right - width, window.innerWidth - width - 12),
-      ) + 'px';
+      Math.max(left, Math.min(bounds.right - width, right - width)) + 'px';
   };
   useEffect(() => {
     if (!open) return;

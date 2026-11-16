@@ -5,11 +5,14 @@ import { areaWiki } from '../map-area-wiki';
 import { osmAreaId } from '../map-area-suggestions';
 import { z } from 'zod';
 import { db, one, run, id } from '../db';
+import { mediaTitle } from '../media-title';
 import {
   fail,
   requireUser,
   membership,
   assertDay,
+  assertParticipationDay,
+  canManageTrip,
   mediaFor,
   throttle,
 } from '../access';
@@ -20,6 +23,32 @@ import { placeTextContent } from '../place-text';
 import { placeGeometry } from '../place-geometry';
 import { json, body } from './http';
 import type { RequestContext } from './context';
+
+function mediaById(mediaId: string) {
+  return (
+    one('SELECT * FROM media WHERE id=?', mediaId) ||
+    fail(404, 'messages.fileNotFound')
+  );
+}
+
+function assertMediaAuthor(authorId: string, userId: string) {
+  if (authorId !== userId) fail(403, 'messages.youCanOnlyEditYourOwnPhotos');
+}
+
+function placeMutationMedia(
+  req: Request,
+  mediaId: string,
+  userId: string,
+  deniedMessage: string,
+) {
+  const media = mediaFor(req, mediaId);
+  const access = membership(media.trip_id, userId);
+  if (!canManageTrip(access)) {
+    if (media.user_id !== userId) fail(403, deniedMessage);
+    assertParticipationDay(media.taken.slice(0, 10), access);
+  }
+  return media;
+}
 
 export async function mediaRoutes({
   req,
@@ -230,46 +259,52 @@ export async function mediaRoutes({
       return new Response(r.body, { status: r.status, headers });
     }
     const u = requireUser(req);
-    const m =
-      one('SELECT * FROM media WHERE id=?', p[1]) ||
-      fail(404, 'messages.fileNotFound');
+    const m = mediaById(p[1]);
     if (p[2] === 'favorite' && method === 'PATCH') {
-      const access = membership(m.trip_id, u.id);
-      assertDay(m.taken.slice(0, 10), access);
-      mediaFor(req, m.id);
       const input = z.object({ favorite: z.boolean() }).parse(await body(req));
-      if (input.favorite)
-        run(
-          'INSERT OR IGNORE INTO media_favorites(user_id,media_id) VALUES (?,?)',
-          u.id,
-          m.id,
+      db.transaction(() => {
+        const current = mediaFor(req, m.id);
+        assertDay(
+          current.taken.slice(0, 10),
+          membership(current.trip_id, u.id),
         );
-      else
-        run(
-          'DELETE FROM media_favorites WHERE user_id=? AND media_id=?',
-          u.id,
-          m.id,
-        );
+        if (input.favorite)
+          run(
+            'INSERT OR IGNORE INTO media_favorites(user_id,media_id) VALUES (?,?)',
+            u.id,
+            current.id,
+          );
+        else
+          run(
+            'DELETE FROM media_favorites WHERE user_id=? AND media_id=?',
+            u.id,
+            current.id,
+          );
+      }).immediate();
       return json({ favorite: input.favorite });
     }
     if (method === 'DELETE' && !p[2]) {
-      if (m.user_id !== u.id) fail(403, 'messages.youCanOnlyEditYourOwnPhotos');
-      assertDay(m.taken.slice(0, 10), membership(m.trip_id, u.id));
       // Keep the exclusion independent of a source, so reconnecting a folder
       // cannot import this resource again. No request is sent to Yandex Disk.
       db.transaction(() => {
+        const current = mediaById(m.id);
+        assertMediaAuthor(current.user_id, u.id);
+        assertParticipationDay(
+          current.taken.slice(0, 10),
+          membership(current.trip_id, u.id),
+        );
         run(
           'INSERT OR IGNORE INTO media_exclusions VALUES (?,?,?,?)',
-          m.trip_id,
+          current.trip_id,
           u.id,
-          m.resource_id,
+          current.resource_id,
           Date.now(),
         );
         const copies = db
           .prepare(
             'SELECT id FROM media WHERE trip_id=? AND user_id=? AND resource_id=?',
           )
-          .all(m.trip_id, u.id, m.resource_id) as { id: string }[];
+          .all(current.trip_id, u.id, current.resource_id) as { id: string }[];
         for (const copy of copies) {
           for (const table of [
             'confirmed_places',
@@ -284,7 +319,7 @@ export async function mediaRoutes({
       return json({ ok: true });
     }
     if (method === 'PATCH' && !p[2]) {
-      if (m.user_id !== u.id) fail(403, 'messages.youCanOnlyEditYourOwnPhotos');
+      assertMediaAuthor(m.user_id, u.id);
       const input = z
         .object({
           rotation: z
@@ -302,77 +337,95 @@ export async function mediaRoutes({
           lon: z.number().min(-180).max(180).optional(),
         })
         .parse(await body(req));
-      if (input.rotation !== undefined) {
-        assertDay(m.taken.slice(0, 10), membership(m.trip_id, u.id));
-        if (m.kind !== 'photo') fail(400, 'mediaArchive.photosOnly');
-        run(
-          'UPDATE media SET rotation=? WHERE trip_id=? AND user_id=? AND resource_id=?',
-          input.rotation,
-          m.trip_id,
-          u.id,
-          m.resource_id,
-        );
-      }
-      if (input.title !== undefined) {
-        assertDay(m.taken.slice(0, 10), membership(m.trip_id, u.id));
-        mediaFor(req, m.id);
-        run(
-          'INSERT INTO media_titles(media_id,title) VALUES (?,?) ON CONFLICT(media_id) DO UPDATE SET title=excluded.title',
-          m.id,
-          input.title,
-        );
-      }
-      if (input.hidden !== undefined || input.hiddenFromGuests !== undefined)
-        run(
-          'UPDATE media SET hidden=COALESCE(?,hidden),hidden_from_guests=COALESCE(?,hidden_from_guests) WHERE id=?',
-          input.hidden === undefined ? null : Number(input.hidden),
-          input.hiddenFromGuests === undefined
-            ? null
-            : Number(input.hiddenFromGuests),
-          m.id,
-        );
-      if (input.lat !== undefined && input.lon !== undefined) {
-        assertDay(m.taken.slice(0, 10), membership(m.trip_id, u.id));
-        db.transaction(() => {
-          run(
-            'UPDATE media SET lat=?,lon=? WHERE id=?',
-            input.lat,
-            input.lon,
-            m.id,
-          );
-          run(
-            'INSERT INTO media_location_overrides(media_id,lat,lon) VALUES (?,?,?) ON CONFLICT(media_id) DO UPDATE SET lat=excluded.lat,lon=excluded.lon',
-            m.id,
-            input.lat,
-            input.lon,
-          );
-          run('DELETE FROM confirmed_places WHERE media_id=?', m.id);
-        }).immediate();
-      }
-      return json({ ok: true });
+      const title = db
+        .transaction(() => {
+          const current = mediaById(m.id);
+          assertMediaAuthor(current.user_id, u.id);
+          // Authors retain control over the visibility of previously contributed files.
+          if (
+            input.rotation !== undefined ||
+            input.title !== undefined ||
+            (input.lat !== undefined && input.lon !== undefined)
+          )
+            assertParticipationDay(
+              current.taken.slice(0, 10),
+              membership(current.trip_id, u.id),
+            );
+          if (input.rotation !== undefined) {
+            if (current.kind !== 'photo') fail(400, 'mediaArchive.photosOnly');
+            run(
+              'UPDATE media SET rotation=? WHERE trip_id=? AND user_id=? AND resource_id=?',
+              input.rotation,
+              current.trip_id,
+              u.id,
+              current.resource_id,
+            );
+          }
+          if (input.title !== undefined) {
+            mediaFor(req, current.id);
+            run(
+              'INSERT INTO media_titles(media_id,title) VALUES (?,?) ON CONFLICT(media_id) DO UPDATE SET title=excluded.title',
+              current.id,
+              input.title,
+            );
+          }
+          if (
+            input.hidden !== undefined ||
+            input.hiddenFromGuests !== undefined
+          )
+            run(
+              'UPDATE media SET hidden=COALESCE(?,hidden),hidden_from_guests=COALESCE(?,hidden_from_guests) WHERE id=?',
+              input.hidden === undefined ? null : Number(input.hidden),
+              input.hiddenFromGuests === undefined
+                ? null
+                : Number(input.hiddenFromGuests),
+              current.id,
+            );
+          if (input.lat !== undefined && input.lon !== undefined) {
+            run(
+              'UPDATE media SET lat=?,lon=? WHERE id=?',
+              input.lat,
+              input.lon,
+              current.id,
+            );
+            run(
+              'INSERT INTO media_location_overrides(media_id,lat,lon) VALUES (?,?,?) ON CONFLICT(media_id) DO UPDATE SET lat=excluded.lat,lon=excluded.lon',
+              current.id,
+              input.lat,
+              input.lon,
+            );
+            run('DELETE FROM confirmed_places WHERE media_id=?', current.id);
+            return mediaTitle(current.id);
+          }
+        })
+        .immediate();
+      return json({ ok: true, title });
     }
     if (p[2] === 'places') {
-      const t = membership(m.trip_id, u.id);
-      assertDay(m.taken.slice(0, 10), t);
-      if (m.hidden || m.missing) fail(404, 'profileFiles.fileUnavailable');
-      mediaFor(req, m.id);
       if (method === 'DELETE' && p[3]) {
-        if (m.user_id !== u.id && t.role !== 'owner')
-          fail(403, 'messages.onlyTheAuthorOrTripOwnerCan');
-        const place =
-          one(
-            'SELECT id FROM confirmed_places WHERE id=? AND media_id=? AND trip_id=?',
-            p[3],
-            m.id,
-            m.trip_id,
-          ) || fail(404, 'messages.placeNotFound');
-        run(
-          'DELETE FROM confirmed_places WHERE id=? AND media_id=?',
-          place.id,
-          m.id,
-        );
-        return json({ ok: true });
+        const title = db
+          .transaction(() => {
+            const current = placeMutationMedia(
+              req,
+              m.id,
+              u.id,
+              'messages.onlyTheAuthorOrTripOwnerCan',
+            );
+            const result = run(
+              'DELETE FROM confirmed_places WHERE id=? AND media_id=? AND trip_id=?',
+              p[3],
+              current.id,
+              current.trip_id,
+            );
+            if (!result.changes) fail(404, 'messages.placeNotFound');
+            return mediaTitle(current.id);
+          })
+          .immediate();
+        return json({ ok: true, title });
       }
+      const access = membership(m.trip_id, u.id);
+      assertDay(m.taken.slice(0, 10), access);
+      mediaFor(req, m.id);
       if (m.lat === null || m.lon === null)
         fail(400, 'messages.thisPhotoHasNoCoordinates');
       if (method === 'GET' && p[3] === 'description') {
@@ -404,45 +457,56 @@ export async function mediaRoutes({
         });
       }
       if (method === 'POST') {
-        if (m.user_id !== u.id && t.role !== 'owner')
-          fail(403, 'messages.onlyTheAuthorOrOwnerCanConfirm');
         const input = z
           .object({ pageId: z.number().int().positive() })
           .parse(await body(req));
+        const selected = placeMutationMedia(
+          req,
+          m.id,
+          u.id,
+          'messages.onlyTheAuthorOrOwnerCanConfirm',
+        );
+        if (selected.lat === null || selected.lon === null)
+          fail(400, 'messages.thisPhotoHasNoCoordinates');
         const summary = await placeSummary(input.pageId, {
-          lat: m.lat,
-          lon: m.lon,
+          lat: selected.lat,
+          lon: selected.lon,
         });
-        const title = summary.title.slice(0, 160);
-        db.transaction(() => {
-          run(
-            'INSERT INTO confirmed_places(id,trip_id,media_id,title,summary,url,lat,lon,day,distance) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(trip_id,media_id,url) DO UPDATE SET title=excluded.title,summary=excluded.summary,lat=excluded.lat,lon=excluded.lon,distance=excluded.distance',
-            id(),
-            m.trip_id,
-            m.id,
-            summary.title,
-            summary.summary,
-            summary.url,
-            summary.lat,
-            summary.lon,
-            m.taken.slice(0, 10),
-            summary.distance,
-          );
-          run(
-            'INSERT INTO media_titles(media_id,title) VALUES (?,?) ON CONFLICT(media_id) DO UPDATE SET title=excluded.title',
-            m.id,
-            title,
-          );
-        })();
-        return json({
-          title,
-          place: one(
-            'SELECT * FROM confirmed_places WHERE trip_id=? AND media_id=? AND url=?',
-            m.trip_id,
-            m.id,
-            summary.url,
-          ),
-        });
+        const result = db
+          .transaction(() => {
+            const current = placeMutationMedia(
+              req,
+              m.id,
+              u.id,
+              'messages.onlyTheAuthorOrOwnerCanConfirm',
+            );
+            if (current.lat !== selected.lat || current.lon !== selected.lon)
+              fail(409, 'messages.theActionCouldNotBeCompletedPlease');
+            run(
+              'INSERT INTO confirmed_places(id,trip_id,media_id,title,summary,url,lat,lon,day,distance) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(trip_id,media_id,url) DO UPDATE SET title=excluded.title,summary=excluded.summary,lat=excluded.lat,lon=excluded.lon,distance=excluded.distance',
+              id(),
+              m.trip_id,
+              m.id,
+              summary.title,
+              summary.summary,
+              summary.url,
+              summary.lat,
+              summary.lon,
+              current.taken.slice(0, 10),
+              summary.distance,
+            );
+            return {
+              title: mediaTitle(m.id),
+              place: one(
+                'SELECT * FROM confirmed_places WHERE trip_id=? AND media_id=? AND url=?',
+                m.trip_id,
+                m.id,
+                summary.url,
+              ),
+            };
+          })
+          .immediate();
+        return json(result);
       }
     }
   }

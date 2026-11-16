@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useLocale } from '@/components/appearance';
 import { api } from '../api';
 import { FolderSearchButton } from '../folder-search';
@@ -14,12 +15,17 @@ export default function FolderDialog({
   archive: ArchiveController;
 }) {
   const { t, m } = useLocale();
+  const [accounts, setAccounts] = useState<
+    { id: string; label: string }[] | null
+  >(null);
+  const [accountError, setAccountError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const {
     selected,
+    tab,
     setModal,
     busy,
     yandex,
-    accounts,
     account,
     folder,
     folders,
@@ -29,9 +35,28 @@ export default function FolderDialog({
     setNotice,
     action,
     reloadSettings,
+    refresh,
     browse,
   } = archive;
   const trip = archive.trip!;
+  useEffect(() => {
+    const controller = new AbortController();
+    setAccountError('');
+    void api<{ accounts: { id: string; label: string }[] }>(
+      'accounts',
+      'GET',
+      undefined,
+      controller.signal,
+    )
+      .then((result) => {
+        if (!controller.signal.aborted) setAccounts(result.accounts);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setAccountError(error.message);
+      });
+    return () => controller.abort();
+  }, [attempt]);
+
   return (
     <>
       <Modal title={t('trip.connectFolder')} onClose={() => setModal('')}>
@@ -41,23 +66,40 @@ export default function FolderDialog({
             <span>{t('common.yandexAccount')}</span>
             <select
               value={account}
+              disabled={!accounts?.length}
               onChange={(e) =>
                 void action(() => browse(e.target.value, 'disk:/'))
               }
             >
               <option value="">{t('trip.chooseAnAccount')}</option>
-              {accounts.map((a) => (
+              {accounts?.map((a) => (
                 <option value={a.id} key={a.id}>
                   {a.label}
                 </option>
               ))}
             </select>
           </label>
-          {yandex && !accounts.length ? (
+          {accountError ? (
+            <p role="alert" className="field-error">
+              {m(accountError)}{' '}
+              <FeedbackButton
+                className="text-button"
+                onClick={() => setAttempt((value) => value + 1)}
+              >
+                {t('common.retry')}
+              </FeedbackButton>
+            </p>
+          ) : !accounts ? (
+            <p className="fine" role="status">
+              {t('createTrip.checkingAccounts')}
+            </p>
+          ) : yandex && !accounts.length ? (
             <a
               href={
                 '/api/auth/yandex?intent=link&returnTo=' +
-                encodeURIComponent(selected ? '/?trip=' + selected : '/')
+                encodeURIComponent(
+                  selected ? '/?trip=' + selected + '&source=1' : '/',
+                )
               }
               className="text-button"
             >
@@ -136,8 +178,9 @@ export default function FolderDialog({
                       accountId: account,
                       path: folder,
                     });
-                    await reloadSettings();
                     setModal('');
+                    if (tab === 'settings') await reloadSettings();
+                    await refresh();
                     setNotice(
                       isOwner
                         ? t(

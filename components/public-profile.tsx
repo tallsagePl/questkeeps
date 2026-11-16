@@ -9,7 +9,9 @@ import { PersonAvatar, FriendshipAction, type Person } from './friends';
 export default function PublicProfile({ profile }: { profile: Person }) {
   const { t, m } = useLocale();
   const viewer = useViewer();
+  const [copyReady, setCopyReady] = useState(false);
   const [copied, setCopied] = useState(false);
+  useEffect(() => setCopyReady(true), []);
   useEffect(() => {
     if (!copied) return;
     const timer = setTimeout(() => setCopied(false), 1500);
@@ -61,7 +63,7 @@ export default function PublicProfile({ profile }: { profile: Person }) {
             <h1>{profile.name}</h1>
             <button
               className="text-button public-profile-handle"
-              data-copied={copied}
+              disabled={!copyReady}
               title={t('common.copyLink')}
               aria-label={t(copied ? 'common.linkCopied' : 'common.copyLink')}
               onClick={async () => {
@@ -78,6 +80,9 @@ export default function PublicProfile({ profile }: { profile: Person }) {
             >
               @{profile.username}
             </button>
+            <p className="fine public-profile-copy-status" role="status">
+              {copied ? t('common.linkCopied') : ''}
+            </p>
           </div>
         </section>
         <div className="public-person-actions">

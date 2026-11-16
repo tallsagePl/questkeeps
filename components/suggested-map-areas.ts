@@ -41,6 +41,7 @@ export function suggestedMapAreas(
         ? t(candidate.kind === 'street' ? 'common.street' : 'common.district')
         : candidate.title;
     const show = () => {
+      if (group.isPopupOpen()) return;
       const box = document.createElement('div');
       box.className = 'map-area-proposal';
       const title = document.createElement('strong');
@@ -70,27 +71,41 @@ export function suggestedMapAreas(
         error.textContent = '';
         try {
           await add(candidate.id);
+          group.closePopup();
           group.remove();
-          map.closePopup();
         } catch (e) {
           error.textContent =
             e instanceof Error ? e.message : t('map.couldNotAddThisPlace');
           button.disabled = false;
         }
       });
-      group
-        .bindPopup(box, {
-          maxWidth: Math.max(180, Math.min(280, map.getSize().x - 64)),
-          maxHeight: 360,
-          className: 'map-area-popup',
-        })
-        .openPopup();
+      group.bindPopup(box, {
+        maxWidth: Math.max(180, Math.min(280, map.getSize().x - 64)),
+        maxHeight: 360,
+        className: 'map-area-popup',
+      });
+      const popup = group.getPopup();
       let active = true;
       let imageUrl: string | undefined;
-      group.once('popupclose', () => {
+      const close = ({ popup: closed }: Leaflet.PopupEvent) => {
+        if (closed !== popup) return;
+        map.off('popupclose', close);
         active = false;
+        // Leaflet leaves a fading popup in the DOM briefly after closing it.
+        const element = popup.getElement();
+        if (element) {
+          element.inert = true;
+          element.setAttribute('aria-hidden', 'true');
+        }
         if (imageUrl) URL.revokeObjectURL(imageUrl);
-      });
+      };
+      map.on('popupclose', close);
+      group.openPopup();
+      const element = popup?.getElement();
+      if (element) {
+        element.inert = false;
+        element.removeAttribute('aria-hidden');
+      }
       if (wikiPath)
         void cachedAreaWiki(
           wikiPath + '/' + candidate.id + '/wiki?lang=' + language + '&v=4',
@@ -154,7 +169,9 @@ export function suggestedMapAreas(
             }
           });
       else preview.remove();
-      requestAnimationFrame(() => button.focus({ preventScroll: true }));
+      requestAnimationFrame(() => {
+        if (active) button.focus({ preventScroll: true });
+      });
     };
     group = L.geoJSON(candidate.geometry, {
       pane:

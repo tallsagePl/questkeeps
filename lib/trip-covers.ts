@@ -26,7 +26,7 @@ export function tripCovers(
        AND substr(m.taken,1,10) BETWEEN t.start AND t.end
        AND (?=1 AND m.hidden_from_guests=0 OR ?=0 AND
          (t.owner_id=? OR mb.user_id IS NOT NULL AND
-           (mb.all_photos=1 OR substr(m.taken,1,10) BETWEEN mb.start AND mb.end)))
+           (mb.all_photos=1 OR mb.can_manage=1 OR substr(m.taken,1,10) BETWEEN mb.start AND mb.end)))
      ORDER BY m.taken,m.id`,
     userId,
     tripId,

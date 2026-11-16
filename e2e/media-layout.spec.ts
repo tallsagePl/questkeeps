@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import sharp from 'sharp';
 
-for (const width of [393, 1024, 1440]) {
+for (const width of [320, 393, 1024, 1440]) {
   test(
     'full-screen media has one toolbar row and a contained edge-to-edge frame at ' +
       width,
@@ -102,6 +102,13 @@ for (const width of [393, 1024, 1440]) {
         return route.fulfill({ json });
       });
       await page.goto('/?trip=frame');
+      const safeTop = width === 320 ? 24 : 0;
+      const safeSide = width === 320 ? 14 : 0;
+      if (width === 320) {
+        await page.addStyleTag({
+          content: `:root { --safe-top: ${safeTop}px; --safe-right: ${safeSide}px; --safe-bottom: 18px; --safe-left: ${safeSide}px; }`,
+        });
+      }
       for (const id of ['landscape', 'portrait']) {
         await page
           .locator(
@@ -154,6 +161,11 @@ for (const width of [393, 1024, 1440]) {
         for (const control of controls) {
           expect(control!.width).toBeGreaterThanOrEqual(44);
           expect(control!.height).toBeGreaterThanOrEqual(44);
+          expect(control!.x).toBeGreaterThanOrEqual(safeSide);
+          expect(control!.x + control!.width).toBeLessThanOrEqual(
+            width - safeSide,
+          );
+          expect(control!.y).toBeGreaterThanOrEqual(safeTop);
         }
         await expect(dialog.locator('.viewer-original')).toHaveAttribute(
           'data-state',

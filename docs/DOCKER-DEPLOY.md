@@ -217,3 +217,5 @@ Prefer the verified GitHub Actions image artifact and `image-manifest.py` output
 Install the updated release, retire and schema compatibility scripts together. The release starts qk-web, qk-worker, qk-video and qk-geo in the inactive slot. Geography has a 256-MiB limit and half a CPU. Each background role has a release-specific heartbeat health check, and a failed geography start restores the preceding traffic target. Schema 14 is additive and supports reviewed marker rollback to 13. See SERVICE-COMPLETION.md for cache budgets and remaining operational limits.
 
 Password recovery adds schema 15. Reviewed direct rollout/rollback between the current production schema 13 and 15 preserves additive tables and user data; update the schema helper and release script together.
+
+Schema 17 adds the per-account onboarding goal receipts. The release script supports the transition between 16 and 17. Marker rollback preserves receipts and the original eligibility date so redeploying preserves funnel counts.

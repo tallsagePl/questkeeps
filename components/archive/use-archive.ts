@@ -7,7 +7,6 @@ import type {
   TripData,
   TripMember,
   DriveSource,
-  DriveAccount,
   DriveFolder,
   MediaItem,
   ConfirmedPlace,
@@ -36,6 +35,10 @@ import {
   pushNavigation,
 } from '../../lib/navigation';
 import { includesDate } from '../../lib/date-selection';
+import {
+  createTripRequested,
+  oauthRegistrationHash,
+} from '../../lib/trip-entry';
 import { groupPlacePhotos } from '../../lib/place-photo-groups';
 import { tripMapScope } from '../trip-preloader';
 import type { LocalizedMessage } from '../../lib/i18n/translate';
@@ -73,13 +76,14 @@ export function useArchive({
   const [busy, setBusy] = useState(false);
   const [yandex, setYandex] = useState(false);
   const [register, setRegister] = useState(false);
+  const [createTripIntent, setCreateTripIntent] = useState(false);
+  const registrationStarted = useRef(false);
   const [members, setMembers] = useState<TripMember[]>([]);
   const [tripOwner, setTripOwner] = useState<Pick<
     TripMember,
     'id' | 'name' | 'username' | 'hasAvatar'
   > | null>(null);
   const [sources, setSources] = useState<DriveSource[]>([]);
-  const [accounts, setAccounts] = useState<DriveAccount[]>([]);
   const [account, setAccount] = useState('');
   const [folder, setFolder] = useState('disk:/');
   const [folders, setFolders] = useState<DriveFolder[]>([]);
@@ -97,6 +101,10 @@ export function useArchive({
   const trip = data?.trip;
   const isOwner = trip?.role === 'owner';
   const guest = !!share;
+  const canManageTrip = !guest && (isOwner || !!trip?.canManage);
+  const contributionRange = trip
+    ? `${trip.participationStart || trip.from}..${trip.participationEnd || trip.to}`
+    : '';
   const { active, clear, report, setError, setNotice } = useFeedback();
   const feedbackRef = useRef({
     clear,
@@ -133,7 +141,6 @@ export function useArchive({
       setTrips([]);
       setSelected(null);
       setData(null);
-      setAccounts([]);
       setMembers([]);
       setSources([]);
       setTripOwner(null);
@@ -339,6 +346,10 @@ export function useArchive({
   }, [user?.id, selected, guest, action, refresh, loadTrips]);
   useEffect(() => {
     mounted.current = true;
+    const query = new URLSearchParams(window.location.search);
+    const create = !share && !invite && createTripRequested(query);
+    setCreateTripIntent(create);
+    if (create) setRegister(query.get('mode') !== 'login');
     void action(async () => {
       let me;
       try {
@@ -350,6 +361,14 @@ export function useArchive({
         );
         setUser(me.user);
         setYandex(me.yandexEnabled);
+        if (me.user && window.location.hash === oauthRegistrationHash) {
+          window.history.replaceState(
+            window.history.state,
+            '',
+            window.location.pathname + window.location.search,
+          );
+          trackGoal('onboarding_registration_confirmed');
+        }
         if (share)
           setData(
             await api(
@@ -370,13 +389,27 @@ export function useArchive({
           );
         else if (me.user) {
           await loadTrips();
-          const tid = new URLSearchParams(window.location.search).get('trip');
-          if (tid) await loadTrip(tid);
-          if (
-            new URLSearchParams(window.location.search).get('create') === '1'
-          ) {
+          const tid = query.get('trip');
+          if (tid) {
+            const identity = identityGeneration.current;
+            const navigation = navigationGeneration.current;
+            await loadTrip(tid);
+            if (
+              query.get('source') === '1' &&
+              identity === identityGeneration.current &&
+              navigation === navigationGeneration.current
+            ) {
+              setModal('source');
+              query.delete('source');
+              window.history.replaceState(
+                window.history.state,
+                '',
+                '/?' + query + window.location.hash,
+              );
+            }
+          } else if (create) {
             setModal('create');
-            window.history.replaceState(null, '', '/');
+            window.history.replaceState(window.history.state, '', '/');
           }
         }
         setReady(true);
@@ -395,20 +428,22 @@ export function useArchive({
     };
   }, [share, invite, action, loadTrips, loadTrip]);
   useEffect(() => {
+    if (ready && !bootFailed && !user && createTripIntent)
+      document.getElementById('welcome-auth')?.focus();
+  }, [ready, bootFailed, user, createTripIntent]);
+  useEffect(() => {
     if (!selected || guest || tab !== 'settings') return;
     void action(async () => {
-      const [m, s, a] = await Promise.all([
+      const [m, s] = await Promise.all([
         api<{
           members: TripMember[];
           owner: Pick<TripMember, 'id' | 'name' | 'username' | 'hasAvatar'>;
         }>('trips/' + selected + '/members'),
         api<{ sources: DriveSource[] }>('trips/' + selected + '/sources'),
-        api<{ accounts: DriveAccount[] }>('accounts'),
       ]);
       setMembers(m.members);
       setTripOwner(m.owner);
       setSources(s.sources);
-      setAccounts(a.accounts);
     });
   }, [selected, guest, tab, action]);
   const openTrip = (tid: string) => {
@@ -466,6 +501,11 @@ export function useArchive({
     setSources((await api('trips/' + selected + '/sources')).sources);
     setMembers((await api('trips/' + selected + '/members')).members);
   };
+  const startRegistration = () => {
+    if (registrationStarted.current) return;
+    registrationStarted.current = true;
+    trackGoal('onboarding_registration_started');
+  };
   const auth = (event: FormEvent<HTMLFormElement>) => {
     const input = values(event);
     void action(async () => {
@@ -473,10 +513,11 @@ export function useArchive({
         throw new ApiError('trip.passwordsDoNotMatch', {
           passwordConfirmation: 'trip.passwordsDoNotMatch',
         });
+      if (register) startRegistration();
       const r = await api(
         'auth/' + (register ? 'register' : 'login'),
         'POST',
-        input,
+        register && createTripIntent ? { ...input, createTrip: true } : input,
         AbortSignal.timeout(15000),
       );
       if (r.verificationRequired) {
@@ -484,6 +525,7 @@ export function useArchive({
         setNotice(r.message);
         return;
       }
+      if (register) trackGoal('onboarding_registration_confirmed');
       announceSessionChange();
       setUser(r.user);
       setModal('');
@@ -495,7 +537,8 @@ export function useArchive({
         feedbackRef.current.report(error, 'page');
         return;
       }
-      if (!invite) window.history.replaceState(null, '', '/');
+      if (createTripIntent) setModal('create');
+      if (!invite) window.history.replaceState(window.history.state, '', '/');
     });
   };
   const folderGeneration = useRef(0);
@@ -714,10 +757,11 @@ export function useArchive({
     yandex,
     register,
     setRegister,
+    createTripIntent,
+    startRegistration,
     members,
     tripOwner,
     sources,
-    accounts,
     account,
     setAccount,
     folder,
@@ -742,6 +786,8 @@ export function useArchive({
     trip,
     isOwner,
     guest,
+    canManageTrip,
+    contributionRange,
     setNotice,
     action,
     loadTrips,

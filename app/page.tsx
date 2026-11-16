@@ -1,11 +1,19 @@
 import Archive from '@/components/archive';
-import { publicMetadata } from '@/lib/public-seo';
+import { publicMetadata, siteOrigin } from '@/lib/public-seo';
 
 const metadata = publicMetadata(
   '/',
-  'Архив фото и видео из путешествий · QuestKeeps',
-  'Подключите папку Яндекс.Диска, просмотрите поездку по дням и местам, разберите похожие кадры и поделитесь путешествием по ссылке.',
+  'Фото из поездки по дням и на карте · QuestKeeps',
+  'Подключите папку Яндекс Диска, чтобы посмотреть фото и видео по дням, найти кадры на карте и поделиться поездкой. Оригиналы останутся на Диске.',
 );
+
+const website = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'QuestKeeps',
+  url: siteOrigin + '/',
+  inLanguage: 'ru',
+};
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -24,5 +32,16 @@ export async function generateMetadata(props: Props) {
 }
 
 export default async function Home(props: Props) {
-  return <Archive publicHome={await isPublicHome(props)} />;
+  const publicHome = await isPublicHome(props);
+  return (
+    <>
+      {publicHome && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }}
+        />
+      )}
+      <Archive publicHome={publicHome} />
+    </>
+  );
 }

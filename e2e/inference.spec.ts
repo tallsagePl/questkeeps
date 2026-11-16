@@ -472,10 +472,11 @@ test('язык маршрута и стран переключается без 
 
 test('подключённая папка: галерея ждёт синхронизацию и автоматически показывает кадры', async ({
   page,
+  baseURL,
 }) => {
   await register(page);
   const response = await page.request.post('/api/trips', {
-    headers: { origin: 'http://127.0.0.1:3101' },
+    headers: { origin: new URL(baseURL!).origin },
     data: {
       title: 'Автоимпорт',
       destination: 'Турция',
@@ -540,7 +541,21 @@ test('подключённая папка: галерея ждёт синхро�
   await expect(
     page.getByRole('button', { name: 'Подключить папку', exact: true }),
   ).toHaveCount(0);
+  await page.route('**/api/trips/' + trip.id + '/sync', (route) =>
+    route.fulfill({ json: { queued: 1, failed: 0 } }),
+  );
+  const queued = page.waitForRequest(
+    (request) =>
+      request.url().endsWith('/' + trip.id + '/sync') &&
+      request.method() === 'POST',
+  );
+  await page
+    .getByRole('button', { name: 'Повторить синхронизацию', exact: true })
+    .click();
+  await queued;
   await expect(
-    page.getByRole('button', { name: 'Проверить синхронизацию', exact: true }),
+    page.getByText(
+      'Обновление поставлено в очередь. Фотографии появятся автоматически.',
+    ),
   ).toBeVisible();
 });

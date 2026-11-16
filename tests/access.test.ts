@@ -1274,11 +1274,6 @@ await test('права, авторизация и синхронизация', a
         const added = (await additional.json()).place;
         assert.ok(added.distance > 10 && added.distance < 12);
         assert.equal(added.title, 'Ближайшие ворота');
-        assert.equal(
-          one('SELECT title FROM media_titles WHERE media_id=?', media.id)
-            ?.title,
-          'Ближайшие ворота',
-        );
         await request(
           'media/' + media.id + '/places',
           'POST',
@@ -1297,14 +1292,6 @@ await test('права, авторизация и синхронизация', a
         ).json();
         assert.equal(
           detail.media.find((photo: any) => photo.id === media.id)?.title,
-          'Ближайшие ворота',
-        );
-        run('DELETE FROM media_titles WHERE media_id=?', media.id);
-        const legacy = await (
-          await request('trips/' + tid, 'GET', undefined, ownerCookie)
-        ).json();
-        assert.equal(
-          legacy.media.find((photo: any) => photo.id === media.id)?.title,
           'Ближайшие ворота',
         );
         assert.equal(
@@ -1333,23 +1320,27 @@ await test('права, авторизация и синхронизация', a
           ).status,
           404,
         );
-        assert.equal(
-          (
-            await request(
-              'media/' + media.id + '/places/' + added.id,
-              'DELETE',
-              undefined,
-              ownerCookie,
-            )
-          ).status,
-          200,
+        const unlinked = await request(
+          'media/' + media.id + '/places/' + added.id,
+          'DELETE',
+          undefined,
+          ownerCookie,
         );
+        assert.equal(unlinked.status, 200);
+        assert.equal((await unlinked.json()).title, 'Крепость');
         assert.equal(
           one(
             'SELECT count(*) n FROM confirmed_places WHERE media_id=?',
             media.id,
           )!.n,
           1,
+        );
+        const afterUnlink = await (
+          await request('trips/' + tid, 'GET', undefined, ownerCookie)
+        ).json();
+        assert.equal(
+          afterUnlink.media.find((photo: any) => photo.id === media.id)?.title,
+          'Крепость',
         );
         assert.equal(
           (
@@ -1411,12 +1402,15 @@ await test('права, авторизация и синхронизация', a
           ).status,
           400,
         );
-        const other = one(
-          'SELECT id FROM media WHERE trip_id=? AND id<>? LIMIT 1',
-          tid,
-          media.id,
-        )!;
+        const other = detail.media.find(
+          (photo: { id: string }) => photo.id !== media.id,
+        );
         assert.ok(other);
+        run(
+          'INSERT INTO media_titles(media_id,title) VALUES (?,?) ON CONFLICT(media_id) DO UPDATE SET title=excluded.title',
+          other.id,
+          'Крепость',
+        );
         run(
           'INSERT INTO confirmed_places(id,trip_id,media_id,title,summary,url,lat,lon,day,distance) SELECT ?,trip_id,?,title,summary,url,lat,lon,day,distance FROM confirmed_places WHERE id=?',
           id(),
@@ -1453,6 +1447,32 @@ await test('права, авторизация и синхронизация', a
           )!.n,
           0,
         );
+        const afterRemoval = await (
+          await request('trips/' + tid, 'GET', undefined, ownerCookie)
+        ).json();
+        assert.equal(
+          afterRemoval.media.find((photo: any) => photo.id === media.id)?.title,
+          null,
+        );
+        assert.equal(
+          afterRemoval.media.find((photo: any) => photo.id === other.id)?.title,
+          'Крепость',
+        );
+        const manualTitle = await request(
+          'media/' + media.id,
+          'PATCH',
+          { title: 'Авторская подпись' },
+          ownerCookie,
+        );
+        assert.equal(manualTitle.status, 200);
+        const confirmedAgain = await request(
+          'media/' + media.id + '/places',
+          'POST',
+          { pageId: 123 },
+          ownerCookie,
+        );
+        assert.equal(confirmedAgain.status, 200);
+        assert.equal((await confirmedAgain.json()).title, 'Авторская подпись');
       } finally {
         globalThis.fetch = original;
       }

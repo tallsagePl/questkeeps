@@ -19,7 +19,7 @@ export function oauthErrorReason(value: string): OAuthErrorReason {
 }
 
 export function oauthReturnPath(value: string) {
-  return /^\/(?:join\/[A-Za-z0-9_-]+|\?(?:trip=[A-Za-z0-9_-]+|create=1))?$/.test(
+  return /^\/(?:join\/[A-Za-z0-9_-]+|\?(?:trip=[A-Za-z0-9_-]+(?:&source=1)?|create=1(?:&mode=login)?))?$/.test(
     value,
   )
     ? value

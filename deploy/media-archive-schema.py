@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
-"""Switch only the reviewed 8/9/10/11/12/13/14/15/16 compatibility marker; never remove user data."""
+"""Switch the reviewed compatibility markers 8 through 17."""
 import sqlite3
 import sys
 import time
 
 path, target = sys.argv[1], int(sys.argv[2])
-if target not in (8, 9, 10, 11, 12, 13, 14, 15, 16):
-    raise SystemExit('Only reviewed additive migrations 8 through 16 are supported')
+if target not in range(8, 18):
+    raise SystemExit('Only reviewed additive migrations 8 through 17 are supported')
 with sqlite3.connect(path, timeout=10) as db:
     db.execute('BEGIN IMMEDIATE')
     current = db.execute('PRAGMA user_version').fetchone()[0]
-    if current not in (8, 9, 10, 11, 12, 13, 14, 15, 16):
+    if current not in range(8, 18):
         raise RuntimeError('Unexpected schema version')
+    if current >= 17 or target >= 17:
+        if {row[1] for row in db.execute('PRAGMA table_info(onboarding_goals)')} != {'user_id', 'goal'}:
+            raise RuntimeError('Onboarding goal compatibility schema is missing')
+        onboarding_history = db.execute('SELECT name FROM schema_migrations WHERE version=17').fetchone()
+        if onboarding_history != ('onboarding-goals',):
+            raise RuntimeError('Unexpected onboarding goal migration history')
+    # Keep the onboarding ledger timestamp through rollback. It is the eligibility
+    # cutoff for new accounts and version 16 ignores this additive ledger row.
     if current >= 16 or target >= 16:
         if 'can_manage' not in {row[1] for row in db.execute('PRAGMA table_info(members)')}:
             raise RuntimeError('Trip manager compatibility schema is missing')

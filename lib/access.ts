@@ -5,6 +5,7 @@ import { localizeMessage, type LocalizedMessage } from './i18n/translate';
 import type { UserProfile, TripRecord, TripAccess } from './contracts';
 import { ensureUsername, descriptionMentions } from './profiles';
 import { addMapDetails } from './map-details';
+import { mediaTitleSql } from './media-title';
 import { one, all, run, hash, token, Row } from './db';
 
 export class HttpError extends Error {
@@ -124,10 +125,13 @@ export function owner(tripId: string, userId: string) {
   return t;
 }
 
+export function canManageTrip(access: TripAccess) {
+  return access.role === 'owner' || !!access.canManage;
+}
+
 export function tripManager(tripId: string, userId: string) {
   const access = membership(tripId, userId);
-  if (access.role !== 'owner' && !access.canManage)
-    fail(403, 'trip.managerRequired');
+  if (!canManageTrip(access)) fail(403, 'trip.managerRequired');
   return access;
 }
 
@@ -152,6 +156,13 @@ export function inRange(day: string, from: string, to: string) {
 export function assertDay(day: string, t: Row) {
   if (!inRange(day, t.from, t.to))
     fail(403, 'messages.thisDateIsOutsideYourParticipationPeriod');
+}
+
+export function assertParticipationDay(day: string, access: TripAccess) {
+  assertDay(day, {
+    from: access.participationStart ?? access.from,
+    to: access.participationEnd ?? access.to,
+  });
 }
 
 export function mediaFor(req: Request, mediaId: string) {
@@ -188,7 +199,7 @@ export function tripData(req: Request, tripId: string) {
   const t = viewAccess(req, tripId);
   const user = currentUser(req);
   const media = all(
-    'SELECT m.id,m.name,m.kind,m.mime,m.revision,m.rotation,s.account_id _account_id,m.resource_id _resource_id,COALESCE((SELECT title FROM media_titles WHERE media_id=m.id),(SELECT substr(title,1,160) FROM confirmed_places WHERE media_id=m.id ORDER BY rowid DESC LIMIT 1)) title,EXISTS(SELECT 1 FROM media_favorites WHERE media_id=m.id AND user_id=?) favorite,m.taken,m.date_basis,m.lat,m.lon,m.user_id,m.hidden,m.hidden_from_guests,u.name author FROM media m JOIN sources s ON s.id=m.source_id JOIN users u ON u.id=m.user_id WHERE m.trip_id=? AND s.approved=1 AND m.missing=0 AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (m.hidden=0 OR m.user_id=?) AND (?=0 OR m.hidden_from_guests=0) ORDER BY m.taken',
+    `SELECT m.id,m.name,m.kind,m.mime,m.revision,m.rotation,s.account_id _account_id,m.resource_id _resource_id,${mediaTitleSql} title,EXISTS(SELECT 1 FROM media_favorites WHERE media_id=m.id AND user_id=?) favorite,m.taken,m.date_basis,m.lat,m.lon,m.user_id,m.hidden,m.hidden_from_guests,u.name author FROM media m JOIN sources s ON s.id=m.source_id JOIN users u ON u.id=m.user_id WHERE m.trip_id=? AND s.approved=1 AND m.missing=0 AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (m.hidden=0 OR m.user_id=?) AND (?=0 OR m.hidden_from_guests=0) ORDER BY m.taken`,
     t.role === 'guest' ? '' : user?.id || '',
     tripId,
     t.from,
@@ -201,7 +212,7 @@ export function tripData(req: Request, tripId: string) {
     t.role === 'guest'
       ? []
       : all(
-          'SELECT s.approved,s.last_sync,s.error,s.lock_until,a.disk_enabled,(s.user_id=t.owner_id OR EXISTS (SELECT 1 FROM members mb WHERE mb.trip_id=s.trip_id AND mb.user_id=s.user_id AND mb.active=1)) eligible FROM sources s JOIN accounts a ON a.id=s.account_id JOIN trips t ON t.id=s.trip_id WHERE s.trip_id=? AND (?=1 OR s.approved=1 OR s.user_id=?)',
+          'SELECT s.user_id,s.approved,s.last_sync,s.error,s.lock_until,a.disk_enabled,(s.user_id=t.owner_id OR EXISTS (SELECT 1 FROM members mb WHERE mb.trip_id=s.trip_id AND mb.user_id=s.user_id AND mb.active=1)) eligible FROM sources s JOIN accounts a ON a.id=s.account_id JOIN trips t ON t.id=s.trip_id WHERE s.trip_id=? AND (?=1 OR s.approved=1 OR s.user_id=?)',
           tripId,
           Number(t.role === 'owner'),
           user?.id || '',
@@ -230,10 +241,21 @@ export function tripData(req: Request, tripId: string) {
         s.approved && s.disk_enabled && s.eligible && !s.last_sync && !s.error,
     ),
     failed: sourceRows.some((s) => s.approved && !!s.error),
+    canRetry: sourceRows.some(
+      (s) =>
+        s.approved &&
+        s.disk_enabled &&
+        s.eligible &&
+        !!s.error &&
+        (t.role === 'owner' || s.user_id === user?.id),
+    ),
     pendingApproval:
       sourceRows.length > 0 && sourceRows.every((s) => !s.approved),
     disconnected:
       sourceRows.length > 0 && sourceRows.every((s) => !s.disk_enabled),
+    canReconnect: sourceRows.some(
+      (s) => !s.disk_enabled && s.user_id === user?.id,
+    ),
     lastSync: Math.max(0, ...sourceRows.map((s) => s.last_sync || 0)),
   };
   return {

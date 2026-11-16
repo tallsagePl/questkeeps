@@ -7,6 +7,13 @@ import type { RouteCity } from '../lib/route-label';
 
 type Option = { id: string; label: string; country?: string };
 
+export type DestinationSelection = {
+  countries: Option[];
+  cities: Option[];
+  routes: Option[];
+  route: string;
+};
+
 function Tags({
   label,
   items,
@@ -210,22 +217,24 @@ function SearchSelect({
 
 export default function DestinationPicker({
   onChange,
+  initialSelection,
   inferredRoute,
   disabled,
   hint,
   onManualChange,
 }: {
-  onChange: (value: string) => void;
+  onChange: (value: string, selection: DestinationSelection) => void;
+  initialSelection?: DestinationSelection;
   onManualChange: () => void;
   inferredRoute: RouteCity[];
   disabled: boolean;
   hint: string;
 }) {
   const { t, language } = useLocale();
-  const [countries, setCountries] = useState<Option[]>([]);
-  const [cities, setCities] = useState<Option[]>([]);
-  const [routes, setRoutes] = useState<Option[]>([]);
-  const [route, setRoute] = useState('');
+  const [countries, setCountries] = useState(initialSelection?.countries || []);
+  const [cities, setCities] = useState(initialSelection?.cities || []);
+  const [routes, setRoutes] = useState(initialSelection?.routes || []);
+  const [route, setRoute] = useState(initialSelection?.route || '');
   useEffect(() => {
     if (!inferredRoute.length) return;
     const names = new Intl.DisplayNames([language], { type: 'region' });
@@ -257,8 +266,9 @@ export default function DestinationPicker({
     const routeLabel = routes.map((item) => item.label).join(' → ');
     onChange(
       [cityLabel, countryLabel, routeLabel].filter(Boolean).join(' || '),
+      { countries, cities, routes, route },
     );
-  }, [countries, cities, routes, onChange]);
+  }, [countries, cities, routes, route, onChange]);
   const addRoute = () => {
     onManualChange();
     const label = route.trim();
