@@ -14,7 +14,6 @@ const goals = [
   'trip_selection_prepared',
   'trip_photo_review_clicked',
   'trip_video_review_clicked',
-  'onboarding_example_opened',
   'onboarding_create_from_home',
   'onboarding_create_from_about',
   'onboarding_create_from_example',

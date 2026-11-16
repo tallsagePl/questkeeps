@@ -71,6 +71,9 @@ for (const width of [320, 393, 1024, 1280, 1440, 1920]) {
         }
       }
       if (width >= 701) {
+        await expect(
+          header.getByRole('link', { name: 'Друзья', exact: true }),
+        ).toHaveAttribute('href', '/people/friends');
         const bounds = (await header.boundingBox())!;
         const brand = (await header.locator('.header-brand').boundingBox())!;
         const profile = (await header
@@ -90,7 +93,7 @@ for (const width of [320, 393, 1024, 1280, 1440, 1920]) {
           expect(control.height).toBe(52);
           expect(Math.abs(control.y - appearance.y)).toBeLessThan(1);
         }
-        if (width >= 1280) {
+        if (width >= 1600) {
           const caption = (await header.locator('.top-caption').boundingBox())!;
           expect(
             Math.abs(
@@ -102,6 +105,8 @@ for (const width of [320, 393, 1024, 1280, 1440, 1920]) {
           await page.screenshot({
             path: 'data/header-aligned-' + width + '.png',
           });
+        } else {
+          await expect(header.locator('.top-caption')).toBeHidden();
         }
       }
       const bell = header.getByRole('button', {
@@ -148,6 +153,9 @@ for (const width of [320, 393, 1024, 1280, 1440, 1920]) {
         await expect(
           menu.getByRole('link', { name: 'О проекте' }),
         ).toBeVisible();
+        await expect(
+          menu.getByRole('link', { name: 'Друзья', exact: true }),
+        ).toHaveAttribute('href', '/people/friends');
         await menu
           .getByRole('button', { name: 'Включить тёмную тему' })
           .click();

@@ -47,7 +47,7 @@ test('stored validation errors change language and user-authored titles stay unc
 test('OAuth failures are translated from the same locale dictionaries', async ({
   page,
 }) => {
-  await page.goto('/auth/error?reason=access_denied');
+  await page.goto('/auth/error?reason=access_denied&intent=link');
   await expect(
     page.getByRole('heading', { name: 'Не удалось завершить подключение' }),
   ).toBeVisible();
@@ -61,6 +61,30 @@ test('OAuth failures are translated from the same locale dictionaries', async ({
     'Access was not granted',
   );
   expect(await page.locator('main').innerText()).not.toMatch(/[А-Яа-яЁё]/);
+});
+
+test('Yandex downtime on sign-in offers a retry and preserves the trip entry for email sign-in', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(
+    '/auth/error?reason=provider_unavailable&intent=login&returnTo=%2F%3Fcreate%3D1',
+  );
+  await expect(
+    page.getByRole('heading', { name: 'Не удалось войти через Яндекс' }),
+  ).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText(
+    'QuestKeeps сейчас не может связаться с Яндексом.',
+  );
+  const retry = page.getByRole('link', { name: 'Повторить вход через Яндекс' });
+  await expect(retry).toHaveAttribute(
+    'href',
+    '/api/auth/yandex?intent=login&returnTo=%2F%3Fcreate%3D1',
+  );
+  await expect(page.locator('main')).not.toContainText('provider_unavailable');
+  await page.getByRole('link', { name: 'Войти по почте или никнейму' }).click();
+  await expect(page).toHaveURL(/\?create=1&mode=login$/);
+  await expect(page.locator('input[name="password"]')).toBeVisible();
 });
 
 test('parameterized server errors keep their parameters when the language changes', async ({

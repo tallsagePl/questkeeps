@@ -26,6 +26,7 @@ const required = [
   'accounts',
   'sources',
   'media',
+  'photo_self_marks',
   'notes',
   'places',
   'oauth_states',

@@ -31,16 +31,18 @@ export function PlaceImage({
   title,
   scope,
   inactive = false,
+  fillFrame = false,
   onRetryIntent = () => {},
 }: {
   endpoint: string;
   title: string;
   scope: string;
   inactive?: boolean;
+  fillFrame?: boolean;
   onRetryIntent?: () => void;
 }) {
   const { t, language } = useLocale();
-  const sizing = usePlacePhotoSizing();
+  const sizing = usePlacePhotoSizing(!fillFrame);
   const eligible = useContext(PreviewPriority) !== null;
   const [activated, setActivated] = useState(false);
   useEffect(() => {
@@ -164,7 +166,6 @@ function PlacePhotos({
   onOpen: () => void;
 }) {
   const { t } = useLocale();
-  const ownSizing = usePlacePhotoSizing();
   const ref = useRef<HTMLDivElement>(null);
   const pointer = useRef('');
   const [near, setNear] = useState(false);
@@ -193,6 +194,7 @@ function PlacePhotos({
           title={place.title}
           scope={scope}
           inactive={own}
+          fillFrame
           onRetryIntent={() => {
             setHovered(false);
             setSelected(false);
@@ -201,7 +203,7 @@ function PlacePhotos({
       </div>
       {photoSrc && (
         <>
-          <div className="place-own-photo" aria-hidden={!own} {...ownSizing}>
+          <div className="place-own-photo" aria-hidden={!own}>
             {near && (
               <PreviewPriority value={own ? 0 : 1}>
                 <MediaPreview src={photoSrc} kind="photo" scope={scope} />
@@ -340,6 +342,14 @@ export default function DiscoveredPlaces({
                   data-place-url={place.url}
                   tabIndex={-1}
                 >
+                  <PlacePhotos
+                    key={imagePath(place)}
+                    place={place}
+                    onOpen={() => onPhotoSelect(place.media_id, place.url)}
+                    photoSrc={photoPath(place)}
+                    endpoint={imagePath(place)}
+                    scope={scope}
+                  />
                   <div className="discovered-place-content">
                     <span className="eyebrow">
                       {new Date(place.day + 'T12:00:00').toLocaleDateString(
@@ -353,6 +363,11 @@ export default function DiscoveredPlaces({
                         ? 'OPENSTREETMAP'
                         : 'WIKIPEDIA'}
                     </span>
+                    <h2>{place.title}</h2>
+                    <p>
+                      {place.description ||
+                        placeTextContent(place.summary).description}
+                    </p>
                     <div className="place-photo-reference">
                       {photoPath(place) && (
                         <button
@@ -382,11 +397,6 @@ export default function DiscoveredPlaces({
                           />
                         )}
                     </div>
-                    <h2>{place.title}</h2>
-                    <p>
-                      {place.description ||
-                        placeTextContent(place.summary).description}
-                    </p>
                     {place.articleFailed && (
                       <button
                         type="button"
@@ -431,14 +441,6 @@ export default function DiscoveredPlaces({
                       />
                     </div>
                   )}
-                  <PlacePhotos
-                    key={imagePath(place)}
-                    place={place}
-                    onOpen={() => onPhotoSelect(place.media_id, place.url)}
-                    photoSrc={photoPath(place)}
-                    endpoint={imagePath(place)}
-                    scope={scope}
-                  />
                 </article>
               )}
             </LocalizedArticle>

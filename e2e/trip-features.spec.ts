@@ -120,6 +120,7 @@ test('единый диапазон, карты улиц и районов, уд
     lat: 41 + i * 0.001,
     lon: 29,
     hidden: 0,
+    favorite: i === 2,
     revision: '1',
   }));
   let places = media.map((photo, i) => ({
@@ -224,6 +225,12 @@ test('единый диапазон, карты улиц и районов, уд
     return r.fulfill({ json: { ok: true } });
   });
   await page.goto('/?trip=features');
+  const dayGroups = page.locator('.gallery-day-toggle');
+  await expect(dayGroups.first()).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Избранное', exact: true }).click();
+  await page.locator('.gallery-jump-button').click();
+  await expect(dayGroups.last()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.photo-card')).toBeFocused();
   await page
     .getByRole('button', { name: 'День поездки: Все дни', exact: true })
     .click();
@@ -234,15 +241,38 @@ test('единый диапазон, карты улиц и районов, уд
   await calendar
     .getByRole('button', { name: '12 октября 2026 г.', exact: true })
     .click();
-  const dayGroups = page.locator('.gallery-day-toggle');
   await expect(dayGroups).toHaveCount(2);
-  await expect(page.locator('.photo-card')).toHaveCount(0);
-  await dayGroups.first().click();
+  await expect(dayGroups.first()).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.photo-card')).toHaveCount(1);
-  await dayGroups.last().click();
-  await expect(dayGroups.first()).toHaveAttribute('aria-expanded', 'false');
-  await expect(dayGroups.last()).toHaveAttribute('aria-expanded', 'true');
+  await dayGroups.last().focus();
+  await page.keyboard.press('Enter');
+  await expect(dayGroups.first()).toHaveAttribute('aria-pressed', 'false');
+  await expect(dayGroups.last()).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.photo-card')).toHaveCount(1);
+  const dates = page.locator('.gallery-day-list');
+  const gallery = page.locator('.gallery-day-content');
+  for (const width of [1440, 1024, 393, 320]) {
+    await page.setViewportSize({ width, height: 852 });
+    const listBounds = (await dates.boundingBox())!;
+    const galleryBounds = (await gallery.boundingBox())!;
+    await expect(dayGroups.last()).toHaveAttribute('aria-pressed', 'true');
+    await expect(gallery.getByRole('heading')).toContainText('12 октября');
+    if (width > 700) {
+      expect(listBounds.x + listBounds.width).toBeLessThan(galleryBounds.x);
+    } else {
+      expect(listBounds.y + listBounds.height).toBeLessThan(galleryBounds.y);
+      expect((await dayGroups.first().boundingBox())!.y).toBe(
+        (await dayGroups.last().boundingBox())!.y,
+      );
+      expect(
+        (await dayGroups.first().boundingBox())!.height,
+      ).toBeGreaterThanOrEqual(44);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBe(width);
+    }
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page
     .getByRole('button', { name: 'Открытые места', exact: true })
     .click();

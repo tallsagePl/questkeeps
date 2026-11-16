@@ -8,6 +8,7 @@ import {
 } from '../friend-links';
 import {
   friendLists,
+  latestFriendTrips,
   relationship,
   requestFriend,
   acceptFriend,
@@ -69,7 +70,13 @@ export async function friendRoutes({
     fail(404, 'messages.routeNotFound');
   }
   if (p[0] === 'friends') {
-    if (!p[1] && method === 'GET') return json(friendLists(u.id));
+    if (!p[1] && method === 'GET')
+      return json({
+        ...friendLists(u.id),
+        ...(url.searchParams.get('trips') === '1'
+          ? { latestTrips: latestFriendTrips(u.id) }
+          : {}),
+      });
     if (p[1] && !p[2]) {
       const targetId = z.string().min(1).max(100).parse(p[1]);
       if (!one('SELECT 1 FROM users WHERE id=?', targetId))

@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react';
 import { publicMetadata } from '@/lib/public-seo';
-import SiteFooter from '@/components/site-footer';
+import PublicPageShell from '@/components/public-page-shell';
 import CreateTripLink from '@/components/create-trip-link';
 import styles from './guide.module.css';
 
@@ -9,42 +10,50 @@ export const metadata = publicMetadata(
   'Как подключить папку Яндекс Диска, разложить фото по дням, добавить место съёмки, сравнить похожие кадры и отправить поездку одной ссылкой.',
 );
 
+function GuideStep({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <details className={styles.step}>
+      <summary>
+        <h2>
+          {title}
+          <span>{description}</span>
+        </h2>
+      </summary>
+      <div className={styles.stepBody} id={id}>
+        {children}
+      </div>
+    </details>
+  );
+}
+
 export default function GuidePage() {
   return (
-    <>
-      <main className={styles.guide} lang="ru">
-        <a className={styles.home} href="/">
-          QuestKeeps
-        </a>
+    <PublicPageShell>
+      <main id="main-content" tabIndex={-1} className={styles.guide} lang="ru">
         <h1>Как разобрать фотографии после поездки</h1>
-        <p>
-          Соберите фото в одной папке Яндекс Диска и запишите даты поездки.
-          Проверьте, сохранились ли даты съёмки. Кадры без GPS попадут в
-          галерею, и место для них можно выбрать вручную.
-        </p>
-        <nav aria-label="Разделы руководства">
-          <ul>
-            <li>
-              <a href="#dates">Разложить фото по дням</a>
-            </li>
-            <li>
-              <a href="#map">Найти кадры на карте</a>
-            </li>
-            <li>
-              <a href="#review">Разобрать похожие снимки</a>
-            </li>
-            <li>
-              <a href="#share">Отправить поездку друзьям</a>
-            </li>
-          </ul>
-        </nav>
-        <section id="dates">
-          <h2>1. Соберите фото и видео по дням</h2>
+        <GuideStep
+          id="dates"
+          title="Разложить фото по дням"
+          description="Выберите папку Яндекс Диска. Кадры сгруппируются по датам съёмки."
+        >
           <p>
-            Нажмите «Новая поездка», укажите название и выберите папку Яндекс
-            Диска. Если не помните даты, попробуйте «Определить даты по фото и
-            видео» и проверьте предложенный диапазон перед созданием поездки.
-            После импорта откройте «Галерею» и разверните нужный день.
+            Нажмите «Создать поездку», чтобы заполнить название, маршрут и даты.
+            Войти или создать аккаунт можно при сохранении. Если нужны фото,
+            выберите папку Яндекс Диска: за один вход можно войти в QuestKeeps и
+            открыть выбор папки. Если не помните даты, попробуйте «Определить
+            даты по фото и видео» и проверьте предложенный диапазон. После
+            импорта откройте «Галерею» и выберите дату. На широком экране даты
+            расположены слева от кадров, на телефоне — в плитках над кадрами.
           </p>
           <p>
             В <a href="/about#trip-example">примере «Три дня у Босфора»</a> фото
@@ -55,9 +64,12 @@ export default function GuidePage() {
           <CreateTripLink source="guide" className={styles.action}>
             Создать поездку
           </CreateTripLink>
-        </section>
-        <section id="map">
-          <h2>2. Посмотрите, где сделаны снимки</h2>
+        </GuideStep>
+        <GuideStep
+          id="map"
+          title="Найти кадры на карте"
+          description="Фото с GPS появятся там, где вы их сняли."
+        >
           <p>
             На вкладке «Карта» отображаются кадры с координатами. Если снимка на
             карте нет, откройте его в галерее. Когда в файле нет GPS, место
@@ -78,9 +90,12 @@ export default function GuidePage() {
               Карта демонстрационной поездки в QuestKeeps.
             </figcaption>
           </figure>
-        </section>
-        <section id="review">
-          <h2>3. Разберите похожие кадры</h2>
+        </GuideStep>
+        <GuideStep
+          id="review"
+          title="Разобрать похожие снимки"
+          description="Сравните кадры и отметьте удачные звёздочкой."
+        >
           <p>
             В «Разборе кадров» нажмите «Сравнить фото» или «Сравнить видео».
             Если вы сняли один вид несколько раз, откройте похожие кадры и
@@ -88,9 +103,12 @@ export default function GuidePage() {
             звёздочку, повернуть фото или убрать его из архива. Оригинал
             останется на Яндекс Диске.
           </p>
-        </section>
-        <section id="share">
-          <h2>4. Отправьте поездку друзьям</h2>
+        </GuideStep>
+        <GuideStep
+          id="share"
+          title="Отправить поездку друзьям"
+          description="Одна ссылка откроет фото, карту и дневник."
+        >
           <p>
             Владелец и управляющий могут создать гостевую ссылку в разделе
             «Управление поездкой». По ней друзья увидят опубликованные кадры,
@@ -103,16 +121,11 @@ export default function GuidePage() {
             отзовите доступ в настройках поездки. Уже скачанные файлы останутся
             у получателей.
           </p>
-        </section>
-        <CreateTripLink source="guide" className={styles.action}>
+        </GuideStep>
+        <CreateTripLink source="guide" className={`primary ${styles.create}`}>
           Создать поездку
         </CreateTripLink>
-        <p>
-          <a href="/">Открыть QuestKeeps</a> · <a href="/about">О сервисе</a> ·{' '}
-          <a href="/privacy">Конфиденциальность</a>
-        </p>
       </main>
-      <SiteFooter />
-    </>
+    </PublicPageShell>
   );
 }

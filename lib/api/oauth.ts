@@ -1,47 +1,100 @@
 import { queueTelegramRegistration } from '../telegram';
-import { oauthErrorReason, oauthReturnPath } from '../oauth-errors';
+import {
+  oauthErrorReason,
+  oauthIntent,
+  oauthReturnPath,
+  type OAuthErrorReason,
+  type OAuthIntent,
+} from '../oauth-errors';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db, one, run, id, token, hash, encrypt } from '../db';
 import { fail, currentUser, session, cookie, HttpError } from '../access';
 import { appURL } from './http';
-import { oauthRegistrationHash } from '../trip-entry';
+import { createTripDiskEntry, oauthRegistrationHash } from '../trip-entry';
+import { YandexRequestError, yandexGet } from '../yandex-request';
+import { boundedProviderJson } from '../provider-queue';
+import { queueProfileCompletionNotice } from '../notifications';
 
-const callbackErrors: Record<string, string> = {
+const callbackErrors: Record<string, OAuthErrorReason> = {
   'messages.authorizationExpiredPleaseSignInAgain': 'session_expired',
+  'messages.authorizationCodeIsMissing': 'session_expired',
+  'messages.theSignedInAccountHasChanged': 'link_session_changed',
   'errors.linkExistingAccount': 'account_link_required',
   'messages.disconnectYourCurrentYandexAccountInYour': 'account_already_linked',
+  'messages.thisYandexAccountIsAlreadyLinkedTo': 'account_linked_elsewhere',
 };
+
+class OAuthProviderError extends Error {
+  constructor(
+    readonly reason:
+      'provider_unavailable' | 'exchange_failed' | 'profile_failed',
+    readonly stage: 'token' | 'profile',
+    readonly status?: number,
+  ) {
+    super(reason);
+  }
+}
+
+const tokenResponse = z.object({
+  access_token: z.string().trim().min(1),
+  refresh_token: z.string().nullish(),
+  expires_in: z.number().positive().nullish(),
+  scope: z.string().optional(),
+});
+
+const profileResponse = z.object({
+  id: z.union([z.string().min(1), z.number().int().positive()]),
+  login: z.string().trim().min(1),
+  display_name: z.string().nullish(),
+  default_email: z.string().nullish(),
+});
 
 type OAuthState = {
   browser_hash: string;
   user_id: string | null;
-  intent: 'link' | 'login';
+  intent: OAuthIntent;
   verifier: string;
   return_path: string | null;
 };
 
+const diskReadScope = 'cloud_api:disk.read';
+
 export function oauthCallbackFailure(
   error: unknown,
-  intent: string,
+  intent: OAuthIntent,
   returnPath = '/',
 ) {
+  if (error instanceof OAuthProviderError) {
+    console.warn('Yandex OAuth request failed', {
+      intent,
+      stage: error.stage,
+      reason: error.reason,
+      status: error.status,
+    });
+    return oauthFailure(error.reason, intent, returnPath);
+  }
   const reason =
     error instanceof HttpError
       ? callbackErrors[error.translation?.key || ''] || 'unknown'
       : 'unknown';
+  if (reason === 'unknown')
+    console.warn('Yandex OAuth callback failed', { intent });
   return oauthFailure(reason, intent, returnPath);
 }
 
 export function oauthFailure(
   reason: string,
-  intent = 'login',
+  intent: OAuthIntent = 'login',
   returnPath = '/',
 ) {
   const url = new URL('/auth/error', appURL());
   url.searchParams.set('reason', oauthErrorReason(reason));
-  url.searchParams.set('intent', intent === 'link' ? 'link' : 'login');
-  url.searchParams.set('returnTo', oauthReturnPath(returnPath));
+  url.searchParams.set('intent', intent);
+  url.searchParams.set(
+    'returnTo',
+    intent === 'login_disk' ? createTripDiskEntry : oauthReturnPath(returnPath),
+  );
   const response = NextResponse.redirect(url);
   response.cookies.set('ta_oauth', '', {
     httpOnly: true,
@@ -59,12 +112,13 @@ export async function oauth(req: NextRequest, p: string[]) {
     fail(503, 'messages.setYandexClientIdAndYandexClient');
   if (p[1] === 'yandex') {
     const user = currentUser(req);
-    const intent =
-      req.nextUrl.searchParams.get('intent') === 'link' ? 'link' : 'login';
+    const intent = oauthIntent(req.nextUrl.searchParams.get('intent'));
     if (intent === 'link' && !user) fail(401, 'messages.signInFirst');
-    const returnTo = oauthReturnPath(
-      req.nextUrl.searchParams.get('returnTo') || '/',
-    );
+    const connectsDisk = intent !== 'login';
+    const returnTo =
+      intent === 'login_disk'
+        ? createTripDiskEntry
+        : oauthReturnPath(req.nextUrl.searchParams.get('returnTo') || '/');
     const state = token();
     const browser = token();
     const verifier = token();
@@ -73,7 +127,7 @@ export async function oauth(req: NextRequest, p: string[]) {
       'INSERT INTO oauth_states (hash,browser_hash,user_id,intent,verifier,expires,return_path) VALUES (?,?,?,?,?,?,?)',
       hash(state),
       hash(browser),
-      intent === 'link' ? user!.id : null,
+      connectsDisk ? (user?.id ?? null) : null,
       intent,
       verifier,
       Date.now() + 600000,
@@ -84,11 +138,10 @@ export async function oauth(req: NextRequest, p: string[]) {
       response_type: 'code',
       client_id: process.env.YANDEX_CLIENT_ID!,
       redirect_uri: appURL() + '/api/auth/callback',
-      scope:
-        intent === 'link'
-          ? 'login:info login:email cloud_api:disk.read'
-          : 'login:info login:email',
-      ...(intent === 'link' ? { optional_scope: 'login:avatar' } : {}),
+      scope: connectsDisk
+        ? 'login:info login:email ' + diskReadScope
+        : 'login:info login:email',
+      ...(connectsDisk ? { optional_scope: 'login:avatar' } : {}),
       state,
       code_challenge: Buffer.from(hash(verifier), 'hex').toString('base64url'),
       code_challenge_method: 'S256',
@@ -105,15 +158,25 @@ export async function oauth(req: NextRequest, p: string[]) {
     return response;
   }
   if (p[1] === 'callback') {
-    const state = req.nextUrl.searchParams.get('state') || '';
+    const stateHash = hash(req.nextUrl.searchParams.get('state') || '');
     const s = one<OAuthState>(
-      'SELECT * FROM oauth_states WHERE hash=? AND expires>?',
-      hash(state),
-      Date.now(),
+      'SELECT * FROM oauth_states WHERE hash=?',
+      stateHash,
     );
-    if (!s || s.browser_hash !== hash(cookie(req, 'ta_oauth')))
+    if (!s || s.browser_hash !== hash(cookie(req, 'ta_oauth'))) {
+      if (s?.intent === 'login_disk')
+        return oauthFailure('session_expired', s.intent);
       fail(400, 'messages.authorizationExpiredPleaseSignInAgain');
-    run('DELETE FROM oauth_states WHERE hash=?', hash(state));
+    }
+    if (
+      !run(
+        'DELETE FROM oauth_states WHERE hash=? AND browser_hash=? AND expires>?',
+        stateHash,
+        s.browser_hash,
+        Date.now(),
+      ).changes
+    )
+      return oauthFailure('session_expired', s.intent, s.return_path || '/');
     return finishOAuth(req, s).catch((error: unknown) =>
       oauthCallbackFailure(error, s.intent, s.return_path || '/'),
     );
@@ -122,8 +185,13 @@ export async function oauth(req: NextRequest, p: string[]) {
 }
 
 async function finishOAuth(req: NextRequest, s: OAuthState) {
-  if (s.intent === 'link' && currentUser(req)?.id !== s.user_id)
-    fail(403, 'messages.theSignedInAccountHasChanged');
+  const connectsDisk = s.intent !== 'login';
+  const startsSession = s.intent !== 'link' && !s.user_id;
+  const assertSameUser = () => {
+    if (connectsDisk && (currentUser(req)?.id ?? null) !== s.user_id)
+      fail(403, 'messages.theSignedInAccountHasChanged');
+  };
+  assertSameUser();
   if (req.nextUrl.searchParams.has('error'))
     return oauthFailure(
       req.nextUrl.searchParams.get('error') || 'unknown',
@@ -133,105 +201,102 @@ async function finishOAuth(req: NextRequest, s: OAuthState) {
   const code =
     req.nextUrl.searchParams.get('code') ||
     fail(400, 'messages.authorizationCodeIsMissing');
-  const result = await fetch('https://oauth.yandex.ru/token', {
-    method: 'POST',
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      client_id: process.env.YANDEX_CLIENT_ID!,
-      client_secret: process.env.YANDEX_CLIENT_SECRET || '',
-      code_verifier: s.verifier,
-      redirect_uri: appURL() + '/api/auth/callback',
-    }),
-    signal: AbortSignal.timeout(20000),
-  });
-  if (!result.ok)
-    return oauthFailure('exchange_failed', s.intent, s.return_path || '/');
-  const creds = await result.json();
-  const profile = await fetch('https://login.yandex.ru/info?format=json', {
-    headers: { Authorization: 'OAuth ' + creds.access_token },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!profile.ok) fail(502, 'messages.couldNotReadYourYandexProfile');
-  const info = await profile.json();
-  if (!info.id || typeof info.login !== 'string')
-    fail(502, 'errors.invalidYandexProfile');
+  const creds = await exchangeCode(code, s.verifier);
+  if (
+    connectsDisk &&
+    creds.scope !== undefined &&
+    !creds.scope.split(/\s+/).includes(diskReadScope)
+  )
+    return oauthFailure('invalid_scope', s.intent, s.return_path || '/');
+  const info = await fetchProfile(creds.access_token);
   const providerEmail = z.email().safeParse(
     String(info.default_email || '')
       .trim()
       .toLowerCase(),
   );
-  const existing = one(
-    'SELECT * FROM accounts WHERE yandex_id=?',
-    String(info.id),
-  );
-  let userId = s.user_id || existing?.user_id;
-  let created = false;
-  db.transaction(() => {
-    if (
-      s.intent === 'link' &&
-      one(
-        'SELECT id FROM accounts WHERE user_id=? AND disk_enabled=1 AND yandex_id<>?',
-        userId,
-        String(info.id),
+  const providerId = String(info.id);
+  const email = providerEmail.success ? providerEmail.data : null;
+  const { sessionToken, created } = db
+    .transaction(() => {
+      // The identity or its links can change while requests to Yandex are in flight.
+      assertSameUser();
+      const existing = one<{
+        id: string;
+        user_id: string;
+        refresh: string | null;
+      }>(
+        'SELECT id,user_id,refresh FROM accounts WHERE yandex_id=?',
+        providerId,
+      );
+      let userId = s.user_id || existing?.user_id;
+      let created = false;
+      if (s.user_id && existing && existing.user_id !== s.user_id)
+        fail(409, 'messages.thisYandexAccountIsAlreadyLinkedTo');
+      if (
+        connectsDisk &&
+        userId &&
+        one(
+          'SELECT id FROM accounts WHERE user_id=? AND disk_enabled=1 AND yandex_id<>?',
+          userId,
+          providerId,
+        )
       )
-    )
-      fail(409, 'messages.disconnectYourCurrentYandexAccountInYour');
-    if (s.intent === 'link' && existing && existing.user_id !== userId)
-      fail(409, 'messages.thisYandexAccountIsAlreadyLinkedTo');
-    if (!userId) {
-      userId = id();
-      const email = providerEmail.success ? providerEmail.data : null;
-      if (email && one('SELECT id FROM users WHERE email=?', email))
-        fail(409, 'errors.linkExistingAccount');
-      run(
-        'INSERT INTO users VALUES (?,?,?,?,?)',
-        userId,
-        email,
-        info.display_name || info.login || 'Путешественник',
-        null,
-        Date.now(),
-      );
-      queueTelegramRegistration(userId);
-      created = true;
-    }
-    if (existing && s.intent === 'link')
-      run(
-        'UPDATE accounts SET token=?,refresh=?,expires=?,label=?,provider_email=?,disk_enabled=1 WHERE id=?',
-        encrypt(creds.access_token),
-        creds.refresh_token ? encrypt(creds.refresh_token) : existing.refresh,
-        creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
-        info.login,
-        providerEmail.success ? providerEmail.data : null,
-        existing.id,
-      );
-    else if (!existing)
-      run(
-        'INSERT INTO accounts (id,user_id,yandex_id,label,token,refresh,expires,disk_enabled,provider_email) VALUES (?,?,?,?,?,?,?,?,?)',
-        id(),
-        userId,
-        String(info.id),
-        info.login,
-        encrypt(creds.access_token),
-        creds.refresh_token ? encrypt(creds.refresh_token) : null,
-        creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
-        Number(s.intent === 'link'),
-        providerEmail.success ? providerEmail.data : null,
-      );
-  })();
-  // Login uses the already linked owner's id without replacing the Disk token
-  // with a token that only grants login scopes.
-  if (existing && s.intent === 'login')
-    run(
-      'UPDATE accounts SET provider_email=? WHERE id=?',
-      providerEmail.success ? providerEmail.data : null,
-      existing.id,
-    );
+        fail(409, 'messages.disconnectYourCurrentYandexAccountInYour');
+      if (!userId) {
+        userId = id();
+        if (email && one('SELECT id FROM users WHERE email=?', email))
+          fail(409, 'errors.linkExistingAccount');
+        run(
+          'INSERT INTO users VALUES (?,?,?,?,?)',
+          userId,
+          email,
+          info.display_name || info.login || 'Путешественник',
+          null,
+          Date.now(),
+        );
+        queueTelegramRegistration(userId);
+        if (s.intent === 'login_disk') queueProfileCompletionNotice(userId);
+        created = true;
+      }
+      if (existing && connectsDisk) {
+        run(
+          'UPDATE accounts SET token=?,refresh=?,expires=?,label=?,provider_email=?,disk_enabled=1 WHERE id=?',
+          encrypt(creds.access_token),
+          creds.refresh_token ? encrypt(creds.refresh_token) : existing.refresh,
+          creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
+          info.login,
+          email,
+          existing.id,
+        );
+      } else if (!existing) {
+        run(
+          'INSERT INTO accounts (id,user_id,yandex_id,label,token,refresh,expires,disk_enabled,provider_email) VALUES (?,?,?,?,?,?,?,?,?)',
+          id(),
+          userId,
+          providerId,
+          info.login,
+          encrypt(creds.access_token),
+          creds.refresh_token ? encrypt(creds.refresh_token) : null,
+          creds.expires_in ? Date.now() + creds.expires_in * 1000 : null,
+          Number(connectsDisk),
+          email,
+        );
+      } else {
+        // Normal login should leave any Disk token already in use alone.
+        run(
+          'UPDATE accounts SET provider_email=? WHERE id=?',
+          email,
+          existing.id,
+        );
+      }
+      return { sessionToken: startsSession ? session(userId) : null, created };
+    })
+    .immediate();
   const destination = new URL(s.return_path || '/', appURL());
-  if (created && s.intent === 'login') destination.hash = oauthRegistrationHash;
+  if (created) destination.hash = oauthRegistrationHash;
   const response = NextResponse.redirect(destination);
-  if (s.intent === 'login')
-    response.cookies.set('ta_session', session(userId), {
+  if (sessionToken)
+    response.cookies.set('ta_session', sessionToken, {
       httpOnly: true,
       sameSite: 'lax',
       secure: appURL().startsWith('https:'),
@@ -248,4 +313,92 @@ async function finishOAuth(req: NextRequest, s: OAuthState) {
     maxAge: 0,
   });
   return response;
+}
+
+async function exchangeCode(code: string, verifier: string) {
+  const signal = AbortSignal.timeout(20000);
+  let response: Response;
+  try {
+    // The authorization code is single-use. The server may have consumed it
+    // even when no response reached us.
+    response = await fetch('https://oauth.yandex.ru/token', {
+      method: 'POST',
+      redirect: 'manual',
+      cache: 'no-store',
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        client_id: process.env.YANDEX_CLIENT_ID!,
+        client_secret: process.env.YANDEX_CLIENT_SECRET || '',
+        code_verifier: verifier,
+        redirect_uri: appURL() + '/api/auth/callback',
+      }),
+      signal,
+    });
+  } catch {
+    throw new OAuthProviderError('provider_unavailable', 'token');
+  }
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    const unavailable =
+      response.status >= 500 || [408, 429].includes(response.status);
+    throw new OAuthProviderError(
+      unavailable ? 'provider_unavailable' : 'exchange_failed',
+      'token',
+      response.status,
+    );
+  }
+  try {
+    return tokenResponse.parse(
+      await boundedProviderJson(response, signal, 65536),
+    );
+  } catch {
+    throw new OAuthProviderError(
+      signal.aborted ? 'provider_unavailable' : 'exchange_failed',
+      'token',
+      response.status,
+    );
+  }
+}
+
+async function fetchProfile(token: string) {
+  const signal = AbortSignal.timeout(15000);
+  try {
+    return await yandexGet(
+      'https://login.yandex.ru/info?format=json',
+      {
+        headers: { Authorization: 'OAuth ' + token },
+        cache: 'no-store',
+        signal,
+      },
+      'oauth-profile',
+      async (response, active) => {
+        if (!response.ok) {
+          await response.body?.cancel().catch(() => {});
+          throw new OAuthProviderError(
+            'profile_failed',
+            'profile',
+            response.status,
+          );
+        }
+        return profileResponse.parse(
+          await boundedProviderJson(response, active, 65536),
+        );
+      },
+      { attemptMs: 7000 },
+    );
+  } catch (error) {
+    if (error instanceof OAuthProviderError) throw error;
+    if (
+      error instanceof YandexRequestError ||
+      signal.aborted ||
+      error instanceof TypeError
+    )
+      throw new OAuthProviderError(
+        'provider_unavailable',
+        'profile',
+        error instanceof YandexRequestError ? error.upstreamStatus : undefined,
+      );
+    throw new OAuthProviderError('profile_failed', 'profile');
+  }
 }

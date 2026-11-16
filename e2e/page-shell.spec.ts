@@ -26,7 +26,7 @@ for (const viewport of [
       page.getByRole('heading', { name: 'Рады вас видеть', exact: true }),
     ).toBeVisible();
     await footerAtBottom(page);
-    await page.goto('/auth/error?reason=access_denied');
+    await page.goto('/auth/error?reason=access_denied&intent=link');
     await expect(
       page.getByRole('heading', { name: 'Не удалось завершить подключение' }),
     ).toBeVisible();
@@ -81,10 +81,11 @@ test('a hanging session check becomes a retryable error instead of an endless sp
 test('logo can recover a failed archive even when already on the home URL', async ({
   page,
 }) => {
+  let unavailable = true;
   let requests = 0;
   await page.route('**/api/me', (route) => {
     requests++;
-    return requests === 1
+    return unavailable
       ? route.fulfill({ status: 503, json: { error: 'Fixture unavailable' } })
       : route.continue();
   });
@@ -92,6 +93,8 @@ test('logo can recover a failed archive even when already on the home URL', asyn
   await expect(
     page.getByRole('heading', { name: 'Не удалось открыть архив' }),
   ).toBeVisible();
+  const requestsBeforeRecovery = requests;
+  unavailable = false;
   await page
     .getByRole('link', { name: 'QuestKeeps', exact: true })
     .first()
@@ -99,5 +102,5 @@ test('logo can recover a failed archive even when already on the home URL', asyn
   await expect(
     page.getByRole('heading', { name: 'Рады вас видеть', exact: true }),
   ).toBeVisible();
-  expect(requests).toBeGreaterThan(1);
+  expect(requests).toBeGreaterThan(requestsBeforeRecovery);
 });

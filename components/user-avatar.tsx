@@ -12,6 +12,10 @@ export type ProfileUser = {
   yandexAccountId?: string | null;
 };
 
+export function AvatarPlaceholder() {
+  return <span className="avatar-placeholder" aria-hidden="true" />;
+}
+
 export default function UserAvatar({
   user,
   large = false,
@@ -31,8 +35,7 @@ function AvatarImage({ user, large }: { user: ProfileUser; large: boolean }) {
       className={'avatar user-avatar' + (large ? ' profile-avatar' : '')}
       aria-hidden="true"
     >
-      {user.name.slice(0, 1).toUpperCase()}
-      {!failed && version && (
+      {!failed && version ? (
         <img
           src={'/api/me/avatar?v=' + encodeURIComponent(version)}
           alt=""
@@ -40,6 +43,8 @@ function AvatarImage({ user, large }: { user: ProfileUser; large: boolean }) {
           height={large ? 88 : 36}
           onError={() => setFailed(true)}
         />
+      ) : (
+        <AvatarPlaceholder />
       )}
     </span>
   );

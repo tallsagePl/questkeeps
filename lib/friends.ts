@@ -1,6 +1,7 @@
 import { all, one, run, db } from './db';
 import { fail } from './access';
 import { ensureUsername } from './profiles';
+import { guestToken } from './guest-links';
 
 export type Relationship =
   'self' | 'none' | 'incoming' | 'outgoing' | 'friends';
@@ -54,6 +55,53 @@ export function friendLists(userId: string) {
       .filter((u) => u.status === 'pending' && u.requested_by === userId)
       .map(profile),
   };
+}
+
+export type FriendTrip = {
+  title: string;
+  destination: string;
+  url: string;
+};
+
+export function latestFriendTrips(userId: string): Record<string, FriendTrip> {
+  const trips = all<{
+    id: string;
+    owner_id: string;
+    title: string;
+    destination: string;
+    share_hash: string | null;
+    member: number;
+  }>(
+    `WITH accepted_friends AS (
+       SELECT CASE WHEN user_a=? THEN user_b ELSE user_a END id
+       FROM friendships WHERE (user_a=? OR user_b=?) AND status='accepted'
+     ), accessible AS (
+       SELECT t.id,t.owner_id,t.title,t.destination,t.share_hash,mb.active IS NOT NULL AS member,
+         ROW_NUMBER() OVER (PARTITION BY t.owner_id ORDER BY t.end DESC,t.start DESC,t.created DESC,t.id) AS rank
+       FROM accepted_friends a JOIN trips t ON t.owner_id=a.id
+       LEFT JOIN members mb ON mb.trip_id=t.id AND mb.user_id=? AND mb.active=1
+       LEFT JOIN trip_follows f ON f.trip_id=t.id AND f.user_id=? AND f.share_hash=t.share_hash
+       WHERE mb.user_id IS NOT NULL OR f.user_id IS NOT NULL
+     )
+     SELECT id,owner_id,title,destination,share_hash,member FROM accessible WHERE rank=1`,
+    userId,
+    userId,
+    userId,
+    userId,
+    userId,
+  );
+  return Object.fromEntries(
+    trips.map((trip) => [
+      trip.owner_id,
+      {
+        title: trip.title,
+        destination: trip.destination,
+        url: trip.member
+          ? '/?trip=' + encodeURIComponent(trip.id)
+          : '/s/' + guestToken(trip),
+      },
+    ]),
+  );
 }
 
 export function requestFriend(userId: string, targetId: string) {

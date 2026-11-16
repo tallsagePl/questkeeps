@@ -58,6 +58,17 @@ for (const canceled of [false, true]) {
       exact: true,
     });
     await expect(create).toHaveCount(1);
+    await expect(page.locator('.first-trip-intro')).toContainText(
+      'Создайте первую поездку.',
+    );
+    await expect(
+      page.locator('.site-header .user-avatar .avatar-placeholder'),
+    ).toHaveCount(1);
+    for (const width of [320, 1440]) {
+      await page.setViewportSize({ width, height: 720 });
+      await expect(create).toBeInViewport({ ratio: 1 });
+      expect((await create.boundingBox())!.height).toBeGreaterThanOrEqual(52);
+    }
     await expect(
       page.getByRole('button', { name: 'Создать первую поездку', exact: true }),
     ).toHaveCount(0);

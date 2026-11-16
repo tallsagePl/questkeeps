@@ -2,7 +2,14 @@
 
 import { trackGoal } from '@/lib/analytics';
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { ConfirmedPlace, MediaItem } from '../../lib/contracts';
 import { isAreaPlace } from '../../lib/place-kind';
 import { useLocale } from '@/components/appearance';
@@ -139,14 +146,17 @@ export default function GalleryTab({
   archive: ArchiveController;
 }) {
   const { t, language } = useLocale();
-  const [expanded, setExpanded] = useState<{
+  const [selection, setSelection] = useState<{
     scope: string;
-    day: string | null;
+    day: string;
   } | null>(null);
   const panelId = useId();
+  const headingId = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  const dayList = useRef<HTMLDivElement>(null);
+  const activeDayButton = useRef<HTMLButtonElement>(null);
   const {
     user,
-    selected,
     setData,
     tab,
     filter,
@@ -181,32 +191,60 @@ export default function GalleryTab({
     lastGallery.current = trip.id;
     trackGoal('trip_gallery_ready');
   }, [guest, tab, data.media.length, trip.id]);
-  const scope = selected + ':' + filter + ':' + day;
-  const groups = new Map<string, MediaItem[]>();
-  if (tab === 'gallery') {
+  const scope = trip.id + ':' + trip.role + ':' + filter + ':' + day;
+  const groups = useMemo(() => {
+    const grouped = new Map<string, MediaItem[]>();
+    if (tab !== 'gallery') return grouped;
     for (const item of visible) {
       const key = item.taken?.slice(0, 10) || '';
-      const group = groups.get(key) ?? [];
-      group.push(item);
-      groups.set(key, group);
+      const group = grouped.get(key);
+      if (group) group.push(item);
+      else grouped.set(key, [item]);
     }
-  }
+    return grouped;
+  }, [tab, visible]);
   const target =
     filter === 'all' && galleryTarget
       ? visible.find((item) => item.id === galleryTarget)
       : undefined;
   const targetDay = target ? target.taken?.slice(0, 10) || '' : null;
-  const expandedDay =
+  const selectedDay =
     targetDay ??
-    (expanded?.scope === scope
-      ? expanded.day
-      : groups.size === 1
-        ? groups.keys().next().value
-        : null);
+    (selection?.scope === scope && groups.has(selection.day)
+      ? selection.day
+      : groups.keys().next().value);
+  const selectedItems =
+    selectedDay === undefined ? undefined : groups.get(selectedDay);
+  useEffect(() => {
+    const list = dayList.current;
+    const button = activeDayButton.current;
+    if (!list || !button) return;
+    const reveal = () => {
+      const item = button.getBoundingClientRect();
+      const bounds = list.getBoundingClientRect();
+      if (item.top < bounds.top) list.scrollTop += item.top - bounds.top - 4;
+      else if (item.bottom > bounds.bottom)
+        list.scrollTop += item.bottom - bounds.bottom + 4;
+    };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [groups, scope, selectedDay]);
   const dayFormatter = new Intl.DateTimeFormat(language, {
     dateStyle: 'full',
     timeZone: 'UTC',
   });
+  const shortDayFormatter = new Intl.DateTimeFormat(language, {
+    day: 'numeric',
+    month: 'short',
+    weekday: 'short',
+    timeZone: 'UTC',
+  });
+  const formatDay = (value: string, formatter: Intl.DateTimeFormat) =>
+    value
+      ? formatter.format(new Date(value + 'T12:00:00Z'))
+      : t('trip.undatedFrames');
   const countFormatter = new Intl.NumberFormat(language);
   return (
     <>
@@ -343,173 +381,185 @@ export default function GalleryTab({
                   t('trip.coordinatesComeFromExifMetadataTheAuthor')}
               </p>
             </>
-          ) : visible.length ? (
+          ) : selectedDay !== undefined && selectedItems ? (
             <div className="gallery-days">
-              {[...groups].map(([groupDay, items], index) => {
-                const open = expandedDay === groupDay;
-                const id = panelId + '-' + index;
-                const title = groupDay
-                  ? dayFormatter.format(new Date(groupDay + 'T12:00:00Z'))
-                  : t('trip.undatedFrames');
-                return (
-                  <section key={groupDay} className="gallery-day">
-                    <h2>
-                      <button
-                        type="button"
-                        className="gallery-day-toggle"
-                        aria-expanded={open}
-                        aria-controls={id}
-                        onClick={() =>
-                          setExpanded({ scope, day: open ? null : groupDay })
+              <div
+                ref={dayList}
+                className="gallery-day-list"
+                role="group"
+                aria-label={t('calendar.tripDates')}
+              >
+                {[...groups].map(([groupDay, items]) => {
+                  const active = selectedDay === groupDay;
+                  const count = t('trip.galleryDayCount', {
+                    count: countFormatter.format(items.length),
+                  });
+                  return (
+                    <button
+                      key={groupDay}
+                      ref={active ? activeDayButton : undefined}
+                      type="button"
+                      className="gallery-day-toggle"
+                      aria-pressed={active}
+                      aria-controls={panelId}
+                      aria-label={
+                        formatDay(groupDay, dayFormatter) + ', ' + count
+                      }
+                      onClick={() => {
+                        setSelection({ scope, day: groupDay });
+                        if (galleryTarget) setGalleryTarget(null);
+                        if (!active) {
+                          const title = heading.current;
+                          if (title && title.getBoundingClientRect().top < 0)
+                            title.scrollIntoView({
+                              block: 'start',
+                              behavior: 'instant',
+                            });
+                          trackGoal('trip_day_selected');
                         }
+                      }}
+                    >
+                      <span className="gallery-day-label">
+                        <span>{formatDay(groupDay, shortDayFormatter)}</span>
+                        <span className="gallery-day-count">{count}</span>
+                      </span>
+                      {active && <Icon name="check" size={16} />}
+                    </button>
+                  );
+                })}
+              </div>
+              <section
+                id={panelId}
+                className="gallery-day-content"
+                aria-labelledby={headingId}
+              >
+                <h2 ref={heading} id={headingId}>
+                  {formatDay(selectedDay, dayFormatter)}
+                </h2>
+                <VirtualGallery
+                  key={scope + ':' + selectedDay}
+                  items={selectedItems}
+                  initialItemKey={target ? galleryTarget : undefined}
+                  onTargetReached={() => {
+                    setSelection({ scope, day: selectedDay });
+                    setGalleryTarget(null);
+                  }}
+                  resetKey={scope + ':' + selectedDay}
+                  itemKey={(m) => m.id}
+                  renderItem={(m) => (
+                    <div
+                      className={
+                        'photo-card-shell' +
+                        (filter === 'favorites' ? ' has-gallery-jump' : '')
+                      }
+                    >
+                      <FeedbackButton
+                        key={m.id}
+                        className={
+                          'photo-card ' + (m.hidden ? 'is-hidden' : '')
+                        }
+                        aria-label={
+                          t(
+                            m.kind === 'video'
+                              ? 'common.openVideo'
+                              : 'common.openPhoto',
+                          ) +
+                          ': ' +
+                          (m.title || m.name.replace(/\.[^.]+$/, '')) +
+                          ', ' +
+                          date(m.taken) +
+                          ', ' +
+                          m.author
+                        }
+                        onClick={() => openMedia(m)}
                       >
-                        <span>{title}</span>
-                        <span className="gallery-day-count">
-                          {t('trip.galleryDayCount', {
-                            count: countFormatter.format(items.length),
-                          })}
-                          <span aria-hidden="true">{open ? '▴' : '▾'}</span>
+                        {m.hidden ? (
+                          <div className="photo-fallback">
+                            {t('trip.hiddenPhoto')}
+                          </div>
+                        ) : (
+                          <MediaPreview
+                            src={
+                              mediaPath(m, 'preview') +
+                              (share ? '&' : '?') +
+                              'revision=' +
+                              encodeURIComponent(m.revision || '1')
+                            }
+                            scope={
+                              share ? 'guest:' + share : 'user:' + user?.id
+                            }
+                            kind={m.kind}
+                            rotation={m.rotation}
+                          />
+                        )}
+                        {m.kind === 'video' && (
+                          <span className="video-badge">
+                            ▶ {t('trip.videos')}
+                          </span>
+                        )}
+                        <span className="photo-overlay">
+                          <strong className="photo-filename">
+                            {m.title || m.name.replace(/\.[^.]+$/, '')}
+                          </strong>
+                          <span className="photo-caption">
+                            {date(m.taken)}
+                            {m.capture_time ? ', ' + m.capture_time : ''} ·{' '}
+                            {m.author}
+                          </span>
                         </span>
-                      </button>
-                    </h2>
-                    <div id={id} hidden={!open}>
-                      {open && (
-                        <VirtualGallery
-                          key={scope + ':' + groupDay}
-                          items={items}
-                          initialItemKey={target ? galleryTarget : undefined}
-                          onTargetReached={() => {
-                            setExpanded({ scope, day: groupDay });
-                            setGalleryTarget(null);
+                      </FeedbackButton>
+                      {filter === 'favorites' && (
+                        <button
+                          type="button"
+                          className="gallery-jump-button"
+                          title={t('trip.goToThisFrameInTheGallery')}
+                          aria-label={t('trip.goToThisFrameInTheGallery')}
+                          onClick={() => {
+                            setGalleryTarget(m.id);
+                            setFilter('all');
+                            setDay('');
+                            openTab('gallery');
                           }}
-                          resetKey={scope + ':' + groupDay}
-                          itemKey={(m) => m.id}
-                          renderItem={(m) => (
-                            <div
-                              className={
-                                'photo-card-shell' +
-                                (filter === 'favorites'
-                                  ? ' has-gallery-jump'
-                                  : '')
-                              }
-                            >
-                              <FeedbackButton
-                                key={m.id}
-                                className={
-                                  'photo-card ' + (m.hidden ? 'is-hidden' : '')
-                                }
-                                aria-label={
-                                  t(
-                                    m.kind === 'video'
-                                      ? 'common.openVideo'
-                                      : 'common.openPhoto',
-                                  ) +
-                                  ': ' +
-                                  (m.title || m.name.replace(/\.[^.]+$/, '')) +
-                                  ', ' +
-                                  date(m.taken) +
-                                  ', ' +
-                                  m.author
-                                }
-                                onClick={() => openMedia(m)}
-                              >
-                                {m.hidden ? (
-                                  <div className="photo-fallback">
-                                    {t('trip.hiddenPhoto')}
-                                  </div>
-                                ) : (
-                                  <MediaPreview
-                                    src={
-                                      mediaPath(m, 'preview') +
-                                      (share ? '&' : '?') +
-                                      'revision=' +
-                                      encodeURIComponent(m.revision || '1')
-                                    }
-                                    scope={
-                                      share
-                                        ? 'guest:' + share
-                                        : 'user:' + user?.id
-                                    }
-                                    kind={m.kind}
-                                    rotation={m.rotation}
-                                  />
-                                )}
-                                {m.kind === 'video' && (
-                                  <span className="video-badge">
-                                    ▶ {t('trip.videos')}
-                                  </span>
-                                )}
-                                <span className="photo-overlay">
-                                  <strong className="photo-filename">
-                                    {m.title || m.name.replace(/\.[^.]+$/, '')}
-                                  </strong>
-                                  <span className="photo-caption">
-                                    {date(m.taken)}
-                                    {m.capture_time
-                                      ? ', ' + m.capture_time
-                                      : ''}{' '}
-                                    · {m.author}
-                                  </span>
-                                </span>
-                              </FeedbackButton>
-                              {filter === 'favorites' && (
-                                <button
-                                  type="button"
-                                  className="gallery-jump-button"
-                                  title={t('trip.goToThisFrameInTheGallery')}
-                                  aria-label={t(
-                                    'trip.goToThisFrameInTheGallery',
-                                  )}
-                                  onClick={() => {
-                                    setGalleryTarget(m.id);
-                                    setFilter('all');
-                                    setDay('');
-                                    openTab('gallery');
-                                  }}
-                                >
-                                  <svg
-                                    width="22"
-                                    height="22"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.8"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden="true"
-                                  >
-                                    <path d="M19 12H5m6-6-6 6 6 6" />
-                                  </svg>
-                                </button>
-                              )}
-                              {!guest && !m.hidden && (
-                                <FavoriteButton
-                                  id={m.id}
-                                  favorite={!!m.favorite}
-                                  onChange={(favorite) =>
-                                    setData((old) =>
-                                      old
-                                        ? {
-                                            ...old,
-                                            media: old.media.map((item) =>
-                                              item.id === m.id
-                                                ? { ...item, favorite }
-                                                : item,
-                                            ),
-                                          }
-                                        : old,
-                                    )
+                        >
+                          <svg
+                            width="22"
+                            height="22"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M19 12H5m6-6-6 6 6 6" />
+                          </svg>
+                        </button>
+                      )}
+                      {!guest && !m.hidden && (
+                        <FavoriteButton
+                          id={m.id}
+                          favorite={!!m.favorite}
+                          onChange={(favorite) =>
+                            setData((old) =>
+                              old
+                                ? {
+                                    ...old,
+                                    media: old.media.map((item) =>
+                                      item.id === m.id
+                                        ? { ...item, favorite }
+                                        : item,
+                                    ),
                                   }
-                                />
-                              )}
-                            </div>
-                          )}
+                                : old,
+                            )
+                          }
                         />
                       )}
                     </div>
-                  </section>
-                );
-              })}
+                  )}
+                />
+              </section>
             </div>
           ) : (
             <GalleryEmpty archive={archive} />

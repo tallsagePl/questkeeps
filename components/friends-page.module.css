@@ -1,0 +1,60 @@
+.title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+}
+
+.section :is(:global(.friend-discovery), :global(.friend-requests)) h2 {
+  margin-block: 0 14px;
+  font-size: 1.125rem;
+}
+
+@media (width > 800px) {
+  .section :global(.friend-discovery) h2 {
+    margin: 0;
+  }
+}
+
+.accepted :global(.friend-row) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.trip {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  min-height: 44px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  background: var(--soft);
+  overflow-wrap: anywhere;
+}
+
+.trip > span,
+.noTrip {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.noTrip {
+  margin: 0;
+  padding-inline: 12px;
+}
+
+@media (max-width: 700px) {
+  .accepted :global(.friend-row) {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+  }
+
+  .accepted :global(.friend-person),
+  .accepted :global(.friend-actions button) {
+    min-height: 44px;
+  }
+}

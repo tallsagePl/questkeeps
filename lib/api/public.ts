@@ -4,6 +4,7 @@ import { sharedProfileTrips } from '../profile-media';
 import { guestTrip } from '../guest-links';
 import { publicProfile } from '../profiles';
 import { accountAvatar } from '../account-avatar';
+import { locationOptions } from '../location-options';
 import { db, one, run, hash } from '../db';
 import { fail, currentUser, requireUser } from '../access';
 import { json } from './http';
@@ -14,6 +15,21 @@ export async function publicRoutes({
   p,
   method,
 }: RequestContext): Promise<Response | undefined> {
+  if (p[0] === 'locations' && !p[1] && method === 'GET') {
+    const query = req.nextUrl.searchParams;
+    const response = json({
+      options: locationOptions(
+        query.get('type') || '',
+        (query.get('q') || '').slice(0, 120),
+        query.get('language') === 'en' ? 'en' : 'ru',
+        (query.get('countries') || '')
+          .split(',')
+          .filter((code) => /^[A-Z]{2}$/.test(code)),
+      ),
+    });
+    response.headers.set('Cache-Control', 'public, max-age=3600');
+    return response;
+  }
   if (p[0] === 'profiles' && p[1] && method === 'GET') {
     const profile = publicProfile(p[1]) || fail(404, 'errors.profileNotFound');
     if (p[2] === 'shared-trips')

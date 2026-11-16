@@ -3,7 +3,7 @@
 import { useEffect, useRef, type SyntheticEvent } from 'react';
 import { placePhotoSize } from '../lib/place-photo-size';
 
-export function usePlacePhotoSizing() {
+export function usePlacePhotoSizing(enabled = true) {
   const ref = useRef<HTMLDivElement>(null);
   const image = useRef<HTMLImageElement | null>(null);
   const update = () => {
@@ -20,15 +20,16 @@ export function usePlacePhotoSizing() {
     img.style.height = size.height + 'px';
   };
   useEffect(() => {
+    if (!enabled) return;
     const observer = new ResizeObserver(update);
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
-  }, []);
+  }, [enabled]);
   const onLoadCapture = (event: SyntheticEvent<HTMLDivElement>) => {
     if (event.target instanceof HTMLImageElement) {
       image.current = event.target;
       update();
     }
   };
-  return { ref, onLoadCapture };
+  return enabled ? { ref, onLoadCapture } : {};
 }

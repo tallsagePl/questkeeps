@@ -50,7 +50,7 @@ for (const screen of screens) {
         name: 'Стамбул ' + i + '.jpg',
         kind: 'photo',
         mime: 'image/jpeg',
-        taken: '2026-10-11',
+        taken: i < 120 ? '2026-10-11' : '2026-10-12',
         author: user.name,
         user_id: 'owner',
         lat: i === 0 ? 41.01 : null,
@@ -245,12 +245,27 @@ for (const screen of screens) {
         height: screen.height,
       });
 
+      if (screen.width > 700) {
+        const heading = page.locator('.gallery-day-content h2');
+        await expect(heading).not.toBeInViewport();
+        await page.locator('.gallery-day-toggle').last().click();
+        await expect(heading).toContainText('12 октября');
+        await expect(heading).toBeInViewport();
+        await expect(
+          grid.getByRole('button', { name: /Стамбул 120,/ }),
+        ).toBeInViewport();
+      }
       await fit();
       await page
         .getByRole('button', { name: 'Открытые места', exact: true })
         .click();
       const feed = page.locator('.virtual-places');
       await feed.locator('article').first().waitFor();
+      expect(
+        await feed.evaluate(
+          (el) => getComputedStyle(el).gridTemplateColumns.split(' ').length,
+        ),
+      ).toBe(screen.width >= 1100 ? 3 : screen.width > 700 ? 2 : 1);
       await page.locator('.place-recommendations').scrollIntoViewIfNeeded();
       await page.locator('.place-recommendation').first().waitFor();
       await expect(
@@ -273,10 +288,10 @@ for (const screen of screens) {
       await capture('places');
       expect(
         await feed
-          .locator('article')
+          .locator('.discovered-place-content')
           .first()
           .evaluate((el) => el.getBoundingClientRect().height),
-      ).toBeLessThan(400);
+      ).toBeLessThan(270);
       await expect
         .poll(() =>
           feed.locator('article').evaluateAll((nodes) =>

@@ -6,6 +6,7 @@ import type { UserProfile, TripRecord, TripAccess } from './contracts';
 import { ensureUsername, descriptionMentions } from './profiles';
 import { addMapDetails } from './map-details';
 import { mediaTitleSql } from './media-title';
+import { tripCovers } from './trip-covers';
 import { one, all, run, hash, token, Row } from './db';
 
 export class HttpError extends Error {
@@ -198,6 +199,10 @@ export function throttle(key: string, limit = 10, period = 15 * 60000) {
 export function tripData(req: Request, tripId: string) {
   const t = viewAccess(req, tripId);
   const user = currentUser(req);
+  const share =
+    t.role === 'guest'
+      ? new URL(req.url).searchParams.get('share') || undefined
+      : undefined;
   const media = all(
     `SELECT m.id,m.name,m.kind,m.mime,m.revision,m.rotation,s.account_id _account_id,m.resource_id _resource_id,${mediaTitleSql} title,EXISTS(SELECT 1 FROM media_favorites WHERE media_id=m.id AND user_id=?) favorite,m.taken,m.date_basis,m.lat,m.lon,m.user_id,m.hidden,m.hidden_from_guests,u.name author FROM media m JOIN sources s ON s.id=m.source_id JOIN users u ON u.id=m.user_id WHERE m.trip_id=? AND s.approved=1 AND m.missing=0 AND substr(m.taken,1,10)>=? AND substr(m.taken,1,10)<=? AND (m.hidden=0 OR m.user_id=?) AND (?=0 OR m.hidden_from_guests=0) ORDER BY m.taken`,
     t.role === 'guest' ? '' : user?.id || '',
@@ -268,6 +273,7 @@ export function tripData(req: Request, tripId: string) {
       end: t.end,
       description: t.description,
       descriptionMentions: descriptionMentions(t.id, t.description),
+      covers: tripCovers(t.id, user?.id || '', share),
       role: t.role,
       from: t.from,
       to: t.to,

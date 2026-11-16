@@ -13,8 +13,11 @@ const { session } = await import('../lib/access');
 
 const { handle } = await import('../lib/api');
 
-const { notificationSnapshot, readNotifications } =
-  await import('../lib/notifications');
+const {
+  notificationSnapshot,
+  queueProfileCompletionNotice,
+  readNotifications,
+} = await import('../lib/notifications');
 
 const { anniversaryMemories } = await import('../lib/memories');
 
@@ -169,6 +172,37 @@ test('follow notifications ignore hidden frames, include public photos and journ
   assert.notEqual('follow:' + f.trip + ':' + notice.stamp, key);
   run('UPDATE trips SET share_hash=NULL WHERE id=?', f.trip);
   assert.equal(notificationSnapshot(f.follower).followChanges.length, 0);
+});
+
+test('the profile completion reminder is private, survives reads and is queued once', async () => {
+  const { owner, reader } = setup();
+  const key = 'profile-completion';
+  const getInbox = async (userId: string) =>
+    (await request(userId, 'invitations')).json();
+
+  assert.equal((await getInbox(owner)).profileCompletion, null);
+  assert.throws(() =>
+    db.transaction(() => {
+      queueProfileCompletionNotice(owner);
+      throw new Error('rollback account creation');
+    })(),
+  );
+  assert.equal((await getInbox(owner)).profileCompletion, null);
+
+  queueProfileCompletionNotice(owner);
+  assert.equal((await getInbox(owner)).profileCompletion, key);
+  assert.ok(!(await getInbox(owner)).seen.includes(key));
+  assert.equal((await getInbox(reader)).profileCompletion, null);
+
+  readNotifications(owner, [key]);
+  readNotifications(
+    owner,
+    Array.from({ length: 300 }, (_, index) => 'trip-update:' + index),
+  );
+  queueProfileCompletionNotice(owner);
+  const readInbox = await getInbox(owner);
+  assert.equal(readInbox.profileCompletion, key);
+  assert.deepEqual(readInbox.seen, [key]);
 });
 
 test('deleting a journal entry does not invent a new followed-trip update', () => {

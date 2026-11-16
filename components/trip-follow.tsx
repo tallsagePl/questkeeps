@@ -46,7 +46,7 @@ export default function TripFollow({
       <button
         className="secondary trip-follow"
         aria-pressed={status?.following || false}
-        aria-describedby={userId ? undefined : 'trip-follow-sign-in-hint'}
+        aria-describedby={status?.following ? undefined : 'trip-follow-hint'}
         title={status?.following ? t('follow.stop') : t('follow.hint')}
         disabled={busy || (!!userId && !status && !error)}
         onClick={async () => {
@@ -78,9 +78,9 @@ export default function TripFollow({
             ? t('follow.following')
             : t('follow.start')}
       </button>
-      {!userId && (
-        <p className="fine" id="trip-follow-sign-in-hint">
-          {t('follow.signInHint')}
+      {!status?.following && (
+        <p className="fine" id="trip-follow-hint">
+          {t(userId ? 'follow.hint' : 'follow.signInHint')}
         </p>
       )}
       {error && (

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { trackGoal } from '@/lib/analytics';
+import { createTripEntry } from '@/lib/trip-entry';
 
 const goals = {
   home: 'onboarding_create_from_home',
@@ -22,7 +23,7 @@ export default function CreateTripLink({
 }) {
   return (
     <a
-      href="/?create=1#welcome-auth"
+      href={createTripEntry}
       className={className}
       onClick={() => trackGoal(goals[source])}
     >

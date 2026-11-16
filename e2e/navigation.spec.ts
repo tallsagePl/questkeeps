@@ -157,8 +157,9 @@ test('trip tabs restore back, forward and after reload; main has no back button'
   });
   await menu.getByRole('link', { name: 'Путешествия' }).click();
   await expect(menu).toBeHidden();
+  await expect(page).toHaveURL(/\/archive\/trips$/);
   await expect(
-    page.getByRole('heading', { name: 'Ваши путешествия.' }),
+    page.getByRole('heading', { name: 'Путешествия', exact: true }),
   ).toBeVisible();
 });
 

@@ -7,10 +7,17 @@ import TripCover from './trip-cover';
 import { useLocale } from './appearance';
 import { Icon, period } from './archive/shared';
 
-export default function FollowedTrips({ userId }: { userId: string }) {
+export default function FollowedTrips({
+  userId,
+  showEmpty = false,
+}: {
+  userId: string;
+  showEmpty?: boolean;
+}) {
   const { t, m } = useLocale();
   const [trips, setTrips] = useState<FollowedTrip[]>([]);
   const [error, setError] = useState('');
+  const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState('');
   useEffect(() => {
     const controller = new AbortController();
@@ -25,10 +32,13 @@ export default function FollowedTrips({ userId }: { userId: string }) {
       })
       .catch((error) => {
         if (!controller.signal.aborted) setError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setReady(true);
       });
     return () => controller.abort();
   }, [userId]);
-  if (!trips.length && !error) return null;
+  if (!showEmpty && !trips.length && !error) return null;
   return (
     <section
       className="followed-trips"
@@ -36,8 +46,16 @@ export default function FollowedTrips({ userId }: { userId: string }) {
     >
       <div className="section-line">
         <h2 id="followed-trips-heading">{t('follow.collection')}</h2>
-        <span>{trips.length}</span>
+        {ready && !error && <span>{trips.length}</span>}
       </div>
+      {!ready && (
+        <p className="fine" role="status">
+          {t('common.loading')}
+        </p>
+      )}
+      {ready && !trips.length && !error && (
+        <p className="muted">{t('follow.empty')}</p>
+      )}
       {error && (
         <p className="inline-error" role="alert">
           {m(error)}

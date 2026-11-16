@@ -31,6 +31,7 @@ export default function TripInvitations({ userId }: { userId: string }) {
   const [incoming, setIncoming] = useState<Person[]>([]);
   const [accepted, setAccepted] = useState<Person[]>([]);
   const [driveChanges, setDriveChanges] = useState<Drive[]>([]);
+  const [profileCompletion, setProfileCompletion] = useState(false);
   const [unread, setUnread] = useState(false);
   const [ring, setRing] = useState(0);
   const [items, setItems] = useState<DirectTripInvitation[]>([]);
@@ -52,6 +53,11 @@ export default function TripInvitations({ userId }: { userId: string }) {
           : undefined;
       const accepted = (result.accepted || []) as Person[];
       const changes = (result.driveChanges || []) as Drive[];
+      const profileCompletionKey =
+        typeof result.profileCompletion === 'string'
+          ? result.profileCompletion
+          : null;
+      setProfileCompletion(!!profileCompletionKey);
       setIncoming(friends?.incoming || []);
       setAccepted(accepted);
       setDriveChanges(changes);
@@ -74,6 +80,7 @@ export default function TripInvitations({ userId }: { userId: string }) {
         ...changes.map(
           (trip) => 'drive:' + trip.id + ':' + (trip.stamp || trip.newest),
         ),
+        ...(profileCompletionKey ? [profileCompletionKey] : []),
       ];
       const unseen = keys.filter((key) => !(result.seen || []).includes(key));
       setUnread(unseen.length > 0);
@@ -84,7 +91,8 @@ export default function TripInvitations({ userId }: { userId: string }) {
           (friends?.incoming.length || 0) +
           accepted.length +
           changes.length +
-          followed.length,
+          followed.length +
+          Number(!!profileCompletionKey),
       );
     },
     [userId],
@@ -229,7 +237,8 @@ export default function TripInvitations({ userId }: { userId: string }) {
             !incoming.length &&
             !accepted.length &&
             !driveChanges.length &&
-            !followChanges.length && <p>{t('notifications.empty')}</p>
+            !followChanges.length &&
+            !profileCompletion && <p>{t('notifications.empty')}</p>
           )}
           {!loading &&
             incoming.map((person) => (
@@ -378,6 +387,15 @@ export default function TripInvitations({ userId }: { userId: string }) {
                 </div>
               </article>
             ))}
+          {!loading && profileCompletion && (
+            <article className="invitation-item">
+              <h3>{t('notifications.profileCompletionTitle')}</h3>
+              <p>{t('notifications.profileCompletionBody')}</p>
+              <a className="secondary" href="/profile">
+                {t('notifications.openProfile')}
+              </a>
+            </article>
+          )}
         </div>
       </HeaderDropdown>
     </FeedbackProvider>

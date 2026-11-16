@@ -193,3 +193,104 @@ test('failed cover previews retain the archive illustration', async ({
   await expect(card.locator('.destination-art')).toHaveText('City');
   await expect(card.locator('.trip-cover-photo')).toHaveCount(0);
 });
+
+test('shared cover appears in member and followed cards and both trip views', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const image = fs.readFileSync('public/welcome/santorini.webp');
+  const trip = {
+    id: 'shared',
+    title: 'Общая поездка',
+    destination: 'Санторини, Греция',
+    description: '',
+    start: '2026-10-10',
+    end: '2026-10-18',
+    from: '2026-10-10',
+    to: '2026-10-18',
+    sharing: true,
+    media_count: 1,
+  };
+  const cover = {
+    id: 'shared-photo',
+    src: '/api/media/shared-photo/preview?revision=shared',
+    position: { x: 20, y: 75 },
+    rotation: 90,
+  };
+  const guestCover = { ...cover, src: cover.src + '&share=fixture' };
+  const previews = new Set<string>();
+  let guest = false;
+  await page.route('**/api/**', (route) => {
+    const { pathname, search } = new URL(route.request().url());
+    if (pathname.endsWith('/preview')) {
+      previews.add(pathname + search);
+      return route.fulfill({ body: image, contentType: 'image/webp' });
+    }
+    if (pathname === '/api/me')
+      return route.fulfill({
+        json: {
+          user: guest
+            ? null
+            : { id: 'member', name: 'Fixture', username: 'member' },
+        },
+      });
+    if (pathname === '/api/trips')
+      return route.fulfill({ json: { trips: [{ ...trip, covers: [cover] }] } });
+    if (pathname === '/api/follows')
+      return route.fulfill({
+        json: {
+          trips: [
+            {
+              ...trip,
+              title: 'Поездка из подписок',
+              url: '/s/fixture',
+              covers: [guestCover],
+            },
+          ],
+        },
+      });
+    if (pathname === '/api/trips/shared' || pathname === '/api/share/fixture')
+      return route.fulfill({
+        json: {
+          trip: {
+            ...trip,
+            role: guest ? 'guest' : 'member',
+            covers: [guest ? guestCover : cover],
+          },
+          media: [],
+          places: [],
+          notes: [],
+          noteReplies: [],
+        },
+      });
+    return route.fulfill({
+      json: {
+        trips: [],
+        invitations: [],
+        friends: [],
+        incoming: [],
+        outgoing: [],
+        drive: [],
+        count: 0,
+      },
+    });
+  });
+  const expectCover = async (selector: string) => {
+    const photo = page.locator(selector + ' .trip-cover-current img');
+    await expect(photo).toBeVisible();
+    await expect(photo).toHaveAttribute('style', /rotate\(90deg\)/);
+  };
+  await page.goto('/');
+  await expectCover('button.trip-card');
+  await expectCover('.followed-card');
+  expect(previews).toEqual(new Set([cover.src, guestCover.src]));
+  await page.locator('button.trip-card').click();
+  await expectCover('.trip-heading-cover');
+  guest = true;
+  await page.setViewportSize({ width: 393, height: 852 });
+  await page.goto('/s/fixture');
+  await expectCover('.trip-heading-cover');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    393,
+  );
+});

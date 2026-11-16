@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
-"""Switch the reviewed compatibility markers 8 through 17."""
+"""Switch the reviewed compatibility markers 8 through 18."""
 import sqlite3
 import sys
 import time
 
 path, target = sys.argv[1], int(sys.argv[2])
-if target not in range(8, 18):
-    raise SystemExit('Only reviewed additive migrations 8 through 17 are supported')
+if target not in range(8, 19):
+    raise SystemExit('Only reviewed additive migrations 8 through 18 are supported')
 with sqlite3.connect(path, timeout=10) as db:
     db.execute('BEGIN IMMEDIATE')
     current = db.execute('PRAGMA user_version').fetchone()[0]
-    if current not in range(8, 18):
+    if current not in range(8, 19):
         raise RuntimeError('Unexpected schema version')
+    if current >= 18 or target >= 18:
+        if {row[1] for row in db.execute('PRAGMA table_info(photo_self_marks)')} != {'media_id', 'user_id'}:
+            raise RuntimeError('Photo self-mark compatibility schema is missing')
+        mark_history = db.execute('SELECT name FROM schema_migrations WHERE version=18').fetchone()
+        if mark_history != ('photo-self-marks',):
+            raise RuntimeError('Unexpected photo self-mark migration history')
+    # Version 17 ignores the additive table and ledger entry, preserving marks
+    # through rollback and a subsequent upgrade.
     if current >= 17 or target >= 17:
         if {row[1] for row in db.execute('PRAGMA table_info(onboarding_goals)')} != {'user_id', 'goal'}:
             raise RuntimeError('Onboarding goal compatibility schema is missing')

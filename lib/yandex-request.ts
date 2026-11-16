@@ -18,7 +18,7 @@ const transientCodes = new Set([
 
 const transientStatuses = new Set([408, 429, 500, 502, 503, 504]);
 
-type Stage = 'metadata' | 'file';
+type Stage = 'metadata' | 'file' | 'oauth-profile';
 
 type Policy = { attemptMs?: number; retryDelayMs?: number };
 
@@ -91,7 +91,7 @@ export async function yandexGet<T>(
   url: string | URL,
   init: RequestInit & { signal: AbortSignal },
   stage: Stage,
-  read: (response: Response) => Promise<T>,
+  read: (response: Response, signal: AbortSignal) => Promise<T>,
   policy: Policy = {},
 ): Promise<T> {
   if (init.method && !['GET', 'HEAD'].includes(init.method.toUpperCase()))
@@ -136,7 +136,7 @@ export async function yandexGet<T>(
           status: response.status,
         });
       } else {
-        return await read(response);
+        return await read(response, signal);
       }
     } catch (error) {
       if (init.signal.aborted) throw init.signal.reason;

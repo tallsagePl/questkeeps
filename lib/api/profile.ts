@@ -1,11 +1,11 @@
 import { profileMediaGroups, profileMediaPage } from '../profile-media';
-import { ensureUsername } from '../profiles';
+import { ensureUsername, usernameTaken } from '../profiles';
+import { normalizeUsername, usernamePattern } from '../username';
 import { readAvatar } from '../profile-avatar';
 import { accountAvatar } from '../account-avatar';
 import { z } from 'zod';
 import { db, one, run, id } from '../db';
 import { fail, userProfile, throttle } from '../access';
-import { locationOptions } from '../location-options';
 import { json, body } from './http';
 import type { AuthenticatedContext } from './context';
 
@@ -15,19 +15,6 @@ export async function profileRoutes({
   method,
   u,
 }: AuthenticatedContext): Promise<Response | undefined> {
-  if (p[0] === 'locations' && method === 'GET') {
-    const query = new URL(req.url).searchParams;
-    return json({
-      options: locationOptions(
-        query.get('type') || '',
-        (query.get('q') || '').slice(0, 120),
-        query.get('language') === 'en' ? 'en' : 'ru',
-        (query.get('countries') || '')
-          .split(',')
-          .filter((code) => /^[A-Z]{2}$/.test(code)),
-      ),
-    });
-  }
   if (p[0] === 'me') {
     if (!p[1] && method === 'PATCH') {
       const input = z
@@ -40,37 +27,37 @@ export async function profileRoutes({
             .optional(),
           username: z
             .string()
-            .trim()
-            .toLowerCase()
-            .regex(
-              /^[a-z0-9_]{3,30}$/,
-              'Юзернейм: от 3 до 30 латинских букв, цифр или подчёркиваний',
-            )
+            .transform(normalizeUsername)
+            .pipe(z.string().regex(usernamePattern, 'auth.usernameFormat'))
             .optional(),
         })
         .strict()
         .refine((v) => v.name !== undefined || v.username !== undefined)
         .parse(await body(req));
       ensureUsername(u.id);
-      db.transaction(() => {
-        if (input.username) {
-          if (
-            one(
-              'SELECT 1 FROM user_handles WHERE username=? AND user_id<>?',
+      const updated = db
+        .transaction(() => {
+          if (input.username) {
+            if (usernameTaken(input.username, u.id)) return false;
+            run(
+              'UPDATE user_handles SET username=? WHERE user_id=?',
               input.username,
               u.id,
-            )
-          )
-            fail(409, 'errors.usernameTaken');
-          run(
-            'UPDATE user_handles SET username=? WHERE user_id=?',
-            input.username,
-            u.id,
-          );
-        }
-        if (input.name !== undefined)
-          run('UPDATE users SET name=? WHERE id=?', input.name, u.id);
-      }).immediate();
+            );
+          }
+          if (input.name !== undefined)
+            run('UPDATE users SET name=? WHERE id=?', input.name, u.id);
+          return true;
+        })
+        .immediate();
+      if (!updated)
+        return json(
+          {
+            error: 'errors.usernameTaken',
+            fieldErrors: { username: 'errors.usernameTaken' },
+          },
+          409,
+        );
       return json({ user: userProfile(u.id) });
     }
     if (p[1] === 'avatar') {

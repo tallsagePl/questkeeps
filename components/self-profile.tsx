@@ -5,7 +5,6 @@ import { useLocale } from './appearance';
 import { api } from './api';
 import { FeedbackProvider, PageFeedback } from './feedback';
 import ProfileSettings from './profile-settings';
-import Friends from './friends';
 import ProfileFiles from './profile-files';
 import { SocialShell, useViewer } from './social-shell';
 
@@ -25,6 +24,10 @@ function ProfileContents() {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
   const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    if (location.hash === '#friends' || location.hash === '#find-people')
+      location.replace('/people/friends' + location.hash);
+  }, []);
   useEffect(() => {
     setAccounts([]);
     setLoaded(false);
@@ -62,9 +65,6 @@ function ProfileContents() {
               {t('profile.title')}
               <span className="brand-dot">.</span>
             </h1>
-            <p className="muted">
-              {t('profile.peopleToShareYourNextJourneyWith')}
-            </p>
           </div>
           {viewer.user?.username && (
             <a className="secondary" href={'/@' + viewer.user.username}>
@@ -119,10 +119,6 @@ function ProfileContents() {
               )}
             </aside>
             <div className="profile-main">
-              <Friends
-                key={'friends:' + viewer.user.id}
-                viewerId={viewer.user.id}
-              />
               <ProfileFiles
                 key={'files:' + viewer.user.id}
                 userId={viewer.user.id}

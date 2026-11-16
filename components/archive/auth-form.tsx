@@ -16,6 +16,7 @@ import { api } from '../api';
 import { FeedbackForm, FeedbackButton, Field } from '../feedback';
 import { type ArchiveController } from './use-archive';
 import { Icon } from './shared';
+import { SignupUsernameField, validateUsernameField } from './signup-username';
 
 export default function AuthForm({ archive }: { archive: ArchiveController }) {
   const { t } = useLocale();
@@ -94,7 +95,8 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
         onSubmit={auth}
         className="stack"
         validateField={(input) => {
-          if (!register || input.name !== 'password') return undefined;
+          if (!register) return;
+          if (input.name !== 'password') return validateUsernameField(input);
           if (!input.value) return '';
           return registrationPasswordErrors(input.value)
             .map(({ key, params }) => t(key, params) + '.')
@@ -102,13 +104,16 @@ export default function AuthForm({ archive }: { archive: ArchiveController }) {
         }}
       >
         {register && (
-          <Field
-            label={t('trip.yourName')}
-            name="name"
-            required
-            maxLength={80}
-            autoComplete="name"
-          />
+          <>
+            <Field
+              label={t('trip.yourName')}
+              name="name"
+              required
+              maxLength={80}
+              autoComplete="name"
+            />
+            <SignupUsernameField />
+          </>
         )}
         <Field
           label={t(register ? 'auth.email' : 'auth.identifier')}

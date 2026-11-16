@@ -49,7 +49,9 @@ test('профиль: никнейм, своя аватарка, отдельн�
   await expect(
     page.getByRole('status').filter({ hasText: 'Никнейм сохранён' }),
   ).toBeVisible();
-  await expect(page.locator('.user-button')).toHaveText('EExplorer');
+  const profileLink = page.getByRole('link', { name: 'Мой профиль' });
+  await expect(profileLink).toHaveText('Explorer');
+  await expect(profileLink.locator('.avatar-placeholder')).toBeVisible();
   await expect(page.getByLabel('Никнейм', { exact: true })).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Изменить никнейм', exact: true }),

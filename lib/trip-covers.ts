@@ -1,12 +1,14 @@
 import { all, one } from './db';
+import { guestTrip } from './guest-links';
 import type { TripCover, TripCoverSettings, CoverPosition } from './contracts';
 
 // Card previews obey the same date and visibility boundaries as their viewer.
 export function tripCovers(
   tripId: string,
   userId: string,
-  guestToken?: string,
+  share?: string,
 ): TripCover[] {
+  if (share !== undefined && guestTrip(share)?.id !== tripId) return [];
   const photos = all<{
     id: string;
     rotation: number;
@@ -21,7 +23,10 @@ export function tripCovers(
      LEFT JOIN trip_cover_settings cs ON cs.trip_id=t.id
      LEFT JOIN members mb ON mb.trip_id=t.id AND mb.user_id=? AND mb.active=1
      WHERE m.trip_id=? AND f.user_id=t.owner_id
-       AND (COALESCE(cs.mode,'all')='all' OR m.id IN (SELECT value FROM json_each(cs.photo_ids) WHERE CAST(key AS INTEGER)<5)) AND m.kind='photo'
+       AND (COALESCE(cs.mode,'all')='all' OR m.id IN (
+         SELECT value FROM json_each(cs.photo_ids) WHERE CAST(key AS INTEGER)<5
+       ))
+       AND m.kind='photo'
        AND m.hidden=0 AND m.missing=0 AND s.approved=1
        AND substr(m.taken,1,10) BETWEEN t.start AND t.end
        AND (?=1 AND m.hidden_from_guests=0 OR ?=0 AND
@@ -30,8 +35,8 @@ export function tripCovers(
      ORDER BY m.taken,m.id`,
     userId,
     tripId,
-    Number(!!guestToken),
-    Number(!!guestToken),
+    Number(!!share),
+    Number(!!share),
     userId,
   );
   return photos.map((photo) => ({
@@ -44,7 +49,7 @@ export function tripCovers(
       '/preview?' +
       new URLSearchParams({
         revision: photo.revision,
-        ...(guestToken ? { share: guestToken } : {}),
+        ...(share ? { share } : {}),
       }),
   }));
 }

@@ -1,17 +1,24 @@
 'use client';
 
 import Memories from '../memories';
-import { useLocale } from '@/components/appearance';
 import Friends from '../friends';
+import { useLocale } from '@/components/appearance';
 import TripCover from '../trip-cover';
 import FollowedTrips from '../followed-trips';
 import { FeedbackButton, PageFeedback } from '../feedback';
 import { type ArchiveController } from './use-archive';
 import { period, Icon } from './shared';
 
-export default function Dashboard({ archive }: { archive: ArchiveController }) {
+export default function Dashboard({
+  archive,
+  collectionOnly = false,
+}: {
+  archive: ArchiveController;
+  collectionOnly?: boolean;
+}) {
   const { t } = useLocale();
   const { user, trips, setModal, openTrip } = archive;
+  const empty = trips.length === 0;
 
   return (
     <>
@@ -23,20 +30,24 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
         }
       >
         <PageFeedback />
-        <div className="page-intro">
+        <div className={'page-intro' + (empty ? ' first-trip-intro' : '')}>
           <div>
-            <span className="eyebrow">{t('trip.personalCollection')}</span>
+            {!empty && !collectionOnly && (
+              <span className="eyebrow">{t('trip.personalCollection')}</span>
+            )}
             <h1>
-              {t('trip.yourTravels')}
-              <span className="brand-dot">.</span>
+              {t(collectionOnly ? 'navigation.trips' : 'trip.yourTravels')}
+              {!collectionOnly && <span className="brand-dot">.</span>}
             </h1>
-            <p>
-              {t(
-                trips.length
-                  ? 'trip.longJourneysAndLittleDiscoveriesAllIn'
-                  : 'archive.firstTripHint',
-              )}
-            </p>
+            {(empty || !collectionOnly) && (
+              <p>
+                {t(
+                  empty
+                    ? 'archive.firstTripHint'
+                    : 'trip.longJourneysAndLittleDiscoveriesAllIn',
+                )}
+              </p>
+            )}
           </div>
           <FeedbackButton
             className="primary"
@@ -46,9 +57,13 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
             {t('trip.newTrip')}
           </FeedbackButton>
         </div>
-        {trips.length > 0 && (
+        {(trips.length > 0 || collectionOnly) && (
           <div className="section-line">
-            <span>{t('trip.allTrips')}</span>
+            {collectionOnly ? (
+              <h2 className="collection-heading">{t('trip.ownCollection')}</h2>
+            ) : (
+              <span>{t('trip.allTrips')}</span>
+            )}
             <span>{String(trips.length).padStart(2, '0')}</span>
           </div>
         )}
@@ -69,7 +84,11 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
                 />
                 <div className="trip-card-body">
                   <span className="eyebrow">{period(trip)}</span>
-                  <h2>{trip.title}</h2>
+                  {collectionOnly ? (
+                    <h3 className="collection-trip-title">{trip.title}</h3>
+                  ) : (
+                    <h2>{trip.title}</h2>
+                  )}
                   <div className="trip-meta">
                     <span>
                       <Icon name="pin" size={16} />
@@ -85,19 +104,31 @@ export default function Dashboard({ archive }: { archive: ArchiveController }) {
             ))}
           </div>
         )}
-        {user && <Memories key={'memories:' + user.id} userId={user.id} />}
-        {user && <Friends key={user.id} viewerId={user.id} compact />}
-        {user && <FollowedTrips key={'follows:' + user.id} userId={user.id} />}
-        <aside className="archive-note">
-          <Icon name="cloud" />
-          <div>
-            <strong>{t('trip.memoriesHereOriginalsWithYou')}</strong>
-            <p>{t('trip.connectYandexDiskFoldersTheArchiveBrings')}</p>
-          </div>
-          <span className="note-label">
-            {t('trip.yourMemoriesTakenCareOf')}
-          </span>
-        </aside>
+        {!collectionOnly && user && (
+          <>
+            <Memories key={'memories:' + user.id} userId={user.id} />
+            <Friends key={user.id} viewerId={user.id} compact />
+          </>
+        )}
+        {user && (
+          <FollowedTrips
+            key={'follows:' + user.id}
+            userId={user.id}
+            showEmpty={collectionOnly}
+          />
+        )}
+        {!collectionOnly && (
+          <aside className="archive-note">
+            <Icon name="cloud" />
+            <div>
+              <strong>{t('trip.memoriesHereOriginalsWithYou')}</strong>
+              <p>{t('trip.connectYandexDiskFoldersTheArchiveBrings')}</p>
+            </div>
+            <span className="note-label">
+              {t('trip.yourMemoriesTakenCareOf')}
+            </span>
+          </aside>
+        )}
       </main>
     </>
   );

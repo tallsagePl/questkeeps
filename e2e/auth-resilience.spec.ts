@@ -100,6 +100,8 @@ test('header retains active travel link, matches About highlight, and trip count
   const trips = page
     .locator('header')
     .getByRole('link', { name: 'Путешествия', exact: true });
+  await trips.click();
+  await expect(page).toHaveURL(/\/archive\/trips$/);
   await expect(trips).toHaveAttribute('aria-current', 'page');
   const color = await trips.evaluate((el) => getComputedStyle(el).color);
   await expect(page.locator('.trip-meta')).toContainText('0 кадров');
@@ -116,8 +118,9 @@ test('header retains active travel link, matches About highlight, and trip count
     .locator('header')
     .getByRole('link', { name: 'Путешествия', exact: true })
     .click();
+  await expect(page).toHaveURL(/\/archive\/trips$/);
   await expect(
-    page.getByRole('heading', { name: 'Ваши путешествия.' }),
+    page.getByRole('heading', { name: 'Путешествия', exact: true }),
   ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(

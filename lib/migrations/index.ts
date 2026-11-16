@@ -1,3 +1,4 @@
+import { photoSelfMarks } from './018-photo-self-marks';
 import { onboardingGoals } from './017-onboarding-goals';
 import { tripManagers } from './016-trip-managers';
 import { passwordRecovery } from './015-password-recovery';
@@ -35,6 +36,7 @@ export const migrations = [
   { version: 15, name: 'password-recovery', up: passwordRecovery },
   { version: 16, name: 'trip-managers', up: tripManagers },
   { version: 17, name: 'onboarding-goals', up: onboardingGoals },
+  { version: 18, name: 'photo-self-marks', up: photoSelfMarks },
 ];
 
 export function migrate(db: Database.Database) {

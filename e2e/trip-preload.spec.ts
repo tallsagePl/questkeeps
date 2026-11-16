@@ -16,7 +16,7 @@ test('trip limits background warmup, loads map resources on demand and retains c
     sharing: false,
     description: '',
   };
-  const media = Array.from({ length: 24 }, (_, i) => ({
+  const media = Array.from({ length: 48 }, (_, i) => ({
     id: 'warm-' + i,
     name: 'Photo ' + i,
     kind: 'photo',
@@ -34,6 +34,8 @@ test('trip limits background warmup, loads map resources on demand and retains c
       names: { ru: 'Стамбул', en: 'Istanbul' },
     },
   }));
+  // Keep the sentinel beyond the gallery's first visible and overscan rows.
+  const distantPhoto = media.at(-1)!.id;
   const places = [
     {
       id: 'district',
@@ -141,10 +143,10 @@ test('trip limits background warmup, loads map resources on demand and retains c
   await page.waitForTimeout(1000);
   expect(areas).toBe(0);
   expect(geometries).toBe(0);
-  expect(previews.get('warm-23') || 0).toBe(0);
+  expect(previews.get(distantPhoto) || 0).toBe(0);
   release();
   await page.waitForTimeout(1000);
-  expect(previews.get('warm-23') || 0).toBe(0);
+  expect(previews.get(distantPhoto) || 0).toBe(0);
   expect(areas).toBe(0);
   expect(geometries).toBe(0);
   expect(texts).toBe(0);
@@ -182,7 +184,7 @@ test('trip limits background warmup, loads map resources on demand and retains c
   await expect(page.locator('.leaflet-visitedPlaces-pane path')).toHaveCount(1);
   expect(areas).toBe(1);
   expect(geometries).toBe(1);
-  expect(previews.get('warm-23') || 0).toBeLessThanOrEqual(1);
+  expect(previews.get(distantPhoto) || 0).toBeLessThanOrEqual(1);
   providersFail = true;
   geometryGate = new Promise<void>((resolve) => {
     releaseGeometry = resolve;

@@ -4,6 +4,7 @@ import SmoothDetails, { Collapse } from './smooth-details';
 import { routeLabel, type RouteCity } from '@/lib/route-label';
 import { useLocale } from '@/components/appearance';
 import type { ApplicationMessage } from '../lib/contracts';
+import { createTripDiskEntry } from '../lib/trip-entry';
 import { useState, useEffect, useRef, useId, useCallback } from 'react';
 import { api } from './api';
 import DestinationPicker, {
@@ -35,6 +36,7 @@ type CreateTripDraft = {
   destination?: DestinationSelection;
   autoDates: boolean;
   autoDestination: boolean;
+  pickerOpen?: boolean;
 };
 
 function readDraft(key: string): CreateTripDraft | undefined {
@@ -62,20 +64,30 @@ type Inference = {
 export default function CreateTrip({
   busy,
   yandexEnabled,
+  signedIn,
   draftKey,
+  openDisk,
+  onRequireAccount,
+  onStartDiskSignup,
   onCreate,
 }: {
   busy: boolean;
   yandexEnabled: boolean;
+  signedIn: boolean;
   draftKey: string;
+  openDisk: boolean;
+  onRequireAccount: () => void;
+  onStartDiskSignup: () => void;
   onCreate: (input: Record<string, unknown>) => Promise<void>;
 }) {
   const { t, m, language } = useLocale();
   const [draft] = useState(() => readDraft(draftKey));
   const destinationSelection = useRef(draft?.destination);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(true);
-  const [picker, setPicker] = useState(!!draft);
+  const [loadingAccounts, setLoadingAccounts] = useState(signedIn);
+  const [picker, setPicker] = useState(
+    openDisk || (draft?.pickerOpen ?? !!draft),
+  );
   const [accountId, setAccountId] = useState('');
   const [folder, setFolder] = useState('disk:/');
   const [folders, setFolders] = useState<
@@ -118,7 +130,35 @@ export default function CreateTrip({
   const [inferredRoute, setInferredRoute] = useState<RouteCity[]>([]);
   const browseGeneration = useRef(0);
   const folderId = useId();
+  const folderSection = useRef<HTMLElement>(null);
   useEffect(() => {
+    if (!openDisk || !signedIn) return;
+    const frame = requestAnimationFrame(() => {
+      folderSection.current?.scrollIntoView({ block: 'start' });
+      folderSection.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [openDisk, signedIn]);
+  function saveDraft(form: HTMLFormElement, pickerOpen: boolean) {
+    const fields = new FormData(form);
+    const next: CreateTripDraft = {
+      title: String(fields.get('title') ?? ''),
+      description: String(fields.get('description') ?? ''),
+      start,
+      end,
+      destination: destinationSelection.current,
+      autoDates,
+      autoDestination,
+      pickerOpen,
+    };
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify(next));
+    } catch {
+      // Continuing remains available when storage is disabled.
+    }
+  }
+  useEffect(() => {
+    if (!signedIn) return;
     const controller = new AbortController();
     void api('accounts', 'GET', undefined, controller.signal)
       .then((r) => setAccounts(r.accounts))
@@ -129,7 +169,7 @@ export default function CreateTrip({
         if (!controller.signal.aborted) setLoadingAccounts(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [signedIn]);
   useEffect(() => {
     if (picker && accounts.length === 1 && !accountId)
       void browse(accounts[0].id, 'disk:/');
@@ -285,6 +325,11 @@ export default function CreateTrip({
           setDestinationHint(t('createTrip.chooseACountryCityOrAddA'));
           return;
         }
+        if (!signedIn) {
+          saveDraft(event.currentTarget, false);
+          onRequireAccount();
+          return;
+        }
         const form = new FormData(event.currentTarget);
         void onCreate({
           title: form.get('title'),
@@ -416,7 +461,12 @@ export default function CreateTrip({
               : m(dateHint)}
         </p>
       </div>
-      <section className="creation-source" aria-labelledby={folderId}>
+      <section
+        ref={folderSection}
+        className="creation-source"
+        aria-labelledby={folderId}
+        tabIndex={-1}
+      >
         <div className="creation-source-heading">
           <strong id={folderId}>{t('gallery.photos')}</strong>
           <span>
@@ -480,6 +530,24 @@ export default function CreateTrip({
               </FeedbackButton>
             </div>
           </>
+        ) : !signedIn && yandexEnabled ? (
+          <>
+            <a
+              className="secondary"
+              href={
+                '/api/auth/yandex?intent=login_disk&returnTo=' +
+                encodeURIComponent(createTripDiskEntry)
+              }
+              onClick={(event) => {
+                const form = event.currentTarget.closest('form');
+                if (form) saveDraft(form, true);
+                onStartDiskSignup();
+              }}
+            >
+              {t('createTrip.chooseAYandexDiskFolder')}
+            </a>
+            <p className="fine">{t('createTrip.diskSignInHint')}</p>
+          </>
         ) : (
           <FeedbackButton
             type="button"
@@ -492,7 +560,7 @@ export default function CreateTrip({
               : t('createTrip.chooseAYandexDiskFolder')}
           </FeedbackButton>
         )}
-        <Collapse open={picker}>
+        <Collapse open={picker && (signedIn || !yandexEnabled)}>
           <div className="creation-picker stack">
             {accounts.length ? (
               <>
@@ -600,22 +668,7 @@ export default function CreateTrip({
                 href="/api/auth/yandex?intent=link&returnTo=%2F%3Fcreate%3D1"
                 onClick={(event) => {
                   const form = event.currentTarget.closest('form');
-                  if (!form) return;
-                  const fields = new FormData(form);
-                  const next: CreateTripDraft = {
-                    title: String(fields.get('title') ?? ''),
-                    description: String(fields.get('description') ?? ''),
-                    start,
-                    end,
-                    destination: destinationSelection.current,
-                    autoDates,
-                    autoDestination,
-                  };
-                  try {
-                    sessionStorage.setItem(draftKey, JSON.stringify(next));
-                  } catch {
-                    // Linking remains available when storage is disabled.
-                  }
+                  if (form) saveDraft(form, true);
                 }}
               >
                 {t('disk.connectAccountExternal')}

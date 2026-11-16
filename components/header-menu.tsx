@@ -3,13 +3,20 @@
 import type { ReactNode } from 'react';
 import HeaderDropdown from './header-dropdown';
 import { AppearanceControls, useLocale } from './appearance';
+import { tripsCollectionPath } from '@/lib/trip-entry';
 
 export default function HeaderMenu({
   logout,
   guest = false,
+  friends = false,
+  friendsCurrent = false,
+  tripsCurrent = false,
 }: {
   logout?: ReactNode;
   guest?: boolean;
+  friends?: boolean;
+  friendsCurrent?: boolean;
+  tripsCurrent?: boolean;
 }) {
   const { t } = useLocale();
   return (
@@ -41,7 +48,20 @@ export default function HeaderMenu({
               ?.hidePopover();
         }}
       >
-        <a href="/">{t('navigation.trips')}</a>
+        <a
+          href={tripsCollectionPath}
+          aria-current={tripsCurrent ? 'page' : undefined}
+        >
+          {t('navigation.trips')}
+        </a>
+        {friends && (
+          <a
+            href="/people/friends"
+            aria-current={friendsCurrent ? 'page' : undefined}
+          >
+            {t('friends.friends')}
+          </a>
+        )}
         <a href="/about">{t('navigation.about')}</a>
       </nav>
       {guest && <p className="muted">{t('trip.guestView')}</p>}

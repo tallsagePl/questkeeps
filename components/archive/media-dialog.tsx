@@ -23,6 +23,7 @@ import { MediaTitle } from '../media-controls';
 import { FeedbackButton } from '../feedback';
 import { type ArchiveController } from './use-archive';
 import { Icon } from './shared';
+import PhotoPeople from './photo-people';
 
 const VideoViewer = dynamic(() => import('../video-viewer'), { ssr: false });
 
@@ -322,6 +323,16 @@ export default function MediaDialog({
               />
             )}
           </div>
+          {!guest &&
+            user &&
+            activeMedia.kind === 'photo' &&
+            !activeMedia.hidden &&
+            !activeMedia.missing && (
+              <PhotoPeople
+                key={user.id + ':' + activeMedia.id}
+                photoId={activeMedia.id}
+              />
+            )}
           {!activeMedia.hidden &&
             !!data?.places.filter((place) => place.media_id === activeMedia.id)
               .length && (

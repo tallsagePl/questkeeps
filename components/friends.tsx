@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState, useRef } from 'react';
 import { useLocale } from './appearance';
 import { api } from './api';
 import FriendLink from './friend-link';
+import { AvatarPlaceholder } from './user-avatar';
+import type { FriendTrip } from '../lib/friends';
+import styles from './friends-page.module.css';
 
 export type Person = {
   id: string;
@@ -22,7 +25,7 @@ export function PersonAvatar({ person }: { person: Person }) {
   const [failed, setFailed] = useState(false);
   return (
     <span className="avatar friend-avatar" aria-hidden="true">
-      {person.name.slice(0, 1).toUpperCase()}
+      <AvatarPlaceholder />
       {person.hasAvatar && !failed && (
         <img
           src={'/api/profiles/' + person.username + '/avatar'}
@@ -212,6 +215,10 @@ export default function Friends({
 }) {
   const { t, m } = useLocale();
   const [lists, setLists] = useState<Lists>(empty);
+  const [latestTrips, setLatestTrips] = useState<Record<string, FriendTrip>>(
+    {},
+  );
+  const acceptedFriends = useRef('');
   const listGeneration = useRef(0);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -221,24 +228,32 @@ export default function Friends({
   const [searchError, setSearchError] = useState('');
   const load = useCallback(
     async (signal?: AbortSignal) => {
+      const generation = ++listGeneration.current;
       try {
-        const generation = ++listGeneration.current;
-        const r = await api<Lists>('friends', 'GET', undefined, signal);
+        const r = await api<
+          Lists & { latestTrips?: Record<string, FriendTrip> }
+        >(compact ? 'friends' : 'friends?trips=1', 'GET', undefined, signal);
         if (signal?.aborted || generation !== listGeneration.current) return;
+        acceptedFriends.current = r.friends
+          .map((person) => person.id)
+          .join(',');
         setLists(r);
+        setLatestTrips(r.latestTrips ?? {});
         setError('');
         setReady(true);
       } catch (e) {
-        if (!signal?.aborted) {
+        if (!signal?.aborted && generation === listGeneration.current) {
           setError((e as Error).message);
           setReady(true);
         }
       }
     },
-    [viewerId],
+    [viewerId, compact],
   );
   useEffect(() => {
     setLists(empty);
+    setLatestTrips({});
+    acceptedFriends.current = '';
     setReady(false);
     const c = new AbortController();
     void load(c.signal);
@@ -248,20 +263,26 @@ export default function Friends({
     const updated = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (detail?.userId === viewerId && detail.friends) {
-        listGeneration.current++;
-        setLists(detail.friends);
+        const snapshot = detail.friends as Lists;
+        const key = snapshot.friends.map((person) => person.id).join(',');
+        if (!compact && key !== acceptedFriends.current) void load(c.signal);
+        acceptedFriends.current = key;
+        setLists(snapshot);
         setReady(true);
         setError('');
       }
     };
     window.addEventListener('questkeeps:social-updated', updated);
     window.addEventListener('questkeeps:friends-changed', changed);
+    const focus = () => void load(c.signal);
+    if (!compact) window.addEventListener('focus', focus);
     return () => {
       c.abort();
       window.removeEventListener('questkeeps:friends-changed', changed);
+      window.removeEventListener('focus', focus);
       window.removeEventListener('questkeeps:social-updated', updated);
     };
-  }, [viewerId, load]);
+  }, [viewerId, load, compact]);
   useEffect(() => {
     setPeople([]);
     setSearchError('');
@@ -295,6 +316,7 @@ export default function Friends({
     };
   }, [query, viewerId]);
   function row(person: Person, status?: Status) {
+    const trip = status === 'friends' ? latestTrips[person.id] : undefined;
     return (
       <li className="friend-row" key={person.id}>
         <a className="friend-person" href={'/@' + person.username}>
@@ -305,34 +327,51 @@ export default function Friends({
           </span>
         </a>
         {!compact && (
-          <FriendshipAction
-            person={person}
-            viewerId={viewerId}
-            initial={status}
-          />
+          <>
+            {trip ? (
+              <a className={styles.trip} href={trip.url}>
+                <strong>{trip.title}</strong>
+                <span>{trip.destination}</span>
+              </a>
+            ) : status === 'friends' ? (
+              <p className={styles.noTrip}>{t('friends.noAccessibleTrips')}</p>
+            ) : null}
+            <FriendshipAction
+              person={person}
+              viewerId={viewerId}
+              initial={status}
+            />
+          </>
         )}
       </li>
     );
   }
+  const title = (
+    <>
+      {t('friends.friends')}
+      {ready && (
+        <span className="friend-count" aria-hidden="true">
+          {lists.friends.length}
+        </span>
+      )}
+    </>
+  );
   return (
     <section
       className={
-        'friends-section' +
-        (compact ? ' friends-compact' : '') +
-        (compact && lists.friends.length ? ' friends-compact-populated' : '')
+        'friends-section ' +
+        (compact
+          ? 'friends-compact' +
+            (lists.friends.length ? ' friends-compact-populated' : '')
+          : styles.section)
       }
       id={compact ? undefined : 'friends'}
       aria-label={t('friends.friends')}
     >
       <div className="friends-heading">
-        <h2>
-          {t('friends.friends')}
-          {ready && (
-            <span className="friend-count">{lists.friends.length}</span>
-          )}
-        </h2>
+        {compact ? <h2>{title}</h2> : <h1 className={styles.title}>{title}</h1>}
         {compact && (
-          <a className="text-button" href="/profile#friends">
+          <a className="text-button" href="/people/friends">
             {t('common.allFriends')}
           </a>
         )}
@@ -353,7 +392,11 @@ export default function Friends({
       {ready && !error && (
         <>
           {lists.friends.length ? (
-            <ul className="friends-list">
+            <ul
+              className={
+                compact ? 'friends-list' : 'friends-list ' + styles.accepted
+              }
+            >
               {(compact ? lists.friends.slice(0, 6) : lists.friends).map((p) =>
                 row(p, 'friends'),
               )}
@@ -361,50 +404,48 @@ export default function Friends({
           ) : (
             <div className="friends-empty">
               <p>{t('friends.storiesFeelCloserWhenYouHaveSomeone')}</p>
-              {compact && (
-                <a href="/profile#find-people">{t('friends.findFriends')}</a>
-              )}
+              <a
+                href={compact ? '/people/friends#find-people' : '#find-people'}
+              >
+                {t('friends.findFriends')}
+              </a>
             </div>
           )}
           {compact && !!lists.incoming.length && (
-            <a className="friend-pending" href="/profile#friends">
+            <a className="friend-pending" href="/people/friends#friends">
               {t('friends.friendRequests')}: {lists.incoming.length}
             </a>
           )}
           {!compact && (
-            <>
-              <p className="fine friend-privacy">
-                {t('friends.onlyYouCanSeeYourFriendsAnd')}
-              </p>
-              {!!lists.incoming.length && (
-                <div className="friend-requests">
-                  <h3>
-                    {t('friends.friendRequests')}{' '}
-                    <span className="friend-count">
-                      {lists.incoming.length}
-                    </span>
-                  </h3>
-                  <ul className="friends-list">
-                    {lists.incoming.map((p) => row(p, 'incoming'))}
-                  </ul>
-                </div>
-              )}
-              {!!lists.outgoing.length && (
-                <div className="friend-requests">
-                  <h3>{t('friends.sentRequests')}</h3>
-                  <ul className="friends-list">
-                    {lists.outgoing.map((p) => row(p, 'outgoing'))}
-                  </ul>
-                </div>
-              )}
-            </>
+            <p className="fine friend-privacy">
+              {t('friends.onlyYouCanSeeYourFriendsAnd')}
+            </p>
+          )}
+          {!compact && !!lists.incoming.length && (
+            <div className="friend-requests">
+              <h2>
+                {t('friends.friendRequests')}{' '}
+                <span className="friend-count">{lists.incoming.length}</span>
+              </h2>
+              <ul className="friends-list">
+                {lists.incoming.map((p) => row(p, 'incoming'))}
+              </ul>
+            </div>
+          )}
+          {!compact && !!lists.outgoing.length && (
+            <div className="friend-requests">
+              <h2>{t('friends.sentRequests')}</h2>
+              <ul className="friends-list">
+                {lists.outgoing.map((p) => row(p, 'outgoing'))}
+              </ul>
+            </div>
           )}
         </>
       )}
       {!compact && (
         <div className="friend-discovery">
           <div className="find-people" id="find-people">
-            <h3>{t('friends.findFriends')}</h3>
+            <h2>{t('friends.findFriends')}</h2>
             <label className="field">
               <span>{t('common.nameOrUsername')}</span>
               <input

@@ -150,3 +150,76 @@ test('friendship requires recipient consent, keeps private lists and never grant
   await request(bob, 'friends/' + alice, 'DELETE');
   assert.equal(one('SELECT count(*) n FROM friendships')!.n, 0);
 });
+
+test('friend trips respect membership and a current follow link without exposing newer private trips', async () => {
+  const memberTrip = id();
+  const followedTrip = id();
+  const nonce = 'followed-nonce';
+  for (const [tripId, title, date, hash] of [
+    [memberTrip, 'Member trip', '2026-10-02', null],
+    [followedTrip, 'Followed trip', '2026-10-04', nonce],
+  ]) {
+    run(
+      'INSERT INTO trips(id,owner_id,title,destination,start,end,created,share_hash) VALUES (?,?,?,?,?,?,?,?)',
+      tripId,
+      bob,
+      title,
+      'Fixture',
+      date,
+      date,
+      Date.now(),
+      hash,
+    );
+  }
+  run(
+    'INSERT INTO members(trip_id,user_id,start,end,active) VALUES (?,?,?,?,1)',
+    memberTrip,
+    alice,
+    '2026-10-02',
+    '2026-10-02',
+  );
+  run(
+    'INSERT INTO trip_follows(user_id,trip_id,share_hash,created) VALUES (?,?,?,?)',
+    alice,
+    followedTrip,
+    nonce,
+    Date.now(),
+  );
+  assert.equal((await request(null, 'friends?trips=1')).status, 401);
+  const latest = async (user: string) =>
+    (await (await request(user, 'friends?trips=1')).json()).latestTrips;
+  const sent = await request(alice, 'friends/' + bob, 'POST');
+  assert.equal(sent.status, 200);
+  assert.deepEqual(await latest(alice), {});
+  const accepted = await request(bob, 'friends/' + alice, 'PATCH', {
+    action: 'accept',
+  });
+  assert.equal(accepted.status, 200);
+  const withFollow = await latest(alice);
+  assert.equal(withFollow[bob].title, 'Followed trip');
+  assert.match(withFollow[bob].url, /^\/s\/v1\./);
+  assert.equal(
+    (await request(alice, 'share/' + withFollow[bob].url.slice(3))).status,
+    200,
+  );
+  assert.deepEqual(await latest(eve), {});
+  run(
+    'UPDATE trips SET share_hash=? WHERE id=?',
+    'replaced-nonce',
+    followedTrip,
+  );
+  assert.deepEqual(await latest(alice), {
+    [bob]: {
+      title: 'Member trip',
+      destination: 'Fixture',
+      url: '/?trip=' + memberTrip,
+    },
+  });
+  run(
+    'UPDATE members SET active=0 WHERE trip_id=? AND user_id=?',
+    memberTrip,
+    alice,
+  );
+  assert.deepEqual(await latest(alice), {});
+  assert.equal((await request(alice, 'trips/' + trip)).status, 403);
+});

@@ -52,24 +52,6 @@ dialog.modal:not(.fullscreen) {
   line-clamp: 3;
   overflow: hidden;
 }
-.virtual-places {
-  --place-row-min-height: 240px;
-  row-gap: 16px;
-}
-.virtual-places-cell > .discovered-place {
-  min-height: var(--place-row-min-height);
-}
-.discovered-place-content {
-  padding: 22px 24px;
-}
-.discovered-place-content h2 {
-  font-size: clamp(1.125rem, 1.7vw, 1.375rem);
-  line-height: 1.35;
-  margin: 10px 0;
-}
-.discovered-place .place-wiki-image {
-  min-height: 240px;
-}
 .video-viewer video {
   display: block;
   width: 100%;
@@ -327,7 +309,7 @@ dialog.modal:not(.fullscreen) {
   .trip-card-body {
     padding: 20px;
   }
-  .trip-card-body h2 {
+  .trip-card-body :is(h2, .collection-trip-title) {
     font-size: 1.25rem;
     line-height: 1.35;
   }
@@ -379,16 +361,6 @@ dialog.modal:not(.fullscreen) {
   .place-recommendation .map-photo-thumb {
     height: 150px;
   }
-  .discovered-place {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .discovered-place-content {
-    padding: 12px;
-  }
-  .discovered-place-content h2 {
-    font-size: 1.0625rem;
-    line-height: 1.35;
-  }
   .discovered-place-content p {
     font-size: 0.875rem;
     -webkit-line-clamp: 3;
@@ -404,17 +376,6 @@ dialog.modal:not(.fullscreen) {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-  }
-  .discovered-place .place-wiki-image {
-    min-height: 0;
-    height: 100%;
-  }
-  /* Show the complete public or personal photo within its half of the card. */
-  .discovered-place .place-wiki-image img,
-  .discovered-place .place-own-photo .media-preview img {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: contain;
   }
   .discovered-place .place-photo-reference {
     gap: 8px;
@@ -878,6 +839,30 @@ dialog.modal.fullscreen[open] {
 }
 
 /* A sparse desktop archive fits beside the header/footer without oversized gaps. */
+.dashboard > .first-trip-intro {
+  display: grid;
+  justify-content: start;
+  gap: 20px;
+  padding: clamp(20px, 4vw, 48px);
+  background: var(--selection);
+  border-radius: var(--radius-control);
+}
+.dashboard > .first-trip-intro h1 { margin-bottom: 8px; }
+.dashboard > .first-trip-intro p { max-width: 46ch; }
+.dashboard > .first-trip-intro > .primary {
+  align-self: start;
+  justify-self: start;
+  min-height: 52px;
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .dashboard > .first-trip-intro {
+    margin-inline: 8px;
+    text-align: start;
+  }
+}
+
 @media (min-width: 1100px) {
   .dashboard-compact {
     --dashboard-space: clamp(8px, 1.5dvh, 20px);
@@ -889,27 +874,10 @@ dialog.modal.fullscreen[open] {
     line-height: 1.2;
     margin-block: 4px 6px;
   }
-  .dashboard-compact .friends-compact:not(.friends-compact-populated) {
-    display: grid;
-    grid-template-columns: 230px minmax(0, 1fr);
-    align-items: center;
-    gap: 24px;
+  .dashboard-compact .friends-compact {
     margin-block: var(--dashboard-space);
-    padding-block: 10px;
+    padding-block: var(--dashboard-space);
   }
-  .dashboard-compact .friends-compact:not(.friends-compact-populated) .friends-heading {
-    margin: 0;
-  }
-  .dashboard-compact .friends-heading h2 { font-size: 1.375rem; line-height: 1.3; }
-  .dashboard-compact .friends-empty {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 4px 16px;
-    max-width: none;
-    padding: 0;
-  }
-  .dashboard-compact .friends-empty p { margin: 0; }
   .dashboard-compact .section-line {
     padding-top: var(--dashboard-space);
     margin-bottom: var(--dashboard-space);
@@ -944,7 +912,7 @@ dialog.modal.fullscreen[open] {
   }
   .dashboard-compact .trip-art > svg { width: 44px; height: 44px; top: 12px; right: 14px; }
   .dashboard-compact .trip-card-body { padding: 14px; }
-  .dashboard-compact .trip-card-body h2 { font-size: 1.25rem; line-height: 1.3; margin-block: 4px; }
+  .dashboard-compact .trip-card-body :is(h2, .collection-trip-title) { font-size: 1.25rem; line-height: 1.3; margin-block: 4px; }
   .dashboard-compact .trip-card-body .eyebrow { margin-bottom: 4px; }
   .dashboard-compact .trip-meta { flex-wrap: wrap; gap: 4px 12px; }
   .dashboard-compact .archive-note {
@@ -1038,15 +1006,15 @@ dialog.modal.fullscreen[open] {
 .public-profile-copy-status { color: var(--success-ink); margin: 0; }
 
 /* Keep shared baselines while allowing generated links and results to grow. */
-@media (min-width: 701px) {
+@media (width > 800px) {
   .friend-discovery { grid-template-rows: auto auto auto; row-gap: 12px; align-items: start; }
-  .friend-discovery h3 { margin: 0; }
+  .friend-discovery h2 { margin: 0; }
   .find-people > .field { display: contents; }
   .find-people > .field > span { align-self: end; }
   .friend-link-block > p.fine:first-of-type, .friend-link-block > .friend-link-actions { margin: 0; }
   .friend-discovery > .find-people, .friend-discovery > .friend-link-block { display: contents; }
-  .find-people > h3 { grid-column: 1; grid-row: 1; }
-  .friend-link-block > h3 { grid-column: 2; grid-row: 1; }
+  .find-people > h2 { grid-column: 1; grid-row: 1; }
+  .friend-link-block > h2 { grid-column: 2; grid-row: 1; }
   .find-people > .field > span { grid-column: 1; grid-row: 2; }
   .find-people > .field > input { grid-column: 1; grid-row: 3; }
   .friend-link-block > p.fine:first-of-type { grid-column: 2; grid-row: 2; }
@@ -1107,6 +1075,20 @@ dialog.modal.fullscreen[open] {
   .site-header .top-actions > .user-button { padding: 6px 12px; max-width: 140px; }
   .site-header .top-actions > .header-logout { padding: 10px 14px; }
 }
+@media (min-width: 701px) and (max-width: 1099px) {
+  .topbar.site-header:has(.header-guest-badge) {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .site-header:has(.header-guest-badge) .top-actions {
+    flex: 0 0 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .site-header:has(.header-guest-badge) .top-actions > a {
+    white-space: nowrap;
+  }
+}
 @media (min-width: 1100px) {
   .site-header .top-actions { flex-wrap: nowrap; gap: 8px; }
   .site-header > .top-caption {
@@ -1146,9 +1128,24 @@ dialog.modal.fullscreen[open] {
     margin: 0;
   }
 }
+@media (min-width: 1280px) and (max-width: 1599px) {
+  .site-header:has(.friends-nav-link) > .top-caption { display: none; }
+  .site-header:has(.friends-nav-link) .top-actions > .header-guest-badge {
+    position: static;
+    transform: none;
+  }
+}
 
 /* Covers preserve the archive artwork until a favorite preview has loaded. */
 .trip-cover-photo { position: absolute; inset: 0; }
+.trip-heading-cover {
+  margin-bottom: clamp(16px, 3vw, 32px);
+  overflow: hidden;
+  border-radius: var(--radius-control);
+}
+.trip-heading-cover > .trip-art {
+  height: clamp(136px, 25vw, 240px);
+}
 .trip-cover-photo .rotation-frame { width: 100%; height: 100%; }
 .trip-cover-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .trip-cover-current { animation: trip-cover-fade 280ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }

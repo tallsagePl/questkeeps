@@ -1,4 +1,5 @@
 import { videoRoutes } from './video';
+import { photoSelfMarkRoute } from './photo-self-marks';
 import { ownProfileMedia } from '../profile-media';
 import { localizedWikiArticle } from '../wiki-article';
 import { areaWiki } from '../map-area-wiki';
@@ -54,7 +55,16 @@ export async function mediaRoutes({
   req,
   p,
   method,
+  url,
 }: RequestContext): Promise<Response | undefined> {
+  if (
+    p[0] === 'media' &&
+    p[1] &&
+    p[2] === 'self-mark' &&
+    !p[3] &&
+    (method === 'GET' || method === 'PATCH')
+  )
+    return photoSelfMarkRoute({ req, p, method, url });
   if (
     ['media', 'my-media'].includes(p[0]) &&
     p[1] &&

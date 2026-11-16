@@ -26,12 +26,15 @@ type FollowUpdate = {
 
 type State = {
   follow?: Record<string, FollowUpdate>;
+  profileCompletion?: 'unread' | 'read';
   friends: string[];
   outgoing: string[];
   accepted: Person[];
   drive: Record<string, Drive>;
   seen: string[];
 };
+
+const profileCompletionKey = 'profile-completion';
 
 function stateFor(userId: string): State {
   const row = one(
@@ -50,6 +53,15 @@ function save(userId: string, state: State) {
     JSON.stringify(state),
     Date.now(),
   );
+}
+
+export function queueProfileCompletionNotice(userId: string) {
+  db.transaction(() => {
+    const state = stateFor(userId);
+    if (state.profileCompletion) return;
+    state.profileCompletion = 'unread';
+    save(userId, state);
+  }).immediate();
 }
 
 const snapshotCache = new MemoryCache<
@@ -172,7 +184,13 @@ export function notificationSnapshot(userId: string) {
         driveChanges,
         followChanges,
         accepted: state.accepted,
-        seen: state.seen,
+        profileCompletion: state.profileCompletion
+          ? profileCompletionKey
+          : null,
+        seen:
+          state.profileCompletion === 'read'
+            ? [...state.seen, profileCompletionKey]
+            : state.seen,
       };
     })
     .immediate();
@@ -181,7 +199,11 @@ export function notificationSnapshot(userId: string) {
 export function readNotifications(userId: string, keys: string[]) {
   db.transaction(() => {
     const state = stateFor(userId);
-    state.seen = [...new Set([...state.seen, ...keys])].slice(-300);
+    if (state.profileCompletion && keys.includes(profileCompletionKey))
+      state.profileCompletion = 'read';
+    // Keep the one-time profile reminder read even if the feed's seen keys roll over.
+    const feedKeys = keys.filter((key) => key !== profileCompletionKey);
+    state.seen = [...new Set([...state.seen, ...feedKeys])].slice(-300);
     save(userId, state);
   }).immediate();
 }

@@ -43,10 +43,13 @@ for (const screen of [
     expect(await fits()).toEqual({ width: screen.width, hasOverflow: false });
 
     await register.tap();
-    const form = page.locator('#welcome-auth');
-    await expect(form.locator('input[name="name"]')).toBeInViewport();
-    await expect(form).toBeFocused();
+    const draft = page.getByRole('dialog', {
+      name: screen.language === 'ru' ? 'Новое путешествие' : 'New journey',
+    });
+    await expect(draft).toBeVisible();
+    await expect(draft.getByRole('textbox').first()).toBeInViewport();
     await page.goBack();
+    const form = page.locator('#welcome-auth');
     await login.tap();
     const identifier = form.locator('input[name="email"]');
     await expect(identifier).toHaveAttribute('autocomplete', 'username');
@@ -61,10 +64,14 @@ for (const screen of [
     expect(await fits()).toEqual({ width: screen.width, hasOverflow: false });
 
     await page.goto('/guide');
-    const map = page.getByRole('link', { name: 'Найти кадры на карте' });
+    await expect(page.locator('header .mobile-header-menu')).toBeVisible();
+    await expect(page.locator('main details')).toHaveCount(4);
+    await expect(page.locator('main details[open]')).toHaveCount(0);
+    const map = page.locator('details:has(#map) > summary');
     expect((await map.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(page.locator('#map')).toBeHidden();
     await map.tap();
-    await expect(page.locator('#map h2')).toBeInViewport();
+    await expect(page.locator('#map')).toBeVisible();
     expect(await fits()).toEqual({ width: screen.width, hasOverflow: false });
   });
 }

@@ -75,10 +75,10 @@ test('numbered migrations preserve legacy records, apply once, and reject newer 
     ],
   );
 
-  assert.equal(legacy.pragma('user_version', { simple: true }), 17);
+  assert.equal(legacy.pragma('user_version', { simple: true }), 18);
   assert.equal(
     (legacy.prepare('SELECT count(*) n FROM schema_migrations').get() as any).n,
-    17,
+    18,
   );
   assert.equal(
     (legacy.prepare('SELECT password FROM users').get() as any).password,
@@ -90,7 +90,7 @@ test('numbered migrations preserve legacy records, apply once, and reject newer 
   legacy.close();
   const fresh = new Database(':memory:');
   migrate(fresh);
-  assert.equal(fresh.pragma('user_version', { simple: true }), 17);
+  assert.equal(fresh.pragma('user_version', { simple: true }), 18);
   fresh.close();
 });
 
@@ -374,6 +374,88 @@ test('unlinked Yandex with an existing primary email cannot create a duplicate o
     );
   } finally {
     globalThis.fetch = original;
+    process.env.YANDEX_CLIENT_ID = '';
+  }
+});
+
+test('Yandex OAuth recovers from a transient profile failure and handles an unavailable token endpoint', async (t) => {
+  process.env.YANDEX_CLIENT_ID = 'fixture-client';
+  async function callback() {
+    const start = await request('auth/yandex?returnTo=%2F%3Fcreate%3D1');
+    const state = new URL(start.headers.get('location')!).searchParams.get(
+      'state',
+    );
+    const cookie = start.headers.get('set-cookie')!.match(/ta_oauth=[^;]+/)![0];
+    return request(
+      'auth/callback?state=' + state + '&code=fixture',
+      undefined,
+      cookie,
+    );
+  }
+
+  try {
+    await t.test(
+      'connection timeout keeps the return path without replaying the code',
+      async (t) => {
+        const fetch = t.mock.method(globalThis, 'fetch', async () => {
+          throw new TypeError('fetch failed', {
+            cause: Object.assign(new Error('connect timed out'), {
+              code: 'UND_ERR_CONNECT_TIMEOUT',
+            }),
+          });
+        });
+        const response = await callback();
+        const destination = new URL(response.headers.get('location')!);
+        assert.equal(destination.pathname, '/auth/error');
+        assert.equal(
+          destination.searchParams.get('reason'),
+          'provider_unavailable',
+        );
+        assert.equal(destination.searchParams.get('returnTo'), '/?create=1');
+        assert.equal(fetch.mock.callCount(), 1);
+        assert.doesNotMatch(
+          response.headers.get('set-cookie') || '',
+          /ta_session=/,
+        );
+      },
+    );
+
+    await t.test(
+      'retries a transient profile failure with the token already issued',
+      async (t) => {
+        let tokenRequests = 0;
+        let profileRequests = 0;
+        t.mock.method(
+          globalThis,
+          'fetch',
+          async (url: string, options: RequestInit) => {
+            if (url === 'https://oauth.yandex.ru/token') {
+              assert.equal(options.method, 'POST');
+              tokenRequests++;
+              return Response.json({ access_token: 'fixture-token' });
+            }
+            assert.equal(url, 'https://login.yandex.ru/info?format=json');
+            assert.equal(
+              new Headers(options.headers).get('Authorization'),
+              'OAuth fixture-token',
+            );
+            profileRequests++;
+            return profileRequests === 1
+              ? new Response(null, { status: 503 })
+              : Response.json({ id: 'retry-fixture', login: 'traveller' });
+          },
+        );
+        const response = await callback();
+        assert.equal(
+          response.headers.get('location'),
+          'http://localhost:3000/?create=1#signup-confirmed',
+        );
+        assert.match(sessionCookie(response), /^ta_session=/);
+        assert.equal(tokenRequests, 1);
+        assert.equal(profileRequests, 2);
+      },
+    );
+  } finally {
     process.env.YANDEX_CLIENT_ID = '';
   }
 });

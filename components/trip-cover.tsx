@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { TripCover as Cover } from '../lib/contracts';
-import { Icon } from './archive/shared';
 import CoverPhotoFrame from './cover-photo-frame';
 import { previewBlob } from '../lib/preview-cache';
 import { queuePreview } from '../lib/preview-queue';
@@ -154,12 +153,7 @@ export default function TripCover({
           />
         </div>
       )}
-      {!active && (
-        <>
-          <Icon name="compass" size={80} />
-          <span className="destination-art">{destination}</span>
-        </>
-      )}
+      {!active && <span className="destination-art">{destination}</span>}
     </div>
   );
 }

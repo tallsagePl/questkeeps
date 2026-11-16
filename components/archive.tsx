@@ -6,10 +6,10 @@ import TripFollow, { FollowArrival } from './trip-follow';
 import { FriendLinkArrival } from './friend-link';
 import TripExample from './trip-example';
 import CreateTripLink from './create-trip-link';
-import { trackGoal } from '@/lib/analytics';
 import { useLocale } from '@/components/appearance';
 import { api } from './api';
 import TripDescription from './trip-description';
+import TripCover from './trip-cover';
 import TripPreloader from './trip-preloader';
 import { BackToTop } from './media-controls';
 import { LogoMark } from './brand';
@@ -31,11 +31,17 @@ import ShareDialog from './archive/share-dialog';
 import MediaDialog from './archive/media-dialog';
 import PublishDialog from './archive/publish-dialog';
 import AuthForm from './archive/auth-form';
+import SignupUsernameDialog from './archive/signup-username';
 import { retryTripImport } from './archive/source-actions';
 import OnboardingMilestones from './onboarding-milestones';
 import welcomeStyles from './archive/welcome.module.css';
 
-type ArchiveProps = { share?: string; invite?: string; publicHome?: boolean };
+type ArchiveProps = {
+  share?: string;
+  invite?: string;
+  publicHome?: boolean;
+  collectionOnly?: boolean;
+};
 
 export default function Archive(props: ArchiveProps) {
   return (
@@ -77,14 +83,19 @@ function ArchiveContent(props: ArchiveProps) {
   const authForm = <AuthForm archive={archive} />;
   const showWelcome =
     ((!ready || bootFailed) && props.publicHome) ||
-    (ready && !bootFailed && !invite && !guest && !user);
+    (ready &&
+      !bootFailed &&
+      !invite &&
+      !guest &&
+      !user &&
+      !props.collectionOnly);
   return (
     <>
       <a className="skip-link" href="#main-content">
         {t('common.skipToContent')}
       </a>
       <BackToTop />
-      <Header archive={archive} />
+      <Header archive={archive} collectionCurrent={props.collectionOnly} />
       {!guest && !invite && ready && (
         <OnboardingMilestones
           userId={user?.id}
@@ -110,13 +121,6 @@ function ArchiveContent(props: ArchiveProps) {
                 <CreateTripLink source="home" className="primary">
                   {t('onboarding.createTrip')}
                 </CreateTripLink>
-                <a
-                  className="secondary"
-                  href="#trip-example"
-                  onClick={() => trackGoal('onboarding_example_opened')}
-                >
-                  {t('onboarding.viewExample')}
-                </a>
                 <a
                   className="text-button"
                   href="#welcome-auth"
@@ -161,7 +165,7 @@ function ArchiveContent(props: ArchiveProps) {
                       : t('trip.signInToReturnToYourStories')}
                   </p>
                 )}
-                {authForm}
+                {modal !== 'create-auth' && authForm}
               </>
             ) : (
               <p role="status">{t('trip.openingTheArchive')}</p>
@@ -185,6 +189,16 @@ function ArchiveContent(props: ArchiveProps) {
           >
             {t('common.retry')}
           </button>
+        </main>
+      ) : props.collectionOnly && !user ? (
+        <main id="main-content" tabIndex={-1} className="social-page">
+          <h1>{t('navigation.trips')}</h1>
+          <div className="profile-signin">
+            <p>{t('trip.signInToReturnToYourStories')}</p>
+            <a className="primary" href="/#welcome-auth">
+              {t('auth.signIn')}
+            </a>
+          </div>
         </main>
       ) : invite ? (
         <main id="main-content" tabIndex={-1} className="invite-page">
@@ -243,10 +257,20 @@ function ArchiveContent(props: ArchiveProps) {
           <a href="/">{t('trip.goHome')}</a>
         </main>
       ) : !trip ? (
-        <Dashboard archive={archive} />
+        <Dashboard archive={archive} collectionOnly={props.collectionOnly} />
       ) : (
         <main id="main-content" tabIndex={-1} className="trip-page">
           <PageFeedback />
+          {!!trip.covers?.length && (
+            <div className="trip-heading-cover">
+              <TripCover
+                key={resourceScope + ':' + trip.id}
+                covers={trip.covers}
+                destination={trip.destination}
+                scope={resourceScope}
+              />
+            </div>
+          )}
           <div className="trip-heading">
             <div>
               <span className="eyebrow">
@@ -314,7 +338,6 @@ function ArchiveContent(props: ArchiveProps) {
                   {data?.media.filter((m) => !m.hidden).length || 0}
                 </strong>
                 <span>{t('trip.photosVideos')}</span>
-                <Icon name="compass" size={42} />
               </div>
             </div>
           </div>
@@ -405,7 +428,12 @@ function ArchiveContent(props: ArchiveProps) {
         </main>
       )}
       <SiteFooter />
-      {modal === 'create' && <CreateDialog archive={archive} />}
+      {(modal === 'create' || modal === 'create-auth') && (
+        <CreateDialog archive={archive} />
+      )}
+      {modal === 'choose-username' && (
+        <SignupUsernameDialog archive={archive} />
+      )}
       {modal === 'source' && <FolderDialog archive={archive} />}
       {(modal === 'invite' || modal.startsWith('member:')) && (
         <InviteDialog archive={archive} />

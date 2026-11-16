@@ -1,6 +1,14 @@
 import { all, one, run, db, hash } from './db';
 import type { Mention } from './mentions';
 
+export function usernameTaken(username: string, userId: string) {
+  return !!one(
+    'SELECT 1 FROM user_handles WHERE username=? AND user_id<>?',
+    username,
+    userId,
+  );
+}
+
 export function ensureUsername(userId: string) {
   const saved = one(
     'SELECT username FROM user_handles WHERE user_id=?',

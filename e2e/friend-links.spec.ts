@@ -20,7 +20,15 @@ test('friend links survive registration and login, add both people, and can be r
     'owner-' + unique + '@fixture.invalid',
   );
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto('/profile');
+  const route = await page.goto('/profile#friends');
+  expect(route?.ok()).toBeTruthy();
+  await expect(page).toHaveURL(base + '/people/friends#friends');
+  await expect(page.locator('meta[name=robots]')).toHaveAttribute(
+    'content',
+    /noindex/,
+  );
+  const friendsPage = await page.request.get('/people/friends');
+  expect(friendsPage.headers()['x-robots-tag']).toBe('noindex, nofollow');
   await page
     .getByRole('button', { name: 'Сгенерировать ссылку', exact: true })
     .click();
@@ -43,6 +51,19 @@ test('friend links survive registration and login, add both people, and can be r
         .analyze()
     ).violations,
   ).toEqual([]);
+  for (const width of [701, 768, 800, 801]) {
+    await page.setViewportSize({ width, height: 940 });
+    const searchBox = (await page.locator('#find-people input').boundingBox())!;
+    const linkBox = (await field.boundingBox())!;
+    if (width <= 800) {
+      expect(linkBox.y).toBeGreaterThan(searchBox.y + searchBox.height);
+      expect(searchBox.width).toBeGreaterThan(width * 0.7);
+    } else {
+      expect(linkBox.x).toBeGreaterThan(searchBox.x + searchBox.width);
+      expect(Math.abs(searchBox.y - linkBox.y)).toBeLessThan(2);
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const newcomer = await browser.newContext();
   const invite = await newcomer.newPage();
   await invite.goto(url);
@@ -71,9 +92,13 @@ test('friend links survive registration and login, add both people, and can be r
   await expect(invite.locator('.friend-arrival')).toContainText(
     'Вы теперь друзья: Friend Owner',
   );
-  await expect(invite.locator('.friends-compact .friend-row')).toContainText(
-    'Friend Owner',
-  );
+  await invite
+    .locator('.friend-arrival')
+    .getByRole('link', { name: 'Все друзья', exact: true })
+    .click();
+  await expect(
+    invite.locator('.friends-section > .friends-list .friend-row'),
+  ).toContainText('Friend Owner');
   const existing = await browser.newContext();
   await register(
     existing,

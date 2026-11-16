@@ -46,7 +46,7 @@ export default function FriendLink() {
   }
   return (
     <div className="friend-link-block" aria-busy={busy}>
-      <h3>{t('friends.inviteWithALink')}</h3>
+      <h2>{t('friends.inviteWithALink')}</h2>
       <p className="fine">{t('friends.sendTheLinkToAFriendOnce')}</p>
       {url && (
         <label className="field">
@@ -177,7 +177,7 @@ export function FriendLinkArrival({ userId }: { userId?: string }) {
       {name ? (
         <p role="status">
           {t('friends.youAreNowFriends')}
-          {name}. <a href="/profile#friends">{t('common.allFriends')}</a>
+          {name}. <a href="/people/friends">{t('common.allFriends')}</a>
         </p>
       ) : error ? (
         <p role="alert">

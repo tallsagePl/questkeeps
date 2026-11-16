@@ -8,6 +8,8 @@ import {
   confirmEmail,
 } from '../email-verification';
 import { validRegistrationPassword } from '../password-policy';
+import { normalizeUsername, usernamePattern } from '../username';
+import { usernameTaken } from '../profiles';
 import { z } from 'zod';
 import { hash as passwordHash, compare } from 'bcryptjs';
 import { db, one, run, id, hash } from '../db';
@@ -169,6 +171,24 @@ export async function authRoutes({
           passwordConfirmation: z.string().max(128).optional(),
           name: z.string().trim().min(1).max(80).optional(),
           createTrip: z.boolean().optional(),
+          username: registering
+            ? z
+                .string()
+                .trim()
+                .transform((value) =>
+                  value ? normalizeUsername(value) : undefined,
+                )
+                .pipe(
+                  z
+                    .string()
+                    .regex(usernamePattern, 'auth.usernameFormat')
+                    .optional(),
+                )
+                .optional()
+            : z
+                .unknown()
+                .optional()
+                .transform(() => undefined),
         })
         .parse(await body(req));
       if (
@@ -214,29 +234,50 @@ export async function authRoutes({
           );
         const userId = id();
         const encodedPassword = await passwordHash(input.password, 12);
-        db.transaction(() => {
-          run(
-            'INSERT INTO users VALUES (?,?,?,?,?)',
-            userId,
-            input.email,
-            input.name || input.email.split('@')[0],
-            encodedPassword,
-            Date.now(),
-          );
-          run(
-            'INSERT INTO email_status (user_id,required) VALUES (?,?)',
-            userId,
-            Number(verificationRequired()),
-          );
-          queueTelegramRegistration(userId);
-          if (verificationRequired())
-            queueVerification(
+        const registered = db
+          .transaction(() => {
+            if (one('SELECT 1 FROM users WHERE email=?', input.email))
+              fail(409, 'messages.thisEmailIsAlreadyRegistered');
+            if (input.username && usernameTaken(input.username, userId))
+              return false;
+            run(
+              'INSERT INTO users VALUES (?,?,?,?,?)',
               userId,
               input.email,
-              req.headers.get('X-QuestKeeps-Language') === 'en' ? 'en' : 'ru',
-              input.createTrip,
+              input.name || input.email.split('@')[0],
+              encodedPassword,
+              Date.now(),
             );
-        }).immediate();
+            if (input.username)
+              run(
+                'INSERT INTO user_handles (user_id,username) VALUES (?,?)',
+                userId,
+                input.username,
+              );
+            run(
+              'INSERT INTO email_status (user_id,required) VALUES (?,?)',
+              userId,
+              Number(verificationRequired()),
+            );
+            queueTelegramRegistration(userId);
+            if (verificationRequired())
+              queueVerification(
+                userId,
+                input.email,
+                req.headers.get('X-QuestKeeps-Language') === 'en' ? 'en' : 'ru',
+                input.createTrip,
+              );
+            return true;
+          })
+          .immediate();
+        if (!registered)
+          return json(
+            {
+              error: 'errors.usernameTaken',
+              fieldErrors: { username: 'errors.usernameTaken' },
+            },
+            409,
+          );
         u = one('SELECT * FROM users WHERE id=?', userId);
       } else {
         const valid = await compare(

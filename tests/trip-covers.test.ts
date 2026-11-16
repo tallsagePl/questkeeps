@@ -5,13 +5,14 @@ import { NextRequest } from 'next/server';
 import { handle } from '../lib/api';
 import { session } from '../lib/access';
 import { migrate } from '../lib/migrations';
-import { db, run, encrypt } from '../lib/db';
+import { db, run, encrypt, hash } from '../lib/db';
+import { guestToken } from '../lib/guest-links';
 import { tripCovers, coverSettings } from '../lib/trip-covers';
 
 after(() => db.close());
 
 test('favorite covers respect guest visibility, membership dates and source approval', async () => {
-  for (const user of ['owner', 'member', 'stranger'])
+  for (const user of ['owner', 'member', 'follower', 'stranger'])
     run(
       'INSERT INTO users VALUES (?,?,?,?,?)',
       user,
@@ -20,14 +21,17 @@ test('favorite covers respect guest visibility, membership dates and source appr
       null,
       Date.now(),
     );
+  const shareHash = hash('legacy-fixture-link');
+  const token = guestToken({ id: 'trip', share_hash: shareHash })!;
   run(
-    'INSERT INTO trips(id,owner_id,title,destination,start,end,created) VALUES (?,?,?,?,?,?,?)',
+    'INSERT INTO trips(id,owner_id,title,destination,start,end,share_hash,created) VALUES (?,?,?,?,?,?,?,?)',
     'trip',
     'owner',
     'Trip',
     'City',
     '2026-10-10',
     '2026-10-18',
+    shareHash,
     Date.now(),
   );
   run(
@@ -90,7 +94,7 @@ test('favorite covers respect guest visibility, membership dates and source appr
     ['private', 'public'],
   );
   assert.deepEqual(tripCovers('trip', 'stranger'), []);
-  const guest = tripCovers('trip', 'owner', 'guest-token');
+  const guest = tripCovers('trip', '', token);
   assert.deepEqual(
     guest.map((x) => x.id),
     ['public', 'outside-member'],
@@ -98,7 +102,7 @@ test('favorite covers respect guest visibility, membership dates and source appr
   assert.equal(guest[0].rotation, 90);
   assert.equal(
     new URL(guest[0].src, 'https://fixture.invalid').searchParams.get('share'),
-    'guest-token',
+    token,
   );
   assert.deepEqual(
     tripCovers('trip', 'owner').map((x) => x.id),
@@ -159,15 +163,121 @@ test('favorite covers respect guest visibility, membership dates and source appr
     ['private', 'public'],
   );
   assert.deepEqual(
-    tripCovers('trip', 'owner', 'guest-token').map((x) => x.id),
+    tripCovers('trip', '', token).map((x) => x.id),
     ['public'],
+  );
+  const cookies = new Map(
+    ['member', 'follower'].map((user) => [user, 'ta_session=' + session(user)]),
+  );
+  const viewRequest = (
+    path: string,
+    user = '',
+    input?: { token: string },
+    etag?: string,
+  ) =>
+    handle(
+      new NextRequest('http://localhost:3000/api/' + path, {
+        method: input ? 'POST' : 'GET',
+        headers: {
+          cookie: cookies.get(user) || '',
+          origin: 'http://localhost:3000',
+          'content-type': 'application/json',
+          ...(etag ? { 'if-none-match': etag } : {}),
+        },
+        ...(input ? { body: JSON.stringify(input) } : {}),
+      }),
+      path.split('?')[0].split('/'),
+    );
+  const memberList = await (await viewRequest('trips', 'member')).json();
+  const sharedPosition = { x: 25, y: 80 };
+  assert.deepEqual(
+    memberList.trips[0].covers.find(
+      (cover: { id: string }) => cover.id === 'public',
+    ).position,
+    sharedPosition,
+  );
+  const memberDetail = await (await viewRequest('trips/trip', 'member')).json();
+  assert.deepEqual(memberDetail.trip.covers, memberList.trips[0].covers);
+  assert.deepEqual(tripCovers('trip', '', 'invalid-link'), []);
+  const guestPath = 'share/' + token;
+  const guestDetail = await viewRequest(guestPath);
+  const initialEtag = guestDetail.headers.get('etag')!;
+  const guestDeck = (await guestDetail.json()).trip.covers;
+  assert.deepEqual(
+    guestDeck.map((cover: { id: string }) => cover.id),
+    ['public'],
+  );
+  assert.deepEqual(guestDeck[0].position, sharedPosition);
+  assert.equal(
+    (await viewRequest(guestPath, '', undefined, initialEtag)).status,
+    304,
+  );
+  const legacyDetail = await viewRequest(
+    'share/legacy-fixture-link',
+    '',
+    undefined,
+    initialEtag,
+  );
+  assert.equal(legacyDetail.status, 200);
+  assert.equal(
+    new URL(
+      (await legacyDetail.json()).trip.covers[0].src,
+      'http://localhost:3000',
+    ).searchParams.get('share'),
+    'legacy-fixture-link',
+  );
+  assert.equal(
+    (await viewRequest('follows', 'follower', { token })).status,
+    200,
+  );
+  const followerList = await (await viewRequest('follows', 'follower')).json();
+  assert.deepEqual(followerList.trips[0].covers, guestDeck);
+  assert.equal(
+    (
+      await request('owner', {
+        mode: 'selected',
+        photoIds: ['public', 'private'],
+        positions: { public: { x: 45, y: 15 } },
+      })
+    ).status,
+    200,
+  );
+  const updatedGuest = await viewRequest(guestPath, '', undefined, initialEtag);
+  assert.equal(updatedGuest.status, 200);
+  assert.deepEqual((await updatedGuest.json()).trip.covers[0].position, {
+    x: 45,
+    y: 15,
+  });
+  assert.equal(
+    (
+      await request('owner', {
+        mode: 'selected',
+        photoIds: ['public', 'private'],
+        positions: { public: sharedPosition },
+      })
+    ).status,
+    200,
   );
   run(
     'DELETE FROM media_favorites WHERE user_id=? AND media_id=?',
     'owner',
     'public',
   );
-  assert.deepEqual(tripCovers('trip', 'owner', 'guest-token'), []);
+  assert.deepEqual(tripCovers('trip', '', token), []);
+  assert.equal(
+    (await viewRequest('media/private/preview?share=' + token)).status,
+    404,
+  );
+  run('UPDATE trips SET share_hash=NULL WHERE id=?', 'trip');
+  assert.deepEqual(tripCovers('trip', '', token), []);
+  assert.deepEqual(
+    (await (await viewRequest('follows', 'follower')).json()).trips,
+    [],
+  );
+  assert.equal(
+    (await viewRequest(guestPath, '', undefined, initialEtag)).status,
+    404,
+  );
   assert.deepEqual(coverSettings('trip').positions?.public, { x: 25, y: 80 });
   assert.deepEqual(
     tripCovers('trip', 'owner').map((x) => x.id),
@@ -219,7 +329,7 @@ test('favorite covers respect guest visibility, membership dates and source appr
   assert.deepEqual(coverSettings('trip').positions?.public, { x: 25, y: 80 });
   assert.deepEqual(coverSettings('trip').photoIds, ['public', 'private']);
   migrate(db);
-  assert.equal(db.pragma('user_version', { simple: true }), 17);
+  assert.equal(db.pragma('user_version', { simple: true }), 18);
   assert.deepEqual(coverSettings('trip').photoIds, ['public', 'private']);
   assert.equal(
     (await request('owner', { mode: 'all', photoIds: [] })).status,

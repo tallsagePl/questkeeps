@@ -10,8 +10,15 @@ import { HeaderBrand } from '../brand';
 import { FeedbackButton } from '../feedback';
 import { type ArchiveController } from './use-archive';
 import { Icon } from './shared';
+import { tripsCollectionPath } from '@/lib/trip-entry';
 
-export default function Header({ archive }: { archive: ArchiveController }) {
+export default function Header({
+  archive,
+  collectionCurrent = false,
+}: {
+  archive: ArchiveController;
+  collectionCurrent?: boolean;
+}) {
   const { t } = useLocale();
   const { user, selected, guest, action, share, invite } = archive;
 
@@ -20,6 +27,8 @@ export default function Header({ archive }: { archive: ArchiveController }) {
       <header className="topbar site-header" tabIndex={-1}>
         <HeaderMenu
           guest={guest}
+          friends={!!user}
+          tripsCurrent={collectionCurrent}
           logout={
             user ? (
               <FeedbackButton
@@ -44,13 +53,18 @@ export default function Header({ archive }: { archive: ArchiveController }) {
           {user && (
             <a
               className="text-button trips-nav-link"
-              href="/"
-              aria-current={!invite && !guest ? 'page' : undefined}
-              onClick={(event) => {
-                if (!selected && !invite && !guest) event.preventDefault();
-              }}
+              href={tripsCollectionPath}
+              aria-current={collectionCurrent ? 'page' : undefined}
             >
               {t('navigation.trips')}
+            </a>
+          )}
+          {user && (
+            <a
+              className="text-button trips-nav-link friends-nav-link"
+              href="/people/friends"
+            >
+              {t('friends.friends')}
             </a>
           )}
           <a className="text-button about-nav-link" href="/about">

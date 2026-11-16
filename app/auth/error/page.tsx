@@ -1,5 +1,9 @@
 import OAuthError from '@/components/oauth-error';
-import { oauthErrorReason, oauthReturnPath } from '@/lib/oauth-errors';
+import {
+  oauthErrorReason,
+  oauthIntent,
+  oauthReturnPath,
+} from '@/lib/oauth-errors';
 
 export default async function OAuthErrorPage({
   searchParams,
@@ -12,7 +16,7 @@ export default async function OAuthErrorPage({
       reason={oauthErrorReason(
         typeof params.reason === 'string' ? params.reason : '',
       )}
-      intent={params.intent === 'link' ? 'link' : 'login'}
+      intent={oauthIntent(params.intent)}
       returnPath={oauthReturnPath(
         typeof params.returnTo === 'string' ? params.returnTo : '/',
       )}

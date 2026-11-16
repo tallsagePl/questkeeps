@@ -103,6 +103,9 @@ test('превью фото и видео, подписи, наведение, �
     const { favorite } = r.request().postDataJSON();
     await r.fulfill({ json: { favorite } });
   });
+  await page.route('**/api/media/*/self-mark', (r) =>
+    r.fulfill({ json: { markedByMe: false, people: [] } }),
+  );
   await page.route('**/api/media/photo', async (r) => {
     expect(r.request().postDataJSON()).toEqual({ title: 'Закат у моря' });
     await r.fulfill({ json: { ok: true } });
@@ -203,9 +206,9 @@ test('превью фото и видео, подписи, наведение, �
     .getByRole('textbox', { name: 'Название кадра' })
     .fill('Закат у моря');
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click();
-  await expect(page.getByRole('dialog').getByRole('heading')).toContainText(
-    'Закат у моря',
-  );
+  await expect(
+    page.getByRole('dialog').getByRole('heading', { level: 2 }),
+  ).toContainText('Закат у моря');
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
   await expect(page.locator('.photo-filename').first()).toHaveText(
     'Закат у моря',
@@ -907,7 +910,7 @@ test('HEIC использует кеш, сбой оригинала не скр�
   await expect(dialog).toBeVisible();
 });
 
-test('открытые места в отдельной вкладке без дублей, фото справа и адаптация к мобильному экрану', async ({
+test('открытые места в отдельной вкладке без дублей, фото над текстом и адаптация к мобильному экрану', async ({
   page,
 }) => {
   const trip = {
@@ -1077,15 +1080,12 @@ test('открытые места в отдельной вкладке без д
     'data-state',
     'loaded',
   );
-  const retained = await card
-    .locator('.place-wiki-image img')
-    .evaluate((img) => {
-      const box = img.parentElement!.getBoundingClientRect();
-      const image = img.getBoundingClientRect();
-      return box.height / image.height;
-    });
-  expect(retained).toBeGreaterThan(0.69);
-  expect(retained).toBeLessThan(0.71);
+  const frame = (await switcher.boundingBox())!;
+  await expect(card.locator('.place-wiki-image img')).toHaveJSProperty(
+    'naturalHeight',
+    960,
+  );
+  expect(frame.width / frame.height).toBeCloseTo(16 / 10, 2);
   await card.screenshot({ path: 'test-results/place-wiki-photo.png' });
   await expect(switcher.locator('.media-preview img')).toHaveCSS(
     'object-fit',
@@ -1334,7 +1334,8 @@ test('открытые места в отдельной вкладке без д
   await expect.poll(() => imageCalls).toBeGreaterThan(initialImages);
   const textBox = await card.locator('.discovered-place-content').boundingBox();
   const imageBox = await card.locator('.place-wiki-image').boundingBox();
-  expect(imageBox!.x).toBeGreaterThanOrEqual(textBox!.x + textBox!.width - 1);
+  expect(imageBox!.y + imageBox!.height).toBeLessThanOrEqual(textBox!.y + 1);
+  expect(imageBox!.width).toBeCloseTo(textBox!.width, 1);
   for (const theme of ['light', 'dark']) {
     await page.evaluate((theme) => {
       document.documentElement.dataset.theme = theme;
@@ -1349,6 +1350,14 @@ test('открытые места в отдельной вкладке без д
     ).toEqual([]);
   }
   await page.setViewportSize({ width: 390, height: 844 });
+  const phonePicture = (await switcher.boundingBox())!;
+  const phoneText = (await card
+    .locator('.discovered-place-content')
+    .boundingBox())!;
+  expect(phonePicture.width / phonePicture.height).toBeCloseTo(16 / 10, 2);
+  expect(phonePicture.y + phonePicture.height).toBeLessThanOrEqual(
+    phoneText.y + 1,
+  );
   await expect
     .poll(() =>
       page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

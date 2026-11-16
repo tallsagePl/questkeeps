@@ -73,6 +73,11 @@ export type MediaItem = {
   lon: number | null;
 };
 
+export type PhotoSelfMarks = {
+  markedByMe: boolean;
+  people: { id: string; name: string; username: string | null }[];
+};
+
 export type ConfirmedPlace = {
   id: string;
   media_id: string;

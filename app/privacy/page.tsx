@@ -1,5 +1,5 @@
 import { publicMetadata } from '@/lib/public-seo';
-import PrivacyShell from '@/components/privacy-shell';
+import PublicPageShell from '@/components/public-page-shell';
 import {
   translate,
   type TranslationKey,
@@ -85,7 +85,7 @@ function Policy({ language }: { language: Language }) {
 
 export default function PrivacyPage() {
   return (
-    <PrivacyShell>
+    <PublicPageShell>
       <main
         id="main-content"
         tabIndex={-1}
@@ -118,6 +118,6 @@ export default function PrivacyPage() {
         <Policy language="ru" />
         <Policy language="en" />
       </main>
-    </PrivacyShell>
+    </PublicPageShell>
   );
 }

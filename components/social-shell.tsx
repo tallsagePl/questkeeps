@@ -14,7 +14,7 @@ import UserAvatar, { type ProfileUser } from './user-avatar';
 import { api } from './api';
 import { clearPreviewCache } from '../lib/preview-cache';
 import { migratePrivateStorage } from '../lib/browser-storage';
-import { createTripSignInEntry } from '../lib/trip-entry';
+import { createTripSignInEntry, tripsCollectionPath } from '../lib/trip-entry';
 
 export function useViewer() {
   const [user, setUser] = useState<ProfileUser | null>(null);
@@ -79,6 +79,8 @@ export function SocialShell({
       </a>
       <header className="topbar social-topbar site-header">
         <HeaderMenu
+          friends={!!user}
+          friendsCurrent={current === 'friends'}
           logout={
             user ? (
               <button
@@ -99,7 +101,15 @@ export function SocialShell({
         />
         <HeaderBrand />
         <nav className="social-nav" aria-label={t('navigation.mainNavigation')}>
-          <a href="/">{t('navigation.trips')}</a>
+          <a href={tripsCollectionPath}>{t('navigation.trips')}</a>
+          {user && (
+            <a
+              href="/people/friends"
+              aria-current={current === 'friends' ? 'page' : undefined}
+            >
+              {t('friends.friends')}
+            </a>
+          )}
           <a
             href="/about"
             aria-current={current === 'about' ? 'page' : undefined}

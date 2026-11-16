@@ -48,6 +48,8 @@ for (const width of [320, 393, 1024, 1440]) {
       page.on('pageerror', (error) => errors.push(error.message));
       await page.route('**/api/**', (route) => {
         const path = new URL(route.request().url()).pathname;
+        if (path.endsWith('/self-mark'))
+          return route.fulfill({ json: { markedByMe: false, people: [] } });
         if (
           route.request().method() === 'PATCH' &&
           path.startsWith('/api/media/')

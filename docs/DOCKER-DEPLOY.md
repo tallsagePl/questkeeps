@@ -219,3 +219,5 @@ Install the updated release, retire and schema compatibility scripts together. T
 Password recovery adds schema 15. Reviewed direct rollout/rollback between the current production schema 13 and 15 preserves additive tables and user data; update the schema helper and release script together.
 
 Schema 17 adds the per-account onboarding goal receipts. The release script supports the transition between 16 and 17. Marker rollback preserves receipts and the original eligibility date so redeploying preserves funnel counts.
+
+Schema 18 adds photo self-marks in a separate table. The release script supports the transition between 17 and 18. Rolling back the schema marker preserves the marks for a later upgrade.

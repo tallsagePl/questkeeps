@@ -37,6 +37,37 @@ test('friends are consensual and private, profile is a page, About works in both
     });
     expect(br.ok()).toBeTruthy();
     const bob = (await br.json()).user;
+    const savedUsername = await b.request.patch(base + '/api/me', {
+      headers: origin,
+      data: { username: 'friends' },
+    });
+    expect(savedUsername.ok()).toBeTruthy();
+    bob.username = 'friends';
+    const planned = await b.request.post(base + '/api/trips', {
+      headers: origin,
+      data: {
+        title: 'Bob-shared-' + suffix,
+        destination: 'Fixture',
+        start: '2026-10-01',
+        end: '2026-10-02',
+      },
+    });
+    expect(planned.ok()).toBeTruthy();
+    const tripId = (await planned.json()).id;
+    const shared = await b.request.post(
+      base + '/api/trips/' + tripId + '/share',
+      {
+        headers: origin,
+        data: { enabled: true },
+      },
+    );
+    expect(shared.ok()).toBeTruthy();
+    const link = new URL((await shared.json()).url);
+    const followed = await a.request.post(base + '/api/follows', {
+      headers: origin,
+      data: { token: link.pathname.split('/').at(-1) },
+    });
+    expect(followed.ok()).toBeTruthy();
     await a.request.post(base + '/api/trips', {
       headers: origin,
       data: {
@@ -53,6 +84,9 @@ test('friends are consensual and private, profile is a page, About works in both
       page.getByRole('heading', { name: 'Мой профиль.' }),
     ).toBeVisible();
     await expect(page.locator('dialog')).toHaveCount(0);
+    await expect(page.locator('.friends-section')).toHaveCount(0);
+    await page.getByRole('link', { name: 'Друзья', exact: true }).click();
+    await expect(page).toHaveURL(base + '/people/friends');
     await page.getByLabel('Имя или @юзернейм').fill(bob.username);
     const result = page
       .locator('.find-people .friend-row')
@@ -62,7 +96,7 @@ test('friends are consensual and private, profile is a page, About works in both
     await expect(
       result.getByText('Заявка отправлена', { exact: true }),
     ).toBeVisible();
-    await other.goto(base + '/profile');
+    await other.goto(base + '/people/friends');
     const incoming = other
       .locator('.friend-requests .friend-row')
       .filter({ hasText: alice.name });
@@ -71,9 +105,30 @@ test('friends are consensual and private, profile is a page, About works in both
     await expect(
       other.locator('.friends-section > .friends-list'),
     ).toContainText(alice.name);
+    await expect(other.getByText('Нет доступных вам поездок')).toBeVisible();
+    await expect(other.getByText('Alice-private-' + suffix)).toHaveCount(0);
     await page.goto(base + '/');
-    await expect(page.locator('.friends-compact')).toContainText(bob.name);
-    await page.locator('.friends-compact .friend-person').click();
+    const preview = page.locator('.friends-compact');
+    await expect(preview).toContainText(bob.name);
+    await expect(
+      preview.getByRole('link', { name: 'Все друзья', exact: true }),
+    ).toHaveAttribute('href', '/people/friends');
+    await page.getByRole('link', { name: 'Друзья', exact: true }).click();
+    await expect(
+      page.locator('.friends-section > .friends-list'),
+    ).toContainText(bob.name);
+    const friendTrip = page.getByRole('link', { name: /Bob-shared-/ });
+    await expect(friendTrip).toHaveAttribute('href', link.pathname);
+    await friendTrip.click();
+    await expect(page).toHaveURL(link.href);
+    await expect(
+      page.getByText('Гостевой просмотр', { exact: true }).first(),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Друзья', exact: true }).click();
+    await page
+      .locator('.friends-section > .friends-list .friend-person')
+      .click();
+    await expect(page).toHaveURL(base + '/@friends');
     await expect(
       page.getByRole('heading', { name: bob.name, exact: true }),
     ).toBeVisible();
@@ -117,9 +172,7 @@ test('friends are consensual and private, profile is a page, About works in both
     await expect(page.locator('.profile-name-display')).toContainText(
       alice.name,
     );
-    await expect(
-      page.locator('.friends-section > .friends-list'),
-    ).toContainText(bob.name);
+    await expect(page.locator('.friends-section')).toHaveCount(0);
     await page.screenshot({
       path: 'test-results/social-profile-desktop.png',
       fullPage: true,
@@ -143,6 +196,21 @@ test('friends are consensual and private, profile is a page, About works in both
       .toBe(true);
     await page.screenshot({
       path: 'test-results/social-profile-mobile-dark.png',
+      fullPage: true,
+    });
+    await page.getByRole('button', { name: 'Меню', exact: true }).click();
+    await page.getByRole('link', { name: 'Друзья', exact: true }).click();
+    await expect(page).toHaveURL(base + '/people/friends');
+    await expect(
+      page.locator('.friends-section > .friends-list'),
+    ).toContainText(bob.name);
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      )
+      .toBe(true);
+    await page.screenshot({
+      path: 'test-results/social-friends-mobile-dark.png',
       fullPage: true,
     });
     await page.goto(base + '/about');
@@ -186,7 +254,7 @@ test('friends are consensual and private, profile is a page, About works in both
     await page.getByRole('button', { name: 'Выйти', exact: true }).click();
     await expect(page).toHaveURL(base + '/');
     await expect(
-      stale.getByText('Войди, чтобы настроить профиль и найти друзей.'),
+      stale.getByText('Войдите, чтобы настроить профиль.'),
     ).toBeVisible();
     await page.getByLabel('Электронная почта').fill(bobEmail);
     await page.getByLabel('Пароль', { exact: true }).fill('TravelPassword123');
@@ -205,6 +273,12 @@ test('friends are consensual and private, profile is a page, About works in both
     );
     await expect(page.getByText(aliceEmail, { exact: true })).toHaveCount(0);
   } finally {
+    await b.request
+      .patch(base + '/api/me', {
+        headers: origin,
+        data: { username: 'boris_' + suffix },
+      })
+      .catch(() => {});
     await a.close();
     await b.close();
   }

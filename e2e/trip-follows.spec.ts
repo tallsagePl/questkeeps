@@ -47,24 +47,40 @@ test('anonymous follow survives sign-in, persists in the archive, works on mobil
       headers,
       data: { email, name: 'Follow Viewer', password },
     });
+    const saved = await follower.request.post(base + '/api/trips', {
+      headers,
+      data: {
+        title: 'My fixture trip',
+        destination: 'Tbilisi',
+        start: '2026-10-10',
+        end: '2026-10-18',
+      },
+    });
+    expect(saved.ok()).toBeTruthy();
     await follower.clearCookies();
     const page = await follower.newPage();
     await page.goto(link);
     await expect(
-      page.getByRole('button', { name: 'Следить', exact: true }),
+      page.getByRole('button', { name: 'Отслеживать', exact: true }),
     ).toBeVisible();
+    await expect(page.locator('.trip-summary svg')).toHaveCount(0);
     const pos = await page.locator('.trip-heading-side').evaluate((el) => ({
       top: el.getBoundingClientRect().top,
       width: innerWidth,
     }));
     expect(pos.top).toBeLessThan(500);
     await page.screenshot({ path: 'data/follow-desktop.png' });
-    await page.getByRole('button', { name: 'Следить', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Отслеживать', exact: true })
+      .click();
     await expect(page).toHaveURL(/\?follow=1$/);
     await expect(
-      page.getByText('Войдите или создайте аккаунт, чтобы сохранить поездку.', {
-        exact: false,
-      }),
+      page.getByText(
+        'Войдите или создайте аккаунт, чтобы отслеживать поездку.',
+        {
+          exact: false,
+        },
+      ),
     ).toBeVisible();
     await page
       .getByLabel('Электронная почта или никнейм', { exact: true })
@@ -80,6 +96,19 @@ test('anonymous follow survives sign-in, persists in the archive, works on mobil
       page.getByRole('button', { name: 'Отслеживается', exact: true }),
     ).toBeVisible();
     await page.getByRole('link', { name: 'Путешествия', exact: true }).click();
+    await expect(page).toHaveURL(/\/archive\/trips$/);
+    await expect(
+      page.getByRole('heading', { name: 'Мои путешествия', exact: true }),
+    ).toBeVisible();
+    await expect(page.locator('.friends-compact, .archive-note')).toHaveCount(
+      0,
+    );
+    await page.getByRole('button', { name: /My fixture trip/ }).click();
+    await expect(
+      page.getByRole('heading', { name: 'My fixture trip.' }),
+    ).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/archive\/trips$/);
     const collection = page.getByRole('region', {
       name: 'Отслеживаемые путешествия',
     });
@@ -105,9 +134,11 @@ test('anonymous follow survives sign-in, persists in the archive, works on mobil
       .getByRole('button', { name: 'Отслеживается', exact: true })
       .click();
     await expect(
-      page.getByRole('button', { name: 'Следить', exact: true }),
+      page.getByRole('button', { name: 'Отслеживать', exact: true }),
     ).toHaveAttribute('aria-pressed', 'false');
-    await page.getByRole('button', { name: 'Следить', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Отслеживать', exact: true })
+      .click();
     await expect(
       page.getByRole('button', { name: 'Отслеживается', exact: true }),
     ).toBeVisible();

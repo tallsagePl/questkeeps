@@ -17,10 +17,10 @@ test('public example and creation entry render while session is pending', async 
     const example = page.locator('#trip-example');
     await expect(
       page.getByRole('link', { name: 'Создать поездку' }),
-    ).toHaveAttribute('href', '/?create=1#welcome-auth');
+    ).toHaveAttribute('href', '/?create=1');
     await expect(
       page.getByRole('link', { name: 'Посмотреть пример' }),
-    ).toHaveAttribute('href', '#trip-example');
+    ).toHaveCount(0);
     await expect(
       example.getByText('10 мая · Вид с Галатской башни'),
     ).toBeVisible();
@@ -29,7 +29,7 @@ test('public example and creation entry render while session is pending', async 
     ).toBeVisible();
     await expect(
       example.getByRole('link', { name: 'Собрать свою поездку' }),
-    ).toHaveAttribute('href', '/?create=1#welcome-auth');
+    ).toHaveAttribute('href', '/?create=1');
     const gallery = example.getByRole('radio', { name: 'Галерея' });
     await gallery.focus();
     await page.keyboard.press('ArrowRight');
@@ -67,7 +67,11 @@ test.describe('without scripts', () => {
     await page.goto('/guide');
     await expect(
       page.getByRole('link', { name: 'Создать поездку' }),
-    ).toHaveCount(2);
+    ).toHaveCount(1);
+    const dates = page.locator('details:has(#dates) > summary');
+    await dates.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#dates')).toBeVisible();
     await page.getByRole('link', { name: /Три дня у Босфора/ }).click();
     const example = page.locator('#trip-example');
     await expect(
@@ -77,5 +81,11 @@ test.describe('without scripts', () => {
     await expect(
       example.getByText('На карте видны места съёмки в Стамбуле.'),
     ).toBeVisible();
+  });
+
+  test('opening a guide fragment reveals its step', async ({ page }) => {
+    await page.goto('/guide#map');
+    await expect(page.locator('#map')).toBeVisible();
+    await expect(page.locator('main details[open]')).toHaveCount(1);
   });
 });

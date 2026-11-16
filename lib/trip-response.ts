@@ -18,6 +18,7 @@ export function tripResponse(req: Request, tripId: string) {
           access.to,
           currentUser(req)?.id || '',
           access.share_hash,
+          new URL(req.url).searchParams.get('share'),
         ]),
       ) +
       '"';

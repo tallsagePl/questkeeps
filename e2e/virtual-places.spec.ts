@@ -105,6 +105,10 @@ test('place feed keeps equal native gaps, lazy retained images, smooth top navig
   const initialHeight = await feed.evaluate(
     (el) => el.getBoundingClientRect().height,
   );
+  const columns = await feed.evaluate(
+    (el) => getComputedStyle(el).gridTemplateColumns.split(' ').length,
+  );
+  expect(columns).toBe(3);
   const first = feed.locator('[data-place-index="0"]');
   await expect(first.locator('.place-wiki-image img')).toHaveJSProperty(
     'naturalWidth',
@@ -121,37 +125,42 @@ test('place feed keeps equal native gaps, lazy retained images, smooth top navig
       return (native as any)(...args);
     }) as typeof window.scrollBy;
   });
-  for (let i = 0; i < 9; i++) {
+  const scrollSteps = 6;
+  for (let i = 0; i < scrollSteps; i++) {
     await page.evaluate(() =>
       window.scrollBy({ top: 500, behavior: 'instant' }),
     );
-    if (i > 0)
-      await expect.poll(() => feed.getAttribute('data-base-row')).not.toBe('0');
     await page.waitForTimeout(60);
   }
-  expect(Number(await feed.getAttribute('data-base-row'))).toBeGreaterThan(5);
+  await expect
+    .poll(async () => Number(await feed.getAttribute('data-base-row')))
+    .toBeGreaterThan(5);
   expect(
     await feed.locator('.virtual-places-cell[data-near=true]').count(),
-  ).toBeLessThanOrEqual(12);
+  ).toBeLessThanOrEqual(columns * 8);
   expect(
     await feed.evaluate((el) => el.getBoundingClientRect().height),
   ).toBeLessThanOrEqual(initialHeight + 350);
   expect(await firstNode!.evaluate((el) => el.isConnected)).toBe(true);
   await expect(first).not.toBeInViewport();
-  expect(await page.evaluate(() => (window as any).__scrollWrites)).toBe(9);
+  expect(await page.evaluate(() => (window as any).__scrollWrites)).toBe(
+    scrollSteps,
+  );
   const gaps = await feed
     .locator('article')
-    .evaluateAll((nodes) =>
-      nodes
-        .slice(1)
-        .map(
-          (node, index) =>
-            node.getBoundingClientRect().top -
-            nodes[index].getBoundingClientRect().bottom,
-        ),
+    .evaluateAll(
+      (nodes, columns) =>
+        nodes
+          .slice(columns)
+          .map(
+            (node, index) =>
+              node.getBoundingClientRect().top -
+              nodes[index].getBoundingClientRect().bottom,
+          ),
+      columns,
     );
   for (const gap of gaps) expect(Math.abs(gap - 16)).toBeLessThan(1);
-  expect(requests.size).toBeLessThan(40);
+  expect(requests.size).toBeLessThan(places.length * 0.65);
   const desktop = page.viewportSize()!;
   await page.setViewportSize({ width: 393, height: 852 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });

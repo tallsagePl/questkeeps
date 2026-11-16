@@ -36,9 +36,12 @@ import {
 } from '../../lib/navigation';
 import { includesDate } from '../../lib/date-selection';
 import {
+  createTripEntry,
+  createTripRegisterEntry,
   createTripRequested,
   oauthRegistrationHash,
 } from '../../lib/trip-entry';
+import { resumeGuestTripDraft } from '../../lib/create-trip-draft';
 import { groupPlacePhotos } from '../../lib/place-photo-groups';
 import { tripMapScope } from '../trip-preloader';
 import type { LocalizedMessage } from '../../lib/i18n/translate';
@@ -57,9 +60,11 @@ const tabGoals: Partial<Record<string, AnalyticsGoal>> = {
 export function useArchive({
   share,
   invite,
+  collectionOnly = false,
 }: {
   share?: string;
   invite?: string;
+  collectionOnly?: boolean;
 }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [ready, setReady] = useState(false);
@@ -73,10 +78,12 @@ export function useArchive({
   const [galleryTarget, setGalleryTarget] = useState<string | null>(null);
   const [day, setDay] = useState('');
   const [modal, setModal] = useState('');
+  const nextModalAfterSignup = useRef('');
   const [busy, setBusy] = useState(false);
   const [yandex, setYandex] = useState(false);
   const [register, setRegister] = useState(false);
   const [createTripIntent, setCreateTripIntent] = useState(false);
+  const [createTripPickingDisk, setCreateTripPickingDisk] = useState(false);
   const registrationStarted = useRef(false);
   const [members, setMembers] = useState<TripMember[]>([]);
   const [tripOwner, setTripOwner] = useState<Pick<
@@ -345,11 +352,19 @@ export function useArchive({
       window.removeEventListener('questkeeps:archive-refresh', updated);
   }, [user?.id, selected, guest, action, refresh, loadTrips]);
   useEffect(() => {
+    let canceled = false;
     mounted.current = true;
     const query = new URLSearchParams(window.location.search);
-    const create = !share && !invite && createTripRequested(query);
+    const create =
+      !share && !invite && !collectionOnly && createTripRequested(query);
+    const createMode = query.get('mode');
+    const legacyAuthEntry = window.location.hash === '#welcome-auth';
+    const showWelcomeAuth = createMode === 'login' || legacyAuthEntry;
+    const disk = create && query.get('disk') === '1';
     setCreateTripIntent(create);
-    if (create) setRegister(query.get('mode') !== 'login');
+    setCreateTripPickingDisk(disk);
+    if (create && (showWelcomeAuth || createMode === 'register'))
+      setRegister(createMode !== 'login');
     void action(async () => {
       let me;
       try {
@@ -359,16 +374,12 @@ export function useArchive({
           undefined,
           AbortSignal.timeout(10000),
         );
+        if (canceled) return;
         setUser(me.user);
         setYandex(me.yandexEnabled);
-        if (me.user && window.location.hash === oauthRegistrationHash) {
-          window.history.replaceState(
-            window.history.state,
-            '',
-            window.location.pathname + window.location.search,
-          );
-          trackGoal('onboarding_registration_confirmed');
-        }
+        const newOAuthAccount =
+          !!me.user && window.location.hash === oauthRegistrationHash;
+        let initialModal = '';
         if (share)
           setData(
             await api(
@@ -389,17 +400,19 @@ export function useArchive({
           );
         else if (me.user) {
           await loadTrips();
-          const tid = query.get('trip');
+          if (canceled) return;
+          const tid = collectionOnly ? null : query.get('trip');
           if (tid) {
             const identity = identityGeneration.current;
             const navigation = navigationGeneration.current;
             await loadTrip(tid);
+            if (canceled) return;
             if (
               query.get('source') === '1' &&
               identity === identityGeneration.current &&
               navigation === navigationGeneration.current
             ) {
-              setModal('source');
+              initialModal = 'source';
               query.delete('source');
               window.history.replaceState(
                 window.history.state,
@@ -408,12 +421,33 @@ export function useArchive({
               );
             }
           } else if (create) {
-            setModal('create');
-            window.history.replaceState(window.history.state, '', '/');
+            resumeGuestTripDraft(me.user.id);
+            initialModal = 'create';
+            if (!newOAuthAccount)
+              window.history.replaceState(window.history.state, '', '/');
           }
+        } else if (create && !showWelcomeAuth) {
+          initialModal = createMode === 'register' ? 'create-auth' : 'create';
         }
+        if (canceled) return;
+        if (newOAuthAccount) {
+          window.history.replaceState(
+            window.history.state,
+            '',
+            window.location.pathname + window.location.search,
+          );
+          trackGoal('onboarding_registration_confirmed');
+          if (disk) {
+            window.history.replaceState(window.history.state, '', '/');
+            setModal(initialModal);
+          } else {
+            nextModalAfterSignup.current = initialModal;
+            setModal('choose-username');
+          }
+        } else if (initialModal) setModal(initialModal);
         setReady(true);
       } catch (error) {
+        if (canceled) return;
         // Expired/revoked public links have their own unavailable-link screen.
         const unavailableLink =
           (share || invite) &&
@@ -422,13 +456,22 @@ export function useArchive({
         if (!unavailableLink) setBootFailed(true);
         throw error;
       }
-    }).finally(() => setReady(true));
+    }).finally(() => {
+      if (!canceled) setReady(true);
+    });
     return () => {
+      canceled = true;
       mounted.current = false;
     };
-  }, [share, invite, action, loadTrips, loadTrip]);
+  }, [share, invite, collectionOnly, action, loadTrips, loadTrip]);
   useEffect(() => {
-    if (ready && !bootFailed && !user && createTripIntent)
+    if (
+      ready &&
+      !bootFailed &&
+      !user &&
+      createTripIntent &&
+      new URLSearchParams(location.search).get('mode') === 'login'
+    )
       document.getElementById('welcome-auth')?.focus();
   }, [ready, bootFailed, user, createTripIntent]);
   useEffect(() => {
@@ -447,11 +490,16 @@ export function useArchive({
     });
   }, [selected, guest, tab, action]);
   const openTrip = (tid: string) => {
+    const url = '/?trip=' + encodeURIComponent(tid);
+    if (collectionOnly) {
+      window.location.assign(url);
+      return;
+    }
     setDay('');
     setTab('gallery');
     setError('');
     navigationGeneration.current++;
-    pushNavigation('/?trip=' + encodeURIComponent(tid), 'gallery');
+    pushNavigation(url, 'gallery');
     void action(() => loadTrip(tid));
   };
   const openTab = (next: string) => {
@@ -483,7 +531,7 @@ export function useArchive({
       setTab(
         guest && (view === 'settings' || view === 'review') ? 'gallery' : view,
       );
-      if (share || invite) return;
+      if (share || invite || collectionOnly) return;
       const tid = new URLSearchParams(window.location.search).get('trip');
       if (tid) {
         if (tid !== selected) void action(() => loadTrip(tid));
@@ -495,7 +543,17 @@ export function useArchive({
     };
     window.addEventListener('popstate', restore);
     return () => window.removeEventListener('popstate', restore);
-  }, [selected, user?.id, share, invite, guest, action, loadTrip, loadTrips]);
+  }, [
+    selected,
+    user?.id,
+    share,
+    invite,
+    guest,
+    collectionOnly,
+    action,
+    loadTrip,
+    loadTrips,
+  ]);
   const reloadSettings = async () => {
     if (!selected) return;
     setSources((await api('trips/' + selected + '/sources')).sources);
@@ -505,6 +563,42 @@ export function useArchive({
     if (registrationStarted.current) return;
     registrationStarted.current = true;
     trackGoal('onboarding_registration_started');
+  };
+  const requireCreateAccount = () => {
+    setRegister(true);
+    setVerificationEmail('');
+    setCreateTripIntent(true);
+    setModal('create-auth');
+    window.history.replaceState(
+      window.history.state,
+      '',
+      createTripRegisterEntry,
+    );
+  };
+  const returnToCreate = () => {
+    setVerificationEmail('');
+    setModal('create');
+    window.history.replaceState(window.history.state, '', createTripEntry);
+  };
+  const closeCreate = () => {
+    setModal('');
+    setCreateTripIntent(false);
+    setCreateTripPickingDisk(false);
+    if (createTripRequested(new URLSearchParams(location.search)))
+      window.history.replaceState(window.history.state, '', '/');
+  };
+  const finishSignupUsername = (updated?: UserProfile) => {
+    if (updated)
+      setUser((current) => (current?.id === updated.id ? updated : current));
+    if (modal !== 'choose-username') return;
+    if (
+      nextModalAfterSignup.current === 'create' &&
+      createTripRequested(new URLSearchParams(window.location.search))
+    )
+      window.history.replaceState(window.history.state, '', '/');
+    setModal((current) =>
+      current === 'choose-username' ? nextModalAfterSignup.current : current,
+    );
   };
   const auth = (event: FormEvent<HTMLFormElement>) => {
     const input = values(event);
@@ -526,6 +620,7 @@ export function useArchive({
         return;
       }
       if (register) trackGoal('onboarding_registration_confirmed');
+      if (createTripIntent) resumeGuestTripDraft(r.user.id);
       announceSessionChange();
       setUser(r.user);
       setModal('');
@@ -758,7 +853,12 @@ export function useArchive({
     register,
     setRegister,
     createTripIntent,
+    createTripPickingDisk,
+    requireCreateAccount,
+    returnToCreate,
+    closeCreate,
     startRegistration,
+    finishSignupUsername,
     members,
     tripOwner,
     sources,

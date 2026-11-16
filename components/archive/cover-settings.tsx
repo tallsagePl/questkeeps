@@ -111,7 +111,7 @@ export default function CoverSettings({
               );
               setSaved(result);
               setIds(result.photoIds);
-              await archive.loadTrips();
+              await Promise.all([archive.loadTrips(), archive.refresh()]);
               archive.setNotice('tripCover.saved');
             });
           }}

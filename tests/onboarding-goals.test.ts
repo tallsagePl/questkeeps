@@ -101,7 +101,7 @@ test('only a new account receives the first trip and visible import milestones o
   assert.equal(rollback.status, 0, rollback.stderr);
   assert.equal(db.pragma('user_version', { simple: true }), 16);
   migrate(db);
-  assert.equal(db.pragma('user_version', { simple: true }), 17);
+  assert.equal(db.pragma('user_version', { simple: true }), 18);
   assert.deepEqual(
     one('SELECT applied FROM schema_migrations WHERE version=17'),
     migration,
